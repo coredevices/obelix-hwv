@@ -1,0 +1,69 @@
+#include "rtthread.h"
+#include "bf0_hal.h"
+#include "drv_io.h"
+#include "stdio.h"
+#include "string.h"
+#include "board.h"
+#include "drv_platform.h"
+#include "drv_aw9527.h"
+
+#define DBG_TAG "drv_aw9527"
+#define DBG_LVL DBG_LOG
+#include <rtdbg.h>
+
+void ioexp_init(void)
+{
+	LOG_D("ioexp_init gpio");
+	gpio_set(44, 1, 1);
+	LOG_D("ioexp_init i2c");
+	i2c_init(2);
+
+	uint8_t value;
+	rt_size_t ret = i2c_read(2, AW9527_I2C_ADDRESS, 0x10, &value);
+	if (ret) {
+		LOG_D("aw9527 read device id=0x%x\n", value);
+	} else {
+		LOG_E("aw9527 read device id error.\n");
+	}
+}
+
+
+/*channel ctrl*/
+void ioexp_pin_set(IOEXP_CHANNEL_T channel, IOEXP_STATE_T state) {
+    if (channel >= IOEXP_CH10) {
+        uint8_t p1_value;
+        i2c_read(2, AW9527_I2C_ADDRESS, 0x03, &p1_value);
+        if (state == IOEXP_HIGH) {
+            p1_value |= (1<<channel);
+        } else {
+            p1_value &= ~(1<<channel);
+        }
+        i2c_write(2, AW9527_I2C_ADDRESS, 0x03, p1_value);
+    } else {
+        uint8_t p0_value;
+        i2c_read(2, AW9527_I2C_ADDRESS, 0x02, &p0_value);
+        if (state == IOEXP_HIGH) {
+            p0_value |= (1<<channel);
+        } else {
+            p0_value &= ~(1<<channel);
+        }
+        i2c_write(2, AW9527_I2C_ADDRESS, 0x02, p0_value);
+    }
+}
+
+static int ioexp_set(int argc, char *argv[])
+{
+    if (argc < 2) {
+		LOG_D("usage %s ioe_pin level\n", argv[0]);
+		return 0;
+	}
+
+	uint8_t pin = atoi(argv[1]);
+	uint8_t level = atoi(argv[2]);
+	ioexp_pin_set(pin, level);
+	LOG_D("ioe set pin:%d = %d\n", pin, level);
+    return 0;
+}
+MSH_CMD_EXPORT(ioexp_set, "trigger notification to client")
+
+
