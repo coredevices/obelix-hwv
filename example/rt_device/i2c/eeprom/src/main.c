@@ -7,6 +7,7 @@
 #include "drv_platform.h"
 #include "drv_aw9527.h"
 #include "drv_aw86225.h"
+#include "drv_eta4662.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -29,6 +30,7 @@ int main(void)
 	HAL_RCC_EnableModule(RCC_MOD_GPIO1); // GPIO clock enable
 	ioexp_init();
 	aw86225_init();
+	eta4662_init();
 		
     while (1)
     {
