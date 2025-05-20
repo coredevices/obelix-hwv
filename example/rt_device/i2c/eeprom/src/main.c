@@ -6,6 +6,7 @@
 #include "board.h"
 #include "drv_platform.h"
 #include "drv_aw9527.h"
+#include "drv_aw86225.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -27,6 +28,7 @@ int main(void)
 	LOG_D("Ready for Pebble CT2_DEV_Kit testing.\n");
 	HAL_RCC_EnableModule(RCC_MOD_GPIO1); // GPIO clock enable
 	ioexp_init();
+	aw86225_init();
 		
     while (1)
     {

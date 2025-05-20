@@ -18,32 +18,32 @@ static struct rt_i2c_bus_device *i2c_bus4 = NULL;
 
 uint8_t i2c_init(uint8_t id)
 {
-	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4};
+	struct rt_i2c_bus_device * i2c[5] = {NULL};//, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4};
 		//1. pin mux
 #ifdef SF32LB52X
 	switch(id) {
 	case 1:
 		HAL_PIN_Set(PAD_PA11, I2C1_SCL, PIN_PULLUP, 1); // i2c io select
 		HAL_PIN_Set(PAD_PA10, I2C1_SDA, PIN_PULLUP, 1);
-		i2c_bus1 = rt_i2c_bus_device_find("i2c1");
+		i2c[id] = i2c_bus1 = rt_i2c_bus_device_find("i2c1");
 		rt_kprintf("i2c_bus1:0x%x\n", i2c_bus1);
 		break;
 	case 2:
 		HAL_PIN_Set(PAD_PA29, I2C2_SCL, PIN_PULLUP, 1); // i2c io select
 		HAL_PIN_Set(PAD_PA28, I2C2_SDA, PIN_PULLUP, 1);
-		i2c_bus2 = rt_i2c_bus_device_find("i2c2");
+		i2c[id] = i2c_bus2 = rt_i2c_bus_device_find("i2c2");
 		rt_kprintf("i2c_bus2:0x%x\n", i2c_bus2);
 		break;
 	case 3:
 		HAL_PIN_Set(PAD_PA21, I2C3_SCL, PIN_PULLUP, 1); // i2c io select
 		HAL_PIN_Set(PAD_PA20, I2C3_SDA, PIN_PULLUP, 1);
-		i2c_bus3 = rt_i2c_bus_device_find("i2c3");
+		i2c[id] = i2c_bus3 = rt_i2c_bus_device_find("i2c3");
 		rt_kprintf("i2c_bus3:0x%x\n", i2c_bus3);
 		break;
 	case 4:
 		HAL_PIN_Set(PAD_PA31, I2C4_SCL, PIN_PULLUP, 1); // i2c io select
 		HAL_PIN_Set(PAD_PA30, I2C4_SDA, PIN_PULLUP, 1);
-		i2c_bus4 = rt_i2c_bus_device_find("i2c4");
+		i2c[id] = i2c_bus4 = rt_i2c_bus_device_find("i2c4");
 		rt_kprintf("i2c_bus4:0x%x\n", i2c_bus4);
 		break;
 #elif defined(SF32LB58X)
@@ -51,7 +51,8 @@ uint8_t i2c_init(uint8_t id)
 		HAL_PIN_Set(PAD_PB29, I2C6_SDA, PIN_PULLUP, 0);
 #endif
 	}
-	
+
+	rt_kprintf("i2c[%d]=0x%x\n", id, i2c[id]);
 	if (i2c[id])
 	{
 #ifdef SF32LB52X

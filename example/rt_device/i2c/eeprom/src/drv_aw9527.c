@@ -16,10 +16,10 @@ void ioexp_init(void)
 	LOG_D("ioexp_init gpio");
 	gpio_set(44, 1, 1);
 	LOG_D("ioexp_init i2c");
-	i2c_init(2);
+	i2c_init(AW9527_I2C_ID);
 
 	uint8_t value;
-	rt_size_t ret = i2c_read(2, AW9527_I2C_ADDRESS, 0x10, &value);
+	rt_size_t ret = i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x10, &value);
 	if (ret) {
 		LOG_D("aw9527 read device id=0x%x\n", value);
 	} else {
@@ -32,22 +32,22 @@ void ioexp_init(void)
 void ioexp_pin_set(IOEXP_CHANNEL_T channel, IOEXP_STATE_T state) {
     if (channel >= IOEXP_CH10) {
         uint8_t p1_value;
-        i2c_read(2, AW9527_I2C_ADDRESS, 0x03, &p1_value);
+        i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x03, &p1_value);
         if (state == IOEXP_HIGH) {
             p1_value |= (1<<channel);
         } else {
             p1_value &= ~(1<<channel);
         }
-        i2c_write(2, AW9527_I2C_ADDRESS, 0x03, p1_value);
+        i2c_write(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x03, p1_value);
     } else {
         uint8_t p0_value;
-        i2c_read(2, AW9527_I2C_ADDRESS, 0x02, &p0_value);
+        i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x02, &p0_value);
         if (state == IOEXP_HIGH) {
             p0_value |= (1<<channel);
         } else {
             p0_value &= ~(1<<channel);
         }
-        i2c_write(2, AW9527_I2C_ADDRESS, 0x02, p0_value);
+        i2c_write(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x02, p0_value);
     }
 }
 
