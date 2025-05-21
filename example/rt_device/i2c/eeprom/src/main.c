@@ -9,6 +9,7 @@
 #include "drv_aw86225.h"
 #include "drv_eta4662.h"
 #include "drv_mmc5603.h"
+#include "drv_battery.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -37,6 +38,7 @@ int main(void)
 	aw86225_init();
 	eta4662_init();
 	mmc5603_init();
+	battery_init();
 		
     while (1)
     {
