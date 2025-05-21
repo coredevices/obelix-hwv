@@ -24,8 +24,10 @@ void aw86225_init(void)
 	rt_size_t ret = i2c_read(AW86225_I2C_ID, AW86225_I2C_ADDRESS, 0x64, &value);
 	if (ret) {
 		LOG_D("aw86225 read device id=0x%x\n", value);
+		LOG_D("**** TESTING COMMS WITH AW86225: PASS ********\n");
 	} else {
 		LOG_E("aw86225 read device id error.\n");
+		LOG_E("**** TESTING COMMS WITH AW86225: FAILED ********\n");
 	}
 }
 

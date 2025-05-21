@@ -19,8 +19,10 @@ void eta4662_init(void)
 	rt_size_t ret = i2c_read(ETA4662_I2C_ID, ETA4662_I2C_ADDRESS, 0x0B, &value);
 	if (ret) {
 		LOG_D("eta4662 read device id=0x%x\n", value);
+		LOG_D("**** TESTING COMMS WITH ETA4662: PASS ********\n");
 	} else {
 		LOG_E("eta4662 read device id error.\n");
+		LOG_E("**** TESTING COMMS WITH ETA4662: FAILED ********\n");
 	}
 
 	//todo:reg int pin

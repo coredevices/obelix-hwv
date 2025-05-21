@@ -14,7 +14,12 @@
 void ioexp_init(void)
 {
 	LOG_D("ioexp_init gpio");
+	gpio_set(44, 0, 1);
+	HAL_Delay_us(200);
+	//gpio_set(44, 0, 1);
+	//HAL_Delay_us(500);
 	gpio_set(44, 1, 1);
+	HAL_Delay_us(10 *1000);
 	LOG_D("ioexp_init i2c");
 	i2c_init(AW9527_I2C_ID);
 
@@ -22,8 +27,10 @@ void ioexp_init(void)
 	rt_size_t ret = i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x10, &value);
 	if (ret) {
 		LOG_D("aw9527 read device id=0x%x\n", value);
+		LOG_D("**** TESTING COMMS WITH AW9527: PASS ********\n");
 	} else {
 		LOG_E("aw9527 read device id error.\n");
+		LOG_E("**** TESTING COMMS WITH AW9527: FAILED ********\n");
 	}
 }
 
@@ -65,6 +72,27 @@ static int ioexp_set(int argc, char *argv[])
 	LOG_D("ioe set pin:%d = %d\n", pin, level);
     return 0;
 }
-MSH_CMD_EXPORT(ioexp_set, "trigger notification to client")
+MSH_CMD_EXPORT(ioexp_set, "ioexp_set cmd")
+
+static int ioexp_dump(int argc, char *argv[])
+{
+    if (argc != 1) {
+		LOG_D("usage %s to get all regs\n", argv[0]);
+		return 0;
+	}
+
+	for (uint8_t i=0; i<=0x07; i++) {
+		uint8_t value;
+		i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, i, &value);
+		LOG_D("aw9527 reg[0x%x] = 0x%02x\n", i, value);
+	}
+	for (uint8_t i=0x10; i<=0x13; i++) {
+		uint8_t value;
+		i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, i, &value);
+		LOG_D("aw9527 reg[0x%x] = 0x%02x\n", i, value);
+	}
+    return 0;
+}
+MSH_CMD_EXPORT(ioexp_dump, "ioexp_dump cmd")
 
 

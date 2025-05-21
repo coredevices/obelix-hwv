@@ -29,6 +29,10 @@ int main(void)
 
 	LOG_D("Ready for Pebble CT2_DEV_Kit testing.\n");
 	HAL_RCC_EnableModule(RCC_MOD_GPIO1); // GPIO clock enable
+	i2c_init(1);
+	i2c_init(2);
+	i2c_init(3);
+	i2c_init(4);
 	ioexp_init();
 	aw86225_init();
 	eta4662_init();

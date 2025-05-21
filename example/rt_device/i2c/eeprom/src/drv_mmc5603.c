@@ -25,8 +25,10 @@ void mmc5603_init(void)
 	rt_size_t ret = i2c_read(MMC5603_I2C_ID, MMC5603_I2C_ADDRESS, 0x39, &value);
 	if (ret) {
 		LOG_D("mmc5603 read device id=0x%x\n", value);
+		LOG_D("**** TESTING COMMS WITH MMC5603: PASS ********\n");
 	} else {
 		LOG_E("mmc5603 read device id error.\n");
+		LOG_E("**** TESTING COMMS WITH MMC5603: FAILED ********\n");
 	}
 
 	//todo:reg int pin
