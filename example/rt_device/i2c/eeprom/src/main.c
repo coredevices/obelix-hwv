@@ -10,6 +10,7 @@
 #include "drv_eta4662.h"
 #include "drv_mmc5603.h"
 #include "drv_battery.h"
+#include "drv_key.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -39,6 +40,7 @@ int main(void)
 	eta4662_init();
 	mmc5603_init();
 	battery_init();
+	key_init();
 		
     while (1)
     {
