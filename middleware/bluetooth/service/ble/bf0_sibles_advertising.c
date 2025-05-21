@@ -294,6 +294,8 @@ uint8_t sibles_advertising_init(sibles_advertising_context_t *context, sibles_ad
             context->adv_para.second_cfg.adv_sid = context->config.mode_config.periodic_config.adv_sid;
             context->adv_para.period_cfg.adv_intv_min = context->config.mode_config.periodic_config.adv_intv_min;
             context->adv_para.period_cfg.adv_intv_max = context->config.mode_config.periodic_config.adv_intv_max;
+            if (context->adv_para.max_tx_pwr != 0x7F)
+                context->adv_para.prop |= GAPM_ADV_PROP_PER_TX_PWR_BIT;
         }
 
         // Compose and save AD data and Scan RSP data
@@ -324,6 +326,7 @@ uint8_t sibles_advertising_init(sibles_advertising_context_t *context, sibles_ad
         context->state = SIBLES_ADV_STATE_READY;
         context->adv_transist = SIBLES_ADV_START;
         context->conn_idx = INVALID_CONN_IDX;
+        context->adv_idx = INVALID_CONN_IDX;
     }
 
     return ret;
@@ -676,6 +679,8 @@ uint8_t sibles_advertising_reconfig(sibles_advertising_context_t *context, sible
         context->adv_para.second_cfg.adv_sid = context->config.mode_config.periodic_config.adv_sid;
         context->adv_para.period_cfg.adv_intv_min = context->config.mode_config.periodic_config.adv_intv_min;
         context->adv_para.period_cfg.adv_intv_max = context->config.mode_config.periodic_config.adv_intv_max;
+        if (context->adv_para.max_tx_pwr != 0x7F)
+            context->adv_para.prop |= GAPM_ADV_PROP_PER_TX_PWR_BIT;
     }
 
     context->adv_transist = SIBLES_ADV_RECREATE;
@@ -893,7 +898,22 @@ int sibles_advertising_evt_handler(uint16_t event_id, uint8_t *data, uint16_t le
             }
             else
             {
+                if (context_p->adv_data)
+                {
+                    bt_mem_free(context_p->adv_data);
+                    context_p->adv_data = NULL;
+                }
+                if (context_p->scan_rsp_data)
+                {
+                    bt_mem_free(context_p->scan_rsp_data);
+                    context_p->scan_rsp_data = NULL;
+                }
                 context_p->state = SIBLES_ADV_STATE_IDLE;
+
+                sibles_adv_evt_deleted_t delete_evt;
+                delete_evt.status = ind->status;
+                if (context_p->evt_handler)
+                    context_p->evt_handler(SIBLES_ADV_EVT_ADV_DELETED, context_p, &delete_evt);
             }
         }
         break;

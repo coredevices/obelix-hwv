@@ -1294,7 +1294,7 @@ static void sifli_trc_config(uint32_t config)
 {
 // TODO: Only 55x not support config HCI immediatelly. Lib has already supported, to avoid assert due to combination of new src and old lib. Just keep old src.
 // #if !defined(SOC_SF32LB55X)
-#if defined(SOC_SF32LB58X) || defined(SOC_SF32LB56X)
+#if (defined(SOC_SF32LB58X) || defined(SOC_SF32LB56X)) && !defined(ZBT)
     sibles_set_trc_cfg(SIBLES_TRC_CUSTOMIZE, config);
 #endif
     sifli_nvds_write_tag_t *update_tag = bt_mem_alloc(sizeof(sifli_nvds_write_tag_t) + NVDS_STACK_LEN_TRACER_CONFIG);
@@ -1310,6 +1310,19 @@ static void sifli_trc_config(uint32_t config)
     bt_mem_free(update_tag);
 }
 
+static uint32_t sifli_trc_get_config(void)
+{
+    sifli_nvds_read_tag_t tag;
+    tag.tag = NVDS_STACK_TAG_TRACER_CONFIG;
+    tag.length = NVDS_STACK_LEN_TRACER_CONFIG;
+    uint32_t trc_config = 0;
+    uint8_t ret = sifli_nvds_read_tag_value(&tag, (uint8_t *)&trc_config);
+    return trc_config;
+
+
+
+}
+
 void sifli_hci_log_enable(bool is_on)
 {
 #if defined(SOC_SF32LB55X)
@@ -1318,6 +1331,13 @@ void sifli_hci_log_enable(bool is_on)
     uint32_t config[] = {0x20, 0x190C20};
 #endif
     sifli_trc_config(config[is_on]);
+}
+
+
+bool sifli_hci_log_get_enable(void)
+{
+    uint32_t config = sifli_trc_get_config();
+    return config != 0x20 ? true : false;
 }
 
 void sifli_trc_log_enable(uint32_t config)
@@ -1908,7 +1928,7 @@ uint8_t sifli_nvds_flush(void)
 void sifli_nvds_init(void)
 {
     sifli_nvds_env_t *env = sifli_nvds_get_env();
-    os_sem_create(g_sible_nvds_sema, 0);
+    g_sible_nvds_sema = os_sem_create("nvds", 0);
     env->srv_handle = datac_open();
     OS_ASSERT(DATA_CLIENT_INVALID_HANDLE != env->srv_handle);
     datac_subscribe(env->srv_handle, "BLE_NV", sifli_nvds_callback, 0);

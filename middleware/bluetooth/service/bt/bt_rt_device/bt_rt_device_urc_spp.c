@@ -75,6 +75,20 @@ void urc_func_spp_conn_ind_sifli(uint8_t *addr, U8 srv_chl, U8 *uuid, U8 uuid_le
     LOG_I("URC BT spp conn ind");
 }
 
+void urc_func_spp_sdp_cfm_sifli(uint8_t *addr, uint8_t reason, U8 *uuid, U8 uuid_len)
+{
+    bt_notify_t args;
+    bt_spp_sdp_cfm_t spp_sdp_cfm = {0};
+    rt_memcpy(spp_sdp_cfm.peer_addr.addr, addr, BT_MAX_MAC_LEN);
+    spp_sdp_cfm.uuid = uuid;
+    spp_sdp_cfm.uuid_len = uuid_len;
+    spp_sdp_cfm.res = reason;
+    args.event = BT_EVENT_SPP_SDP_CFM;
+    args.args = &spp_sdp_cfm;
+    rt_bt_event_notify(&args);
+    LOG_I("URC BT spp sdp cfm");
+}
+
 void urc_func_spp_data_ind_sifli(U8 *payload, U16 payload_len, uint8_t *addr, U8 srv_chl, U8 *uuid, U8 uuid_len)
 {
     bt_notify_t args;

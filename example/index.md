@@ -10,6 +10,8 @@ rt_device/index
 rt_driver/*
 multimedia/index
 multicore/index
+storage/index
+system/index
 pm/index
 misc/index
 bt/index

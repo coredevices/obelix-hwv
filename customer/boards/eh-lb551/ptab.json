@@ -19,7 +19,14 @@
                     "HCPU_FLASH_CODE"
                 ], 
                 "img": "main",
-                "exec": "main"
+                "exec": "main",
+                "ftab": {
+                    "name": "main", 
+                    "address": [
+                        "base", 
+                        "xip"
+                    ]
+                }
             },
             {
                 "offset": "0x001a0000", 

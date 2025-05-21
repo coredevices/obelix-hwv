@@ -414,6 +414,7 @@ static void lcd_refresh_task(void *parameter)
         if (6 == loop) fill_color((uint8_t *)p_framebuffer, FB_WIDTH, FB_HEIGHT, framebuffer_color_format, 0x000000); //Fill BLACK color
         loop = (6 == loop) ? 0 : (loop + 1);
 
+        mpu_dcache_clean((uint32_t *)p_framebuffer, sizeof(framebuffer1));
 
         /*Flush framebuffer to LCD*/
         rt_device_control(lcd_device, RTGRAPHIC_CTRL_SET_BUF_FORMAT, &framebuffer_color_format);

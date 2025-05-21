@@ -20,7 +20,7 @@ Original Author: Shay Gal-on
 	This file contains the framework to acquire a block of memory, seed initial parameters, tun t he benchmark and report the results.
 */
 #include "coremark.h"
-#include <rtthread.h>
+// #include <rtthread.h>
 
 #ifndef COREMARK_MININUM_RUN_TIME
 #define COREMARK_MININUM_RUN_TIME (10)

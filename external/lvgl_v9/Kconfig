@@ -768,6 +768,8 @@ menu "LVGL V9 configuration"
 				default y if LV_CONF_MINIMAL
 			config LV_FONT_UNSCII_16
 				bool "Enable UNSCII 16 (Perfect monospace font)"
+			config LV_FONT_SIMYOU_30_CH
+				bool "SimYou 30 simple chinese"
 		endmenu
 
 		choice LV_FONT_DEFAULT
@@ -858,6 +860,9 @@ menu "LVGL V9 configuration"
 			config LV_FONT_DEFAULT_UNSCII_16
 				bool "UNSCII 16 (Perfect monospace font)"
 				select LV_FONT_UNSCII_16
+			config LV_FONT_DEFAULT_SIMYOU_30_CH
+				bool "SimYou 30 simple chinese"
+				select LV_FONT_SIMYOU_30_CH
 		endchoice
 
 		config LV_FONT_FMT_TXT_LARGE

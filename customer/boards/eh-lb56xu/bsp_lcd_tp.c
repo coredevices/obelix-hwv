@@ -83,6 +83,18 @@ void BSP_TP_Reset(uint8_t high1_low0)
 
 
 #ifdef HAL_LCD_MODULE_ENABLED
+static const uint32_t soft_spi_cfg[7][4] =
+{
+    /*SOFT_SPI_PIN       GPIO_PIN     LCDC_PIN_MUX       PULL     */
+    /*SW_SPI_CS*/        {36,          LCDC1_SPI_CS,   PIN_NOPULL},
+    /*SW_SPI_CLK*/       {37,          LCDC1_SPI_CLK,  PIN_NOPULL},
+    /*SW_SPI_D0*/        {38,          LCDC1_SPI_DIO0, PIN_NOPULL},
+    /*SW_SPI_D1*/        {39,          LCDC1_SPI_DIO1, PIN_NOPULL},
+    /*SW_SPI_D2*/        {40,          LCDC1_SPI_DIO2, PIN_NOPULL},
+    /*SW_SPI_D3*/        {41,          LCDC1_SPI_DIO3, PIN_NOPULL},
+    /*SW_SPI_DCX*/       {39,          LCDC1_SPI_DIO1, PIN_NOPULL}
+};
+
 void BSP_GPIO_Set2(int pin, uint32_t mode, int val, int is_porta)
 {
     GPIO_TypeDef *gpio = (is_porta) ? hwp_gpio1 : hwp_gpio2;
@@ -100,108 +112,32 @@ void BSP_GPIO_Set2(int pin, uint32_t mode, int val, int is_porta)
 
 void HAL_LCDC_SoftSpiInit(SOFT_SPI_PIN_Def pin, SOFT_SPI_IO_Def inout, uint32_t high1low0)
 {
-    uint32_t mode = ((inout == SW_SPI_INPUT) ? GPIO_MODE_INPUT : GPIO_MODE_OUTPUT);
-    switch (pin)
+    uint32_t gpio_pin = soft_spi_cfg[pin][0];
+
+    if (inout == SW_SPI_INPUT)
     {
-    case SW_SPI_CS:
-        BSP_GPIO_Set2(36, mode, high1low0, 1);
-        HAL_PIN_Set(PAD_PA36, GPIO_A36, PIN_PULLDOWN, 1); //LCDC1_SPI_CS
-        break;
-
-    case SW_SPI_CLK:
-        BSP_GPIO_Set2(37, mode, high1low0, 1);
-        HAL_PIN_Set(PAD_PA37, GPIO_A37, PIN_PULLDOWN, 1); //LCDC1_SPI_CLK
-        break;
-
-    case SW_SPI_D0:
-        BSP_GPIO_Set2(38, mode, high1low0, 1);
-        HAL_PIN_Set(PAD_PA38, GPIO_A38, PIN_PULLDOWN, 1); //LCDC1_SPI_DIO0
-        break;
-
-    case SW_SPI_DCX:
-    case SW_SPI_D1:
-        BSP_GPIO_Set2(39, mode, high1low0, 1);
-        HAL_PIN_Set(PAD_PA39, GPIO_A39, PIN_PULLDOWN, 1); //LCDC1_SPI_DIO1
-        break;
-
-    default:
-        HAL_ASSERT(0);
-        break;
+        BSP_GPIO_Set2(gpio_pin, GPIO_MODE_INPUT, high1low0, 1);
+        HAL_PIN_Set(PAD_PA00 + gpio_pin, GPIO_A0 + gpio_pin, PIN_PULLDOWN, 1);
+    }
+    else
+    {
+        BSP_GPIO_Set2(gpio_pin, GPIO_MODE_OUTPUT, high1low0, 1);
+        HAL_PIN_Set(PAD_PA00 + gpio_pin, GPIO_A0 + gpio_pin, PIN_NOPULL, 1);
     }
 }
 void HAL_LCDC_SoftSpiDeinit(SOFT_SPI_PIN_Def pin)
 {
-    switch (pin)
-    {
-    case SW_SPI_CS:
-        HAL_PIN_Set(PAD_PA36, LCDC1_SPI_CS, PIN_NOPULL, 1);
-        break;
-
-    case SW_SPI_CLK:
-        HAL_PIN_Set(PAD_PA37, LCDC1_SPI_CLK, PIN_NOPULL, 1);
-        break;
-
-    case SW_SPI_D0:
-        HAL_PIN_Set(PAD_PA38, LCDC1_SPI_DIO0, PIN_PULLDOWN, 1);
-        break;
-
-    case SW_SPI_DCX:
-    case SW_SPI_D1:
-        HAL_PIN_Set(PAD_PA39, LCDC1_SPI_DIO1, PIN_NOPULL, 1);
-        break;
-
-    default:
-        HAL_ASSERT(0);
-        break;
-    }
+    HAL_PIN_Set(PAD_PA00 + soft_spi_cfg[pin][0], soft_spi_cfg[pin][1], soft_spi_cfg[pin][2], 1);
 }
 uint32_t HAL_LCDC_SoftSpiGetPin(SOFT_SPI_PIN_Def pin)
 {
-    GPIO_PinState pin_state;
-    switch (pin)
-    {
-    case SW_SPI_D0:
-        pin_state = HAL_GPIO_ReadPin(hwp_gpio1, 38);
-        break;
-
-    case SW_SPI_D1:
-        pin_state = HAL_GPIO_ReadPin(hwp_gpio1, 39);
-        break;
-
-    default:
-        HAL_ASSERT(0);
-        break;
-    }
-
+    GPIO_PinState pin_state = HAL_GPIO_ReadPin(hwp_gpio1, soft_spi_cfg[pin][0]);
     return (GPIO_PIN_SET == pin_state) ? 1 : 0;
 }
 void HAL_LCDC_SoftSpiSetPin(SOFT_SPI_PIN_Def pin, uint32_t high1low0)
 {
     GPIO_PinState pin_state = (1 == high1low0) ? GPIO_PIN_SET : GPIO_PIN_RESET;
-
-    switch (pin)
-    {
-    case SW_SPI_CS:
-        HAL_GPIO_WritePin(hwp_gpio1, 36, pin_state);
-        break;
-
-    case SW_SPI_CLK:
-        HAL_GPIO_WritePin(hwp_gpio1, 37, pin_state);
-        break;
-
-    case SW_SPI_D0:
-        HAL_GPIO_WritePin(hwp_gpio1, 38, pin_state);
-        break;
-
-    case SW_SPI_DCX:
-    case SW_SPI_D1:
-        HAL_GPIO_WritePin(hwp_gpio1, 39, pin_state);
-        break;
-
-    default:
-        HAL_ASSERT(0);
-        break;
-    }
+    HAL_GPIO_WritePin(hwp_gpio1, soft_spi_cfg[pin][0], pin_state);
 }
 #endif /* HAL_LCD_MODULE_ENABLED */
 

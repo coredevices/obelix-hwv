@@ -53,7 +53,7 @@
 
 #include "dfu.h"
 #include "drv_flash.h"
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     #include "mbedtls/cipher.h"
     #include "mbedtls/pk.h"
     #include "mbedtls/sha256.h"
@@ -63,7 +63,7 @@
 #include "log.h"
 struct sec_configuration *g_sec_config;
 
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     static mbedtls_sha256_context ctx2;
 #endif
 
@@ -282,7 +282,7 @@ uint8_t *dfu_get_counter(uint32_t offset)
 uint8_t *dfu_dec_verify(uint8_t *key, uint32_t offset,
                         uint8_t *in_data, uint8_t *out_data, int size, uint8_t *hash)
 {
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     uint8_t *r = NULL;
 
     uint8_t *temp_out;
@@ -315,7 +315,7 @@ uint8_t *dfu_dec_verify(uint8_t *key, uint32_t offset,
 
 int8_t dfu_integrate_verify(uint8_t *in_data, int size, uint8_t *hash)
 {
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     int8_t ret = -1;
 
     mbedtls_sha256_init(&ctx2);
@@ -338,7 +338,7 @@ int8_t dfu_integrate_verify(uint8_t *in_data, int size, uint8_t *hash)
 
 uint8_t dfu_img_verification(dfu_ctrl_env_t *env)
 {
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
 #ifdef OTA_55X
     dfu_img_info_t *curr_info = &env->prog.fw_context.code_img.curr_img_info;
     if (env->mode == DFU_CTRL_NORMAL_MODE && env->ota_state.dfu_ID == DFU_ID_OTA_MANAGER)
@@ -419,7 +419,7 @@ uint8_t dfu_img_verification(dfu_ctrl_env_t *env)
 
 uint8_t dfu_img_verification_ext(dfu_ctrl_ext_env_t *env)
 {
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     dfu_img_info_t *curr_info = &env->prog.fw_context.code_img.curr_img_info;
     dfu_image_header_int_t *img_hdr = curr_info->header;
     int offset = 0;
@@ -505,7 +505,7 @@ int dfu_encrypt_packet(dfu_image_header_int_t *header, uint32_t offset, uint8_t 
 
 int8_t dfu_ctrl_ctrl_header_sig_verify(dfu_ctrl_env_t *env, uint8_t *packet, uint16_t total_len, uint8_t *sig)
 {
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     uint16_t packet_size = total_len - DFU_SIG_SIZE;
     //uint8_t *sig = (uint8_t *)packet + packet_size;
     uint8_t hash[DFU_IMG_HASH_SIZE];
@@ -544,7 +544,7 @@ int8_t dfu_ctrl_ctrl_header_sig_verify(dfu_ctrl_env_t *env, uint8_t *packet, uin
 
 int8_t dfu_ctrl_ctrl_header_sig_verify_ext(uint8_t *packet, uint16_t total_len, uint8_t *sig)
 {
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     uint16_t packet_size = total_len - DFU_SIG_SIZE;
     //uint8_t *sig = (uint8_t *)packet + packet_size;
     uint8_t hash[DFU_IMG_HASH_SIZE];

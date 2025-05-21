@@ -77,7 +77,10 @@ elif GetDepend('BF0_LCPU'):
     SFLIB=['bfhal_lcpu.lib']
     if rtconfig.CROSS_TOOL == 'keil':
         if GetDepend('SOC_SF32LB58X'):
-            rom_src_name = 'sifli_rom_58x.sym'
+            if GetDepend('LCPU_CONFIG_V2'):
+                rom_src_name = 'sifli_rom_58x_a2.sym'
+            else:    
+                rom_src_name = 'sifli_rom_58x.sym'
         elif GetDepend('SOC_SF32LB55X'):
             if GetDepend('LCPU_XIP_CODE'):
                 if GetConfigValue('BSP_LB55X_CHIP_ID') >= 3:
@@ -95,7 +98,10 @@ elif GetDepend('BF0_LCPU'):
             rom_src_name = 'sifli_rom_52x.sym'
     elif rtconfig.CROSS_TOOL == 'gcc': 
         if GetDepend('SOC_SF32LB58X'):
-            rom_src_name = 'sifli_rom_58x_gcc.sym'
+            if GetDepend('LCPU_CONFIG_V2'):
+                rom_src_name = 'sifli_rom_58x_a2_gcc.sym'
+            else:    
+                rom_src_name = 'sifli_rom_58x_gcc.sym'   
         elif GetDepend('SOC_SF32LB55X'):
             if GetDepend('LCPU_XIP_CODE'):
                 if GetConfigValue('BSP_LB55X_CHIP_ID') >= 3:
@@ -170,6 +176,16 @@ if GetDepend('BSP_AVDD_V18_ENABLE'):
 
 if GetDepend('BSP_PVDD_V18_ENABLE'):
     CPPDEFINES += ['PVDD_V18_ENABLE']
+    
+if GetDepend('LCPU_CONFIG_AUTO'):
+    if GetDepend('SOC_SF32LB58X') or GetDepend('SOC_SF32LB56X') or GetDepend('SOC_SF32LB55X'):
+        CPPDEFINES += ['LCPU_CONFIG_V1']
+    else:
+        CPPDEFINES += ['LCPU_CONFIG_V2']
+elif GetDepend('LCPU_CONFIG_V1'):
+    CPPDEFINES += ['LCPU_CONFIG_V1']
+elif GetDepend('LCPU_CONFIG_V2'):
+    CPPDEFINES += ['LCPU_CONFIG_V2']
 
 tick_per_second = GetConfigValue('RT_TICK_PER_SECOND')
 if tick_per_second == '':

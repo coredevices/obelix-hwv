@@ -21,14 +21,14 @@ if PKG_USING_WEBRTC
     config WEBRTC_AGC_FIX
         bool
         prompt "WebRTC auto gain control"
-        default n
+        default y
     config WEBRTC_AGC_DEMO
         bool
         prompt "WebRTC auto gain control test demo"
         default n
     choice
         prompt "Select echo cancellation Type"
-        default WEBRTC_AEC_NULL
+        default WEBRTC_AECM
         config WEBRTC_AEC
             bool "float point AEC"           
         config WEBRTC_AECM

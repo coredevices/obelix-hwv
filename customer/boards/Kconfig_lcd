@@ -180,10 +180,9 @@ if BSP_USING_LCD
  
 
         config LCD_USING_JDI387A_JDI
-            bool "1.2 round JDI387A LCD(use LCDC2)"
+            bool "1.2 round JDI387A LCD"
             select LCD_USING_JDI387A
             select BSP_LCDC_USING_JDI_PARALLEL
-            select BSP_USE_LCDC2_ON_HPSYS
             select BSP_USING_ROUND_TYPE_LCD
 
         config LCD_USING_LS013B7DD02_JDI
@@ -362,7 +361,12 @@ if BSP_USING_LCD
             select LCD_USING_CO5300_DUAL
             select BSP_LCDC_USING_QADSPI
             select LCD_USING_PWM_AS_BACKLIGHT
-  
+        
+        config LCD_USING_EDP_OPM060E9_V10
+            bool "6.0 rect electronic paper display(EPD OPM060E9_V1.0 1448x1072)"
+            select LCD_USING_OPM060E9_V10
+            select BSP_LCDC_USING_EPD_8BIT
+
     endchoice
 
     config LCD_HOR_RES_MAX
@@ -404,6 +408,7 @@ if BSP_USING_LCD
         default 720 if LCD_USING_TFT_NV3052C
         default 390 if LCD_USING_TFT_CO5300
         default 780 if LCD_USING_TFT_CO5300_DUAL
+        default 1448 if LCD_USING_EDP_OPM060E9_V10
 
         
     config LCD_VER_RES_MAX
@@ -445,6 +450,7 @@ if BSP_USING_LCD
         default 720 if LCD_USING_TFT_NV3052C
         default 450 if LCD_USING_TFT_CO5300
         default 450 if LCD_USING_TFT_CO5300_DUAL
+        default 1072 if LCD_USING_EDP_OPM060E9_V10
 
     config LCD_DPI
         int
@@ -485,6 +491,7 @@ if BSP_USING_LCD
         default 315 if LCD_USING_TFT_NV3052C
         default 300 if LCD_USING_TFT_CO5300
         default 300 if LCD_USING_TFT_CO5300_DUAL
+        default 300 if LCD_USING_EDP_OPM060E9_V10
 
     config BSP_USING_LCD_FRAMEBUFFER
         bool

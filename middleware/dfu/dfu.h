@@ -392,8 +392,8 @@ typedef struct
 #define FLASH_UNINIT_32     0xffffffff
 #define FLASH_UNINIT_8      0xff
 
-#define DFU_OFFLINE_INSTALL 0x7F
-#define DFU_OFFLINE_INSTALL_FINISH 0x3F
+#define DFU_PACKAGE_INSTALL 0x7F
+#define DFU_PACKAGE_INSTALL_FINISH 0x3F
 
 struct sec_configuration
 {
@@ -433,7 +433,7 @@ typedef enum
 {
     DFU_FORCE_MODE_NONE,
     DFU_FORCE_MODE_REBOOT_TO_USER,
-    DFU_FORCE_MODE_REBOOT_TO_OFFLINE_OTA_MANAGER,
+    DFU_FORCE_MODE_REBOOT_TO_PACKAGE_OTA_MANAGER,
 } dfu_force_mode_t;
 
 typedef struct

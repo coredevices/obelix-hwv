@@ -1394,8 +1394,6 @@ static HAL_StatusTypeDef LayerUpdate(LCDC_HandleTypeDef *lcdc)
             reg = (uint32_t)cfg->data;
         }
 
-        mpu_dcache_clean((uint32_t *)cfg->data, layer_1line_total_bytes * (cfg->data_area.y1 - cfg->data_area.y0 + 1));
-
 #ifndef SF32LB55X
         pHwLayerx->SRC = (HCPU_MPI_SBUS_ADDR(reg)) << LCD_IF_LAYER0_SRC_ADDR_Pos;
 #else
@@ -2326,9 +2324,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_Init(LCDC_HandleTypeDef *lcdc)
 {
     LCDC_HW_Init(lcdc);
 
-    /*Enable layer0 only default*/
-    lcdc->Layer[HAL_LCDC_LAYER_0].disable = 0;
-    lcdc->Layer[HAL_LCDC_LAYER_1].disable = 1;
+    /*Enable default layer only*/
+    lcdc->Layer[HAL_LCDC_LAYER_0].disable = (HAL_LCDC_LAYER_DEFAULT == HAL_LCDC_LAYER_0) ? 0 : 1;
+    lcdc->Layer[HAL_LCDC_LAYER_1].disable = (HAL_LCDC_LAYER_DEFAULT == HAL_LCDC_LAYER_1) ? 0 : 1;
 
     lcdc->ErrorCode = HAL_LCDC_ERROR_NONE;
     lcdc->State = HAL_LCDC_STATE_READY;
@@ -2456,7 +2454,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_ReadDatas(LCDC_HandleTypeDef *lcdc, ui
         uint32_t config;
         HAL_LCDC_ASSERT((data_len > 0) && (data_len <= 4));
 
-        HAL_LCDC_SPI_Sequence(lcdc, 1);
+
 
         if (HAL_TIMEOUT == WaitBusy(lcdc)) goto READ_TIMEOUT;
 
@@ -2468,17 +2466,18 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_ReadDatas(LCDC_HandleTypeDef *lcdc, ui
         else
 #endif /*LCD_IF_LCD_CONF_SPI_RD_SEL*/
         {
+            HAL_LCDC_SPI_Sequence(lcdc, 0);
+            SendSingleCmd(lcdc, addr, addr_len);
+            HAL_LCDC_SPI_Sequence(lcdc, 1);
             config = lcdc->Instance->SPI_IF_CONF;
             config &= ~(LCD_IF_SPI_IF_CONF_RD_LEN_Msk | LCD_IF_SPI_IF_CONF_SPI_RD_MODE_Msk | LCD_IF_SPI_IF_CONF_WR_LEN_Msk);
 
             config |= MAKE_REG_VAL((data_len - 1), LCD_IF_SPI_IF_CONF_RD_LEN_Msk, LCD_IF_SPI_IF_CONF_RD_LEN_Pos)
-                      | MAKE_REG_VAL(0, LCD_IF_SPI_IF_CONF_SPI_RD_MODE_Msk, LCD_IF_SPI_IF_CONF_SPI_RD_MODE_Pos)
-                      | MAKE_REG_VAL((addr_len - 1), LCD_IF_SPI_IF_CONF_WR_LEN_Msk, LCD_IF_SPI_IF_CONF_WR_LEN_Pos);
+                      | MAKE_REG_VAL(1, LCD_IF_SPI_IF_CONF_SPI_RD_MODE_Msk, LCD_IF_SPI_IF_CONF_SPI_RD_MODE_Pos);
 
 
             lcdc->Instance->SPI_IF_CONF = config;
-            lcdc->Instance->LCD_WR = (addr);
-            lcdc->Instance->LCD_SINGLE = LCD_IF_LCD_SINGLE_RD_TRIG;
+            lcdc->Instance->LCD_SINGLE = LCD_IF_LCD_SINGLE_RD_TRIG | LCD_IF_LCD_SINGLE_TYPE;;
 
             if (HAL_TIMEOUT == WaitBusy(lcdc)) goto READ_TIMEOUT;
 
@@ -3208,8 +3207,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LCDC_SendLayerData2Reg(LCDC_HandleTypeDef *
         uint32_t _ptc_reg = (((op) << PTC_TCR1_OP_Pos) | (trigger));\
         _ptc_reg |= ((repeat) > 0) ? (PTC_TCR1_REPEN|PTC_TCR1_REPTRIG) : 0; \
         if((delay)>0) HAL_LCDC_ASSERT(_ptc_ch < 4);                \
-        HAL_LCDC_ASSERT((delay) <= (PTC_RCR1_DLY_Msk >> PTC_RCR1_DLY_Pos));\
-        HAL_LCDC_ASSERT((repeat) <= (PTC_RCR1_REP_Msk >> PTC_RCR1_REP_Pos));\
+        HAL_LCDC_ASSERT((repeat) <= (int)(PTC_RCR1_REP_Msk >> PTC_RCR1_REP_Pos));\
         PTC_PHASE_ADDR(ptc_phase)[ptc_pahse_i++] = (uint32_t) _ptc_reg; \
         PTC_PHASE_ADDR(ptc_phase)[ptc_pahse_i++] = (uint32_t) (addr);            \
         PTC_PHASE_ADDR(ptc_phase)[ptc_pahse_i++] = (uint32_t) (data);            \
@@ -3640,7 +3638,7 @@ static HAL_StatusTypeDef RAMLESS_HW_FSM_WRITE_DATAS_START(LCDC_HandleTypeDef *lc
 
     uint32_t data_len_mod4 = (data_len % 4);
 
-    uint32_t i, cur_data;
+    uint32_t i, cur_data = 0;
 
 
     PTC_PHASE_INIT();
@@ -3686,7 +3684,7 @@ static HAL_StatusTypeDef RAMLESS_HW_FSM_WRITE_DATAS_START(LCDC_HandleTypeDef *lc
     PTC_PHASE_ENDS(11);
 
 
-    for (i = 0; i < data_len_mod4; i++)
+    for (i = 0, cur_data = 0; i < data_len_mod4; i++)
     {
         cur_data = (cur_data << 8) | (*p_data);
         p_data++;

@@ -7,21 +7,12 @@ menu "Bluetooth"
         default n
     config CFG_BT
         bool 
+        default y if CFG_BT_HOST
         default n
     config CFG_BT_PWR_CTRL
         bool 
         default n    
-    config CFG_TRC_EN
-        bool "Trace enabled"
-        default n
-    choice
-        depends on CFG_TRC_EN
-        prompt "Select trace level"
-        config CFG_TRC_HCI
-            bool "HCI trace enabled"
-        config CFG_TRC_ALL
-            bool "All trace enabled"
-    endchoice
+
     
     config BSP_BLE_SIBLES
         bool "Bluetooth service"
@@ -313,5 +304,5 @@ menu "Bluetooth"
     if !KCONFIG_V2 || KCONFIG_BOARD_V2
         rsource "Kconfig.hw"
     endif
-  
+   
 endmenu

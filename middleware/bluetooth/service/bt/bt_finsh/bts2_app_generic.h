@@ -87,7 +87,7 @@ int8_t bt_start_inquiry(bts2_app_stru *bts2_app_data, U32 dev_mask_cls, U16 time
  *----------------------------------------------------------------------------*/
 void bt_stop_inquiry(bts2_app_stru *bts2_app_data);
 
-void bt_register_receive_earphone_connect_req_handler(BOOL (*cb)(BTS2S_BD_ADDR *p_bd));
+void bt_register_receive_connect_req_handler(BOOL (*cb)(BTS2S_BD_ADDR *p_bd, U24 dev_cls));
 
 /*----------------------------------------------------------------------------*
  *
@@ -354,7 +354,7 @@ void bt_get_rssi(bts2_app_stru *bts2_app_data);
  *      none.
  *
  *----------------------------------------------------------------------------*/
-void bt_wr_link_policy(BTS2S_BD_ADDR *bd, uint16_t link_policy_mode);
+void bt_wr_link_policy(bts2_app_stru *bts2_app_data);
 
 /*----------------------------------------------------------------------------*
  *
@@ -485,9 +485,8 @@ U8  bt_hdl_sc_oobdata(bts2_app_stru *bts2_app_data);
 void bt_sifli_interface_stop_inquiry(void);
 void bt_sifli_interface_start_inquiry(void);
 #endif
-
-void bt_etner_sniff_mode(BTS2S_BD_ADDR *bd, uint16_t interval, uint16_t attmpt);
-void bt_exit_sniff_mode(BTS2S_BD_ADDR *bd);
+void bt_etner_sniff_mode(bts2_app_stru *bts2_app_data);
+void bt_exit_sniff_mode(bts2_app_stru *bts2_app_data);
 
 
 

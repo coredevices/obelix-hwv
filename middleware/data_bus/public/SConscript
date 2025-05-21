@@ -30,6 +30,9 @@ if GetDepend('BSP_USING_AMS_SVC'):
 
 CPPPATH = [cwd]
 
+if GetDepend('SOC_SF32LB55X') and GetDepend('BF0_HCPU'):
+    CPPPATH+=[cwd+'../../../bluetooth/include']
+
 # sensor data service include sensor data, SifliSDK reuse sensor data strcture from rt-thread.
 CPPPATH += [cwd+'../../include', cwd+"../../../../rtos/rtthread/components/drivers/sensors"]
     

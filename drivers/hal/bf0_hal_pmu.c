@@ -44,6 +44,7 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  */
+#include "rtconfig.h"
 #include "string.h"
 #include "bf0_hal.h"
 #include "math.h"
@@ -414,6 +415,11 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_DisableXTAL32(void)
 __HAL_ROM_USED HAL_StatusTypeDef HAL_PMU_LXTReady()
 {
     HAL_StatusTypeDef ret = HAL_OK;
+
+#ifdef FPGA
+    //rdy signal from analog£¬FPGA needn't check
+    return ret;
+#endif
 
     if (0 == (hwp_pmuc->LXT_CR & PMUC_LXT_CR_RDY))
     {
@@ -925,7 +931,7 @@ uint32_t HAL_PMU_ChgConfigTargetVolt(PMU_ChgHandleTypeDef *handle, uint32_t volt
         goto __EXIT;
     }
 
-    delta = (uint16_t)round(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
+    delta = (uint16_t)roundf(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
     cv_vctrl = handle->cv_vctrl + delta;
     max = GET_REG_VAL(PMUC_CHG_CR1_CV_VCTRL_Msk, PMUC_CHG_CR1_CV_VCTRL_Msk, PMUC_CHG_CR1_CV_VCTRL_Pos);
     if (cv_vctrl > max)
@@ -963,7 +969,7 @@ uint32_t HAL_PMU_ChgConfigVbatHighVolt(PMU_ChgHandleTypeDef *handle, uint32_t vo
         goto __EXIT;
     }
 
-    delta = (uint16_t)round(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
+    delta = (uint16_t)roundf(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
     high_vctrl = handle->cv_vctrl + delta;
     max = GET_REG_VAL(PMUC_CHG_CR2_HIGH_VCTRL_Msk, PMUC_CHG_CR2_HIGH_VCTRL_Msk, PMUC_CHG_CR2_HIGH_VCTRL_Pos);
     if (high_vctrl > max)
@@ -999,7 +1005,7 @@ uint32_t HAL_PMU_ChgConfigRepVolt(PMU_ChgHandleTypeDef *handle, uint32_t volt_mv
      * rep_vol_adj = -40mV + delta * 20mV
      * rep_cvtrl = cv + delta
      */
-    delta = (int16_t)round(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
+    delta = (int16_t)roundf(((float)volt_mv - (float)PMU_CHG_CAL_TARGET_VOLT) / step);
     if (delta < -(int16_t)(handle->cv_vctrl))
     {
         delta = -handle->cv_vctrl;

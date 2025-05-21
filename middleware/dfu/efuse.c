@@ -47,7 +47,7 @@
 #include <rtthread.h>
 #include "dfu.h"
 #include "board.h"
-#ifndef OTA_INSTALL_OFFLINE
+#ifdef PKG_SIFLI_MBEDTLS_BOOT
     #ifndef BSP_USING_HW_AES
         #include "mbedtls/aes.h"
     #endif
@@ -221,7 +221,7 @@ int sifli_hw_efuse_write(uint8_t id, uint8_t *data, int size)
 
 int sifli_hw_dec(uint8_t *key, uint8_t *in_data, uint8_t *out_data, int size, uint32_t init_offset)
 {
-#ifndef OTA_INSTALL_OFFLINE
+#if defined(OTA_55X) || defined (OTA_56X_NAND)
     uint32_t offset = 0;
 
     if (g_dfu_efuse_read_hook && !key)

@@ -62,8 +62,13 @@
     #ifdef LV_RES_AUTO
         #undef LV_HOR_RES_MAX
         #undef LV_VER_RES_MAX
-        #define LV_HOR_RES_MAX LCD_HOR_RES_MAX
-        #define LV_VER_RES_MAX LCD_VER_RES_MAX
+        #ifdef LCD_HOR_RES_MAX
+            #define LV_HOR_RES_MAX LCD_HOR_RES_MAX
+            #define LV_VER_RES_MAX LCD_VER_RES_MAX
+        #else
+            #define LV_HOR_RES_MAX 368
+            #define LV_VER_RES_MAX 448
+        #endif
     #endif
 
     #ifdef DISABLE_LVGL_V9
@@ -117,8 +122,11 @@
         #define LV_DISP_DEF_REFR_PERIOD   PKG_LVGL_DISP_REFR_PERIOD
     #endif
 
-
-    #define FT_BPP    2
+    #if (defined(SF32LB55X)||defined(SF32LB56X)||defined(SF32LB58X))
+        #define FT_BPP    4
+    #else
+        #define FT_BPP    2
+    #endif
 
     #ifndef _MSC_VER
         #define LV_USE_GPU_SIFLI_EPIC 1

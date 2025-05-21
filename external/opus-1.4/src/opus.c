@@ -31,6 +31,19 @@
 
 #include "opus.h"
 #include "opus_private.h"
+#include "os_support.h"
+
+#ifndef BF0_ACPU
+RT_WEAK void* opus_heap_malloc(uint32_t size)
+{
+    return rt_malloc(size);
+}
+RT_WEAK void opus_heap_free(void *p)
+{
+    rt_free(p);
+}
+#endif
+
 
 #ifndef DISABLE_FLOAT_API
 OPUS_EXPORT void opus_pcm_soft_clip(float *_x, int N, int C, float *declip_mem)

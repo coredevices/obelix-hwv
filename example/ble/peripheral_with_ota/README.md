@@ -23,11 +23,11 @@
 见接入方法-主工程
 
 ### 编译和烧录
-切换到例程project/common目录，运行scons命令执行编译：
+切换到例程project目录，运行scons命令执行编译：
 ```c
 > scons --board=eh-lb561 -j8
 ```
-切换到例程`project/common/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
 ```c
 $ ./uart_download.bat
 
@@ -35,7 +35,7 @@ $ ./uart_download.bat
 
 please input the serial port num:5
 ```
-关于编译、下载的详细步骤，请参考[快速入门](/quickstart/get-started-gcc.md)的相关介绍。
+关于编译、下载的详细步骤，请参考[快速入门](/quickstart/get-started.md)的相关介绍。
 
 ## 接入方法
 本工程已经配置完毕如下内容，如果需要在自己的工程接入DFU sub project，需要按如下进行检查
@@ -139,3 +139,4 @@ board.conf中打开的内容，dfu工程也会编译，导致dfu工程编译一�
 |0.0.1 |01/2025 |初始版本|
 |0.0.2 |03/2025 |增加关于nand芯片DFU的支持，更新制作命令和脚本，去掉无效参数|
 |0.0.3 |03/2025 |增加对58x的支持 |
+|0.0.4 |04/2025 |增加http下载示例，调整目录结构和宏开关 |

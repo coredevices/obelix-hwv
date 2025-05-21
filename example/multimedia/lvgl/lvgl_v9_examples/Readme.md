@@ -1,4 +1,4 @@
-# LVGL v8官方Example
+# LVGL v9官方Example
 ## 介绍
 本示例用来测试LVGL V9的API，使用官方提供的example。
 可以替换 src/main.c (模拟器在 simulator/applications/application.c) 里面的lv_example_scroll_1()函数，来测试其他API，

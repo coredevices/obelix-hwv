@@ -245,8 +245,13 @@ typedef struct
     int16_t y1;
 } EPIC_AreaTypeDef;
 
+typedef struct
+{
+    int16_t x;
+    int16_t y;
+} EPIC_PointTypeDef;
 
-#define EPIC_SIN_COS_FRAC_BIT   (15)
+
 typedef struct
 {
     /** angle in 0.1 degree */
@@ -273,6 +278,15 @@ typedef struct
      *   scale_y < EPIC_INPUT_SCALE_NONE means scaling up, scale_y > EPIC_INPUT_SCALE_NONE means scaling down
      */
     uint32_t scale_y;
+
+    /*Reserved params for epic_adv APIs*/
+    uint16_t type; /*0: disable, 1-type1 2-type2*/
+    int16_t angle_adv; /** angle in 0.1 degree */
+    int16_t pivot_z;
+    int16_t z_offset; /*src z offset*/
+    int16_t vp_x_offset; /*view x offset*/
+    int16_t vp_y_offset; /*view y offset*/
+    int16_t dst_z_offset; /*dst z offset*/
 } EPIC_TransformCfgTypeDef;
 
 typedef struct
@@ -839,6 +853,12 @@ HAL_StatusTypeDef HAL_EPIC_TransStart(EPIC_HandleTypeDef *hepic,
                                       EPIC_TransPath ver_path,
                                       void *user_data);
 
+HAL_StatusTypeDef HAL_EPIC_Adv(EPIC_HandleTypeDef *hepic,
+                               EPIC_LayerConfigTypeDef *input_layers,
+                               uint8_t input_layer_num,
+                               EPIC_LayerConfigTypeDef *output_layer);
+
+bool HAL_EPIC_IsHWBusy(EPIC_HandleTypeDef *hepic);
 
 
 bool HAL_EPIC_AreaIsIn(const EPIC_AreaTypeDef *ain_p, const EPIC_AreaTypeDef *aholder_p);
@@ -874,6 +894,14 @@ void HAL_EPIC_LayerSetDataOffset(EPIC_BlendingDataType *layer, int16_t x, int16_
 HAL_StatusTypeDef HAL_EPIC_BlendFastStart_Init(EPIC_HandleTypeDef *hepic_s);
 HAL_StatusTypeDef HAL_EPIC_BlendFastStart_IT(EPIC_HandleTypeDef *hepic, EPIC_HandleTypeDef *hepic_s);
 uint32_t HAL_EPIC_GetColorDepth(uint32_t color_mode);
+#define EPIC_SIN_COS_FRAC_BIT   (15)
+#define EPIC_TRIGO_SHIFT EPIC_SIN_COS_FRAC_BIT
+int16_t EPIC_TrigoSin(int16_t angle);
+static inline int32_t EPIC_TrigoCos(int16_t angle)
+{
+    return EPIC_TrigoSin(angle + 90);
+}
+void EPIC_TrigoSinCosP1(int16_t angle, int16_t *sin_val, int16_t *cos_val);
 
 
 /**

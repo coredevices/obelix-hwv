@@ -174,7 +174,7 @@ static eq_state_t ble_eq_config_send_cmd(uint8_t type, uint8_t len, uint8_t *dat
 
 static eq_state_t ble_eq_config_send_rsp(uint8_t type, uint8_t ret, uint8_t len, uint8_t *data)
 {
-    eq_state_t ret = 1;
+    eq_state_t status = 1;
     if (data == NULL && len != 0)
         return ret;
 
@@ -195,15 +195,15 @@ static eq_state_t ble_eq_config_send_rsp(uint8_t type, uint8_t ret, uint8_t len,
         rsp.data = rsp_data;
         ble_serial_tran_send_data(&rsp);
         bt_mem_free(rsp_data);
-        ret = 0;
+        status = 0;
     }
     else
     {
         LOG_E("eq config rsp OOM");
-        ret = 2;
+        status = 2;
     }
 
-    return ret;
+    return status;
 }
 
 

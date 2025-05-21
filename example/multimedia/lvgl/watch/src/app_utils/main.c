@@ -58,7 +58,9 @@ const struct dfs_mount_tbl mount_table[] =
 #ifdef RT_USING_DFS
 #include "dfs_file.h"
 #include "dfs_posix.h"
-#include "drv_flash.h"
+#ifndef BSP_USING_PC_SIMULATOR
+    #include "drv_flash.h"
+#endif /* !BSP_USING_PC_SIMULATOR */
 
 int auto_mnt_init(void)
 {

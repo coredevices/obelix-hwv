@@ -1,6 +1,7 @@
 from building import *
 import rtconfig
 import os
+import platform
 
 src = []
 inc = []
@@ -30,7 +31,10 @@ if GetDepend('LVGL_V9'):
             if check_h_hpp_exsit(current_path): # add .h and .hpp path
                 inc = inc + [current_path]
 
-    CPPDEFINES =['LV_CONF_KCONFIG_EXTERNAL_INCLUDE=<lv_conf_sifli.h>']
+    if platform.system() == 'Windows':
+        CPPDEFINES = ['LV_CONF_KCONFIG_EXTERNAL_INCLUDE=<lv_conf_sifli.h>']
+    else:
+        CPPDEFINES = ['LV_CONF_KCONFIG_EXTERNAL_INCLUDE=\<lv_conf_sifli.h\>']   
 
     group = DefineGroup('LVGL', src, depend = ['PKG_USING_LITTLEVGL2RTT'], CPPPATH = inc, CPPDEFINES = CPPDEFINES)
     #group = SConscript(cwd + '/env_support/rt-thread/SConscript')

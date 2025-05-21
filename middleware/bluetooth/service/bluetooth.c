@@ -112,12 +112,14 @@ typedef void (*patch_init_handler)(void);
     static uint32_t g_pa_ctrl_val;
 #endif
 
-#if defined(RT_USING_PM) && (defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) && defined(BF0_LCPU)
+#if defined(RT_USING_PM) && ((defined(SOC_SF32LB58X) && defined(LCPU_CONFIG_V2)) || defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) \
+    && defined(BF0_LCPU)
     static struct rt_device g_ble_mac_dev;
 #endif // defined(RT_USING_PM) && defined(SOC_SF32LB56X)
 
 static void ble_xtal_less_init(void)
 {
+#ifndef ROM_CONFIG_V2
 #ifndef BSP_USING_PC_SIMULATOR
     if (!HAL_LXT_ENABLED())
     {
@@ -129,8 +131,16 @@ static void ble_xtal_less_init(void)
         rom_config_set_default_rc_cycle(HAL_RC_CAL_GetLPCycle_ex());
 #endif
     }
+
+#ifdef SOC_SF32LB56X
+    // For BTC run in flash
+    rom_config_set_lld_prog_delay(3);
+#else
     rom_config_set_lld_prog_delay(2);
+#endif
+
 #endif //BSP_USING_PC_SIMULATOR
+#endif // ROM_CONFIG_V2
 }
 
 
@@ -144,13 +154,35 @@ static void ble_xtal_less_init(void)
     #define PATCH_ADDR LCPU_PATCH_START_ADDR
 #endif
 
-volatile patch_init_handler g_patch_handler;
-static void patch_install(void)
+#if defined(ROM_CONFIG_V2) && defined(BF0_LCPU)
+typedef struct
 {
+    uint32_t magic;
+    uint16_t patch_ver;
+    uint16_t reserved;
+    patch_init_handler handler;
+} patch_type_t;
+__USED void bluetooth_patch_install(void)
+{
+    if (memcmp((void *)LCPU_PATCH_BUF_START_ADDR, "PACH", 4) == 0)
+    {
+        patch_type_t *patch = (patch_type_t *)LCPU_PATCH_BUF_START_ADDR;
+        if (patch->handler)
+            patch->handler();
+    }
+}
+#endif //SOC_SF32LB57X
+
+
+volatile patch_init_handler g_patch_handler;
+__ROM_USED void patch_install(void)
+{
+#ifndef ROM_CONFIG_V2
 #if defined(BF0_LCPU) && (!defined(FPGA))
     g_patch_handler = (patch_init_handler)(PATCH_ADDR + 1);
     if ((*(uint32_t *)PATCH_ADDR) != 0)
         g_patch_handler();
+#endif
 #endif
 }
 
@@ -163,7 +195,7 @@ int32_t ble_event_process(uint16_t const msgid, void const *param,
 }
 #endif
 
-#if (defined(SOC_SF32LB58X) || defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) && (defined(SOC_BF0_LCPU)) && (!defined(BSP_USING_PC_SIMULATOR))
+#if !defined(SOC_SF32LB55X) && (defined(SOC_BF0_LCPU)) && (!defined(BSP_USING_PC_SIMULATOR)) && (!FPGA) && (!defined(LCPU_CONFIG_V2))
 
 extern void ble_isr_rom(void);
 extern void bt_isr_rom(void);
@@ -277,7 +309,8 @@ RT_USED void ble_standby_sleep_after_handler()
 }
 #endif
 
-#if defined(RT_USING_PM) && (defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) && defined(BF0_LCPU)
+#if defined(RT_USING_PM) && ((defined(SOC_SF32LB58X) && defined(LCPU_CONFIG_V2)) || defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) \
+    && defined(BF0_LCPU)
 
 __WEAK int bluetooth_stack_suspend(void)
 {
@@ -502,7 +535,7 @@ static void ad9364_bt_recovery(void)
 
 
 
-#ifndef ROM_ATTR
+//#ifndef ROM_ATTR
 RT_USED int32_t ble_standby_sleep_pre_handler()
 {
     return ble_standby_sleep_pre_handler_rom();
@@ -511,9 +544,10 @@ RT_USED int32_t ble_standby_sleep_pre_handler()
 RT_USED void ble_standby_sleep_after_handler()
 {
 #ifdef FPGA
-    ad9364_bt_recovery();
+    if (rom_config_get_default_is_fpga() == 1)
+        ad9364_bt_recovery();
 #endif
-#if (defined(SOC_SF32LB56X)||defined(SOC_SF32LB52X)) && !defined(BSP_USING_PC_SIMULATOR)
+#if (defined(SOC_SF32LB56X)||defined(SOC_SF32LB52X)||defined(SOC_SF32LB58X)) && !defined(BSP_USING_PC_SIMULATOR)
     HAL_RCC_SetMacFreq();
 #endif
     ble_standby_sleep_after_handler_rom();
@@ -526,7 +560,7 @@ RT_USED void ble_standby_sleep_after_handler()
 #endif
 }
 #endif // !ROM_ATTR
-#endif
+//#endif
 
 #if defined(SOC_SF32LB58X)
     #define NVDS_BUFF_START 0x204FFD00
@@ -550,23 +584,12 @@ extern void register_hostlib_trace_en_callback(hostlib_get_trace_en_callback fun
 
 bool bthost_get_hci_trace_en(void)
 {
-    sifli_nvds_read_tag_t tag;
-    tag.tag = NVDS_STACK_TAG_TRACER_CONFIG;
-    tag.length = NVDS_STACK_LEN_TRACER_CONFIG;
-    uint32_t trc_config;
-    uint8_t ret = sifli_nvds_read_tag_value(&tag, (uint8_t *)&trc_config);
-    if ((ret == NVDS_OK) && (trc_config != 0x20))
-    {
-        return true;
-    }
-    else
-    {
-        return false;
-    }
+    return sifli_hci_log_get_enable();
 }
 
 #endif
 
+#if 0
 #ifndef BSP_USING_PC_SIMULATOR
 uint32_t BTS2_GET_TIME(void)
 {
@@ -574,6 +597,7 @@ uint32_t BTS2_GET_TIME(void)
     uint64_t curr_timer = BTS_READ_GTIMER();
     return (uint32_t)(curr_timer * 1000 / freq);
 }
+#endif
 #endif
 
 #if !defined(SOC_SF32LB55X) || !defined(BF0_HCPU)
@@ -614,7 +638,6 @@ __ROM_USED int bluetooth_init(void)
 #endif
 #endif
 
-
 #if (defined(SOC_SF32LB58X) || defined(SOC_SF32LB56X)|| defined(SOC_SF32LB52X)) && defined(BF0_LCPU)
     rf_ptc_config(1);
 #endif // SOC_SF32LB58X
@@ -633,11 +656,14 @@ __ROM_USED int bluetooth_init(void)
 
     ble_xtal_less_init();
 
-#if defined(RT_USING_PM) && (defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) && defined(BF0_LCPU) && !defined(ROM_ATTR)
+#if defined(RT_USING_PM) && ((defined(SOC_SF32LB58X) && defined(LCPU_CONFIG_V2)) || defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) \
+    && defined(BF0_LCPU)
+
     bluetooth_pm_init();
 
 #ifdef FPGA
-    spi_addr = hwp_bt_mac->DMRADIOCNTL4;
+    if (rom_config_get_default_is_fpga() == 1)
+        spi_addr = hwp_bt_mac->DMRADIOCNTL4;
 #endif
 
 #endif // defined(RT_USING_PM) && defined(SOC_SF32LB56X)
@@ -663,7 +689,7 @@ __ROM_USED int bluetooth_init(void)
 #endif
 #else // BSP_BLE_SIBLES
 
-#if (defined(SOC_SF32LB56X)||defined(SOC_SF32LB52X)) && !defined(BSP_USING_PC_SIMULATOR)
+#if (defined(SOC_SF32LB56X)||defined(SOC_SF32LB52X)||defined(SOC_SF32LB58X)) && !defined(BSP_USING_PC_SIMULATOR)
     HAL_RCC_SetMacFreq();
 #endif
 
@@ -765,15 +791,6 @@ void bluetooth_wakeup_lcpu(void)
 void bluetooth_release_lcpu(void)
 {
 }
-
-uint8_t a2dp_set_speaker_volume(uint8_t volume)
-{
-    return volume;
-}
-void set_speaker_volume(uint8_t volume)
-{
-}
-
 #endif
 
 #ifndef BSP_USING_PC_SIMULATOR

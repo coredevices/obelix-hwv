@@ -292,6 +292,7 @@ uint8_t sifli_nvds_get_default_vaule(uint8_t *ptr, uint16_t *len);
 
 void sifli_hci_log_enable(bool is_on);
 
+bool sifli_hci_log_get_enable(void);
 
 // Porting APIs
 uint8_t sifli_nvds_flash_adaptor_delete(const char *key);

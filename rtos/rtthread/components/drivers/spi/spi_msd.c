@@ -18,7 +18,7 @@
 
 //#define MSD_TRACE
 
-#ifdef MSD_TRACE
+#if 1//def MSD_TRACE
     #define MSD_DEBUG(...)         rt_kprintf("[MSD] %d ", rt_tick_get()); rt_kprintf(__VA_ARGS__);
 #else
     #define MSD_DEBUG(...)
@@ -33,7 +33,7 @@
 
 static struct msd_device  _msd_device;
 ALIGN(4)
-static const uint8_t ones_data[512] =
+static uint8_t ones_data[512] =
 {
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -586,14 +586,14 @@ static rt_err_t rt_msd_init(rt_device_t dev)
         /* The host shall supply power to the card so that the voltage is reached to Vdd_min within 250ms and
            start to supply at least 74 SD clocks to the SD card with keeping CMD line to high.
            In case of SPI mode, CS shall be held to high during 74 clock cycles. */
-
+        if (1)
         {
-            uint8_t send_buffer[100]; /* 100byte > 74 clock */
+            uint8_t send_buffer[200]; /* 100byte > 74 clock */
 
             /* initial message */
             memset(send_buffer, DUMMY, sizeof(send_buffer));
             message.send_buf = send_buffer;
-            message.recv_buf = RT_NULL;
+            message.recv_buf = send_buffer;
             message.length = sizeof(send_buffer);
             message.cs_take = message.cs_release = 0;
 
@@ -849,7 +849,8 @@ static rt_err_t rt_msd_init(rt_device_t dev)
         else if (msd->card_type == MSD_CARD_TYPE_SD_V2_X)
         {
             rt_spi_take(msd->spi_device);
-            while (1)
+            uint8_t ocr_timeout = 5;
+            while (ocr_timeout --)
             {
                 MSD_DEBUG("SD_V2: READ_OCR\n");
                 result = _send_cmd(msd->spi_device, READ_OCR, 0x00, 0x00, response_r3, response);
@@ -864,6 +865,7 @@ static rt_err_t rt_msd_init(rt_device_t dev)
                     MSD_DEBUG("response:%x,%x,%x,%x\n", response[0], response[1], response[2], response[3]);
                     break;
                 }
+                rt_thread_mdelay(10);
             }
             rt_spi_release(msd->spi_device);
 
@@ -894,24 +896,25 @@ static rt_err_t rt_msd_init(rt_device_t dev)
                     result = RT_ERROR;
                     goto _exit;
                 }
-
-                /* CMD55 APP_CMD */
-                result = _send_cmd(msd->spi_device, APP_CMD, 0x00, 0x65, response_r1, response);
-//                if((result != RT_EOK) || (response[0] == 0x01))
-                if (result != RT_EOK)
+                ocr_timeout = 5;
+                while (ocr_timeout --)
                 {
-                    rt_spi_release(msd->spi_device);
-                    continue;
-                }
+                    /* CMD55 APP_CMD */
+                    result = _send_cmd(msd->spi_device, APP_CMD, 0x00, 0x65, response_r1, response);
+                    //                if((result != RT_EOK) || (response[0] == 0x01))
+                    if (result != RT_EOK)
+                    {
+                        rt_spi_release(msd->spi_device);
+                        continue;
+                    }
 
-                if ((response[0] & 0xFE) != 0)
-                {
-                    rt_spi_release(msd->spi_device);
-                    MSD_DEBUG("[err] Not SD ready!\r\n");
-                    result = RT_ERROR;
-                    goto _exit;
+                    if (response[0] == 0x01)
+                    {
+                        //MSD_DEBUG("response:%x,%x,%x,%x\n", response[0], response[1], response[2], response[3]);
+                        break;
+                    }
+                    rt_thread_mdelay(10);
                 }
-
                 /* ACMD41 SD_SEND_OP_COND */
                 result = _send_cmd(msd->spi_device, SD_SEND_OP_COND, 0x40000000, 0x77, response_r1, response);
                 if (result != RT_EOK)
@@ -1870,11 +1873,9 @@ int rt_spi_msd_init(void)
             return RT_ERROR;
         }
     }
-    rt_kprintf("[BUS]SPI1 sdcard succ ...\n");
     rt_device_t spi_dev = rt_device_find("sdcard");
     if (rt_device_open(spi_dev,  RT_DEVICE_FLAG_DMA_RX | RT_DEVICE_FLAG_DMA_TX | RT_DEVICE_FLAG_RDWR) != RT_EOK)
         rt_kprintf("[SD] OPEN SPI1 FAIL !\n");
-    rt_kprintf("%s %d spi_dev=%p 0x%x %s\n", __func__, __LINE__, spi_dev, spi_dev->open_flag, spi_dev->parent.name);
 
     if (msd_init("sd0", "sdcard") != RT_EOK)
     {
@@ -1897,4 +1898,4 @@ int rt_spi_msd_init(void)
     return RT_EOK;
 }
 
-INIT_DEVICE_EXPORT(rt_spi_msd_init);
+INIT_PREV_EXPORT(rt_spi_msd_init);

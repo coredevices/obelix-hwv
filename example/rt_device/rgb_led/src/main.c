@@ -8,9 +8,9 @@
 #define RGB_COLOR   (0x00ff00)
 
 #define RGBLED_NAME    "rgbled"
-#define PWM_CHANNEL 1
 
-struct rt_device_pwm *rgbled_device;
+
+struct rt_device *rgbled_device;
 struct rt_color
 {
     char *color_name;
@@ -33,8 +33,10 @@ struct rt_color rgb_color_arry[] =
 void rgb_led_init()
 {
     /*rgbled poweron*/
+#ifdef SF32LB52X
     HAL_PMU_ConfigPeriLdo(PMU_PERI_LDO3_3V3, true, true);
-    rgbled_device = (struct rt_device_pwm *)rt_device_find(RGBLED_NAME);
+#endif
+    rgbled_device = rt_device_find(RGBLED_NAME);//find rgb
     if (!rgbled_device)
     {
         RT_ASSERT(0);
@@ -43,26 +45,22 @@ void rgb_led_init()
 
 void rgb_led_set_color(uint32_t color)
 {
-    HAL_PIN_Set(PAD_PA32, GPTIM2_CH1, PIN_NOPULL, 1);   // RGB LED
+#ifdef SF32LB52X
+    HAL_PIN_Set(PAD_PA32, GPTIM2_CH1, PIN_NOPULL, 1);   // RGB LED 52x  pwm3_cc1
+#elif defined SF32LB58X
+    HAL_PIN_Set(PAD_PB39, GPTIM3_CH4, PIN_NOPULL, 0);//58x          pwm4_cc4
+#elif defined SF32LB56X
+    HAL_PIN_Set(PAD_PB09, GPTIM3_CH4, PIN_NOPULL, 0);//566
+#endif
     struct rt_rgbled_configuration configuration;
     configuration.color_rgb = color;
-    configuration.channel = PWM_CHANNEL;
-    rt_device_control(&rgbled_device->parent, PWM_CMD_SET_COLOR, &configuration);
+    rt_device_control(rgbled_device, PWM_CMD_SET_COLOR, &configuration);
 }
 
-void rgb_led_turnon(uint8_t on)
-{
-    HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_NOPULL, 1);   // RGB LED
-    rt_pin_mode(RGBLED_CONTROL_PIN, PIN_MODE_OUTPUT);
-    if (on)
-        rt_pin_write(RGBLED_CONTROL_PIN, PIN_LOW);
-    else
-        rt_pin_write(RGBLED_CONTROL_PIN, PIN_LOW);
-}
 
 void rgb_color_array_display()
 {
-    uint16_t i;
+    uint16_t i = 0;
     rt_kprintf("start display color!\n");
     while (1)
     {
@@ -71,15 +69,14 @@ void rgb_color_array_display()
             rt_kprintf("-> %s\n", rgb_color_arry[i].color_name);
             rgb_led_set_color(rgb_color_arry[i].color);
             rt_thread_mdelay(1000);
-            rgb_led_turnon(0);
+
         }
         i++;
         if (i >= 8)
             i = 0;
+
     }
 }
-
-
 /**
   * @brief  Main program
   * @param  None
@@ -89,7 +86,6 @@ int main(void)
 {
     /* Output a message on console using printf function */
     rt_kprintf("Hello world!\n");
-
     rgb_led_init();
     //rgb_color_auto();
     rgb_color_array_display();

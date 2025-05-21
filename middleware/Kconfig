@@ -16,6 +16,18 @@ menu "Sifli middleware"
         depends on BF0_LCPU
         bool "enable wifi coexist"
         default n
+
+    config USING_BARCODE128
+        bool "Barcode128 Library"
+        default y if PKG_USING_LITTLEVGL2RTT
+
+    config USING_CELL_TRANSFORM
+        bool "Cell Transform Algo"
+        default n
+
+    config USING_GAUSS_BLUR
+        bool "Gauss Blurring Library"
+        default n    
  
     menuconfig BSP_USING_PM
         bool "Enable Low power support"
@@ -72,6 +84,9 @@ menu "Sifli middleware"
             depends on BF0_LCPU
             bool "Disable low power timer in PM"
             default n
+        config GUI_APP_PM
+            bool "Use Gui_App_Pm"
+            default n    
     endif
     menuconfig BSP_USING_DATA_SVC
         bool "Enable Data service"
@@ -142,76 +157,83 @@ menu "Sifli middleware"
         bool "Device firmware update by uart"
         depends on BF0_HCPU
         default n
-    config BSP_USING_DFU
+
+    menuconfig USING_SECBOOT
+        bool "Secure Boot Module for Bootloader"
+        default n
+
+    if USING_SECBOOT
+        config SECBOOT_USING_APP_IMG_SIG_VERIFIY
+            bool "APP Image Signature Verfication Enabled"
+            default n
+        config SECBOOT_APP_IMG_SIG_BY_UID_ENABLD
+            bool "APP Image Signature Generated with UID"
+            default n
+            depends on SECBOOT_USING_APP_IMG_SIG_VERIFIY
+    endif
+
+    menuconfig BSP_USING_DFU
         bool "Device firmware update support functions"
         depends on BF0_HCPU
         default n    
-    config BSP_USING_DFU_COMPRESS
-        bool "Device firmware using compress"
-        depends on BSP_USING_DFU
-        default n
-    config DFU_DECOMPRESS_USING_SOFTWARE
-        bool "Use software function to decompress zlib ota code"
-        depends on BSP_USING_DFU_COMPRESS
-        default n
-    config DFU_USING_DOWNLOAD_BACKUP
-        bool "Backup for ota download content"
-        default n
-        if DFU_USING_DOWNLOAD_BACKUP
-            config DFU_USING_BACK_UP_FLASH
-            bool "Store backup content on flash"
+    if BSP_USING_DFU
+        config BSP_USING_DFU_COMPRESS
+            bool "Device firmware using compress"
+            default n
+        config DFU_DECOMPRESS_USING_SOFTWARE
+            bool "Use software function to decompress zlib ota code"
             depends on BSP_USING_DFU_COMPRESS
             default n
-        endif
-        if DFU_USING_DOWNLOAD_BACKUP
-            config DFU_USING_BACK_UP_PSRAM
-            bool "Store backup content on psram"
-            depends on BSP_USING_DFU_COMPRESS
+        config DFU_USING_DOWNLOAD_BACKUP
+            bool "Backup for ota download content"
             default n
-        endif
-    config OTA_SECTION_CHANGE
-        bool "Support change image download address"
-        depends on BSP_USING_DFU
-        default n
-    config OTA_ERROR_HANDLE_IN_USR
-        bool "OTA error handle in user bin"
-        depends on BSP_USING_DFU
-        default n
-    config OTA_USING_SOL_FUNC
-        bool "OTA will use solution's version check and power off function"
-        depends on BSP_USING_DFU
-        default n
-    config OTA_55X
-        bool "NOR flash OTA"
-        depends on BSP_USING_DFU
-        default n
-        if OTA_55X
-            config OTA_NOR_OTA_MANAGER_LITE
-            bool "support lite or none ota manager"
+            if DFU_USING_DOWNLOAD_BACKUP
+                config DFU_USING_BACK_UP_FLASH
+                bool "Store backup content on flash"
+                depends on BSP_USING_DFU_COMPRESS
+                default n
+            endif
+            if DFU_USING_DOWNLOAD_BACKUP
+                config DFU_USING_BACK_UP_PSRAM
+                bool "Store backup content on psram"
+                depends on BSP_USING_DFU_COMPRESS
+                default n
+            endif
+        config OTA_SECTION_CHANGE
+            bool "Support change image download address"
             default n
-        endif
-        if OTA_55X
-            config OTA_INSTALL_OFFLINE
-            bool "only provide install"
+        config OTA_ERROR_HANDLE_IN_USR
+            bool "OTA error handle in user bin"
             default n
-        endif
-    config OTA_56X_NAND
-        bool "NAND flash OTA"
-        depends on BSP_USING_DFU
-        default n
-        if OTA_56X_NAND
-            config OTA_NAND_ONLY
-            bool "Support nand only board"
+        config OTA_USING_SOL_FUNC
+            bool "OTA will use solution's version check and power off function"
             default n
-        endif
-    config OTA_NOR_LCPU_ROM_PATCH_SIZE
-        int "nor ota lcpu rom patch download size"
-        depends on DFU_USING_BACK_UP_FLASH
-        default 8192
-    config DFU_LCPU_ROM_PATCH_COMPARE
-        bool "skip update lcpu rom patch if compare result is the same"
-        depends on DFU_USING_BACK_UP_FLASH
-        default n
+        config OTA_55X
+            bool "NOR flash OTA"
+            default n
+            if OTA_55X
+                config OTA_NOR_OTA_MANAGER_LITE
+                bool "support lite or none ota manager"
+                default n
+            endif
+        config OTA_56X_NAND
+            bool "NAND flash OTA"
+            default n
+            if OTA_56X_NAND
+                config OTA_NAND_ONLY
+                bool "Support nand only board"
+                default n
+            endif
+        config OTA_NOR_LCPU_ROM_PATCH_SIZE
+            int "nor ota lcpu rom patch download size"
+            depends on DFU_USING_BACK_UP_FLASH
+            default 8192
+        config DFU_LCPU_ROM_PATCH_COMPARE
+            bool "skip update lcpu rom patch if compare result is the same"
+            depends on DFU_USING_BACK_UP_FLASH
+            default n
+    endif
+
     config BSP_SHARE_PREFS
         bool "Enable share preferences"
         depends on PKG_USING_EASYFLASH || PKG_USING_FLASHDB
@@ -377,7 +399,9 @@ menu "Sifli middleware"
                             select USING_METRICS_COLLECTOR
                             bool "Save by Metrics Collector"
                         config CPU_USAGE_METRICS_PRINT_DIRECTLY
-                            bool "Print Directly"
+                            bool "Print Periodically"
+                        config CPU_USAGE_METRICS_PRINT_MANUALLY
+                            bool "Print Manually"
                     endchoice
                     if CPU_USAGE_METRICS_PRINT_DIRECTLY
                         config CPU_USAGE_METRICS_PRINT_PERIOD
@@ -419,9 +443,14 @@ menu "Sifli middleware"
         depends on SOC_SF32LB58X || SOC_SF32LB56X
         select BSP_USING_CMSIS_DSP
         default n
-    config USING_ACPU_CTRL_FWK
+    menuconfig USING_ACPU_CTRL_FWK
         bool "Enable ACPU Control Framework"
         default n
+    if USING_ACPU_CTRL_FWK
+        config ACPU_CALLER_ENABLED
+            bool "Enable Caller"
+            default y
+    endif
 
     source "$SIFLI_SDK/middleware/file_logger/Kconfig"
 

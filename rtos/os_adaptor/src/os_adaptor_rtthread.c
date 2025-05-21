@@ -44,11 +44,55 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
 */
-
+#include "rtthread.h"
 #include "os_adaptor.h"
+#include "os_adaptor_rtthread.h"
 #include "string.h"
 
-__ROM_USED os_thread_t os_thread_create_int(const char *name, os_thread_func_t entry, void *parameter, void *stack_memory, uint32_t stack_size, os_priority_t priority, uint32_t tick)
+os_semaphore_t os_sem_create(char *name, uint32_t count)
+{
+    return (os_semaphore_t)rt_sem_create(name, count, RT_IPC_FLAG_FIFO);
+}
+
+os_status_t os_sem_delete(os_semaphore_t sem)
+{
+    return (os_status_t)rt_sem_delete((rt_sem_t)sem);
+}
+
+os_status_t os_sem_take(os_semaphore_t sema, int32_t timeout)
+{
+    return (os_status_t)rt_sem_take((rt_sem_t)sema, timeout);
+}
+os_status_t os_sem_release(os_semaphore_t      sem)
+{
+    return (os_status_t)rt_sem_release((rt_sem_t)sem);
+}
+
+os_mutex_t os_mutex_create(char *name)
+{
+    return (os_mutex_t)rt_mutex_create(name, RT_IPC_FLAG_FIFO);
+}
+
+os_status_t os_mutex_take(os_mutex_t mutex, int32_t timeout)
+{
+    return (os_status_t)rt_mutex_take((rt_mutex_t)mutex, timeout);
+}
+
+os_status_t os_mutex_release(os_mutex_t mutex)
+{
+    return (os_status_t)rt_mutex_release((rt_mutex_t)mutex);
+
+}
+
+os_status_t os_mutex_delete(os_mutex_t mutex)
+{
+    return (os_status_t)rt_mutex_delete((rt_mutex_t)mutex);
+
+}
+
+os_thread_t os_thread_create(char     *name, os_thread_func_t entry, void *parameter, void *stack_memory,
+                             uint32_t stack_size, os_priority_t priority, uint32_t tick)
+
 {
     os_handle_t tid = RT_NULL;
     do
@@ -220,5 +264,47 @@ __ROM_USED rt_err_t os_mailbox_delete_int(os_mailbox_t mailbox)
     return err;
 }
 #endif
+
+/**@brief Create a system timer.
+ * @param[in][out] timer_id Timer handle as reference for other timer functions and NULL if created failed.
+ * @param[in] func Timer callback functioin.
+ * @param[in] parameter Passed to the timer function as callback argument.
+ * @param[in] flags Timer options, such as one shot or periodic.
+ */
+void os_timer_create(ot_timer_id_t timer_id, os_timer_func_t func, void *parameter, uint8_t flag)
+{
+    rt_timer_init((rt_timer_t)timer_id, STRINGIFY(timer_id), func, parameter, 0, flag);
+}
+
+/**@brief Start a system timer.
+ * @param[in] timer_id Timer handle as created by \ref os_timer_create.
+ * @param[in] duration Timeout value in milliseconds.
+ * @retval The status of timer start.
+ */
+os_status_t os_timer_start(ot_timer_id_t timer_id, uint32_t duration)
+{
+    return rt_timer_start_int((rt_timer_t)timer_id, duration);
+}
+
+/**@brief Stop a system timer.
+ * @param[in] timer_id Timer handle as created by \ref os_timer_create.
+ * @retval The status of timer stop.
+ */
+os_status_t os_timer_stop(ot_timer_id_t timer_id)
+{
+    return rt_timer_stop((rt_timer_t)timer_id);
+}
+
+/**@brief Delete a system timer.
+ * @param[in] timer_id Timer handle as created by \ref os_timer_create.
+ * @retval The status of timer delete.
+ */
+os_status_t os_timer_delete(ot_timer_id_t        timer_id)
+{
+    return rt_timer_detach((rt_timer_t)timer_id);
+}
+
+
+
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

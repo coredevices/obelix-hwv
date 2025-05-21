@@ -364,7 +364,9 @@ void HAL_PDM_IRQHandler(PDM_HandleTypeDef *hpdm)
         if (0 == (err_mask & PDM_INT_MSK_INT_MASK_R))
             hpdm->ErrorCode |= PDM_ERROR_OVERFLOW_R;
         else
+        {
             ;//Ignore
+        }
     }
 
     if (err & PDM_INT_ST_OVERFLOW_L)
@@ -373,7 +375,9 @@ void HAL_PDM_IRQHandler(PDM_HandleTypeDef *hpdm)
         if (0 == (err_mask & PDM_INT_MSK_INT_MASK_L))
             hpdm->ErrorCode |= PDM_ERROR_OVERFLOW_L;
         else
+        {
             ;//Ignore
+        }
     }
 }
 

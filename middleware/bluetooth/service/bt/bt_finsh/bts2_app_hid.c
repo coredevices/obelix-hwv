@@ -1047,7 +1047,6 @@ void bt_hid_timeout_handler_reset_at_middle1(void *parameter)
 {
     bts2_app_stru *bts2_app_data = (bts2_app_stru *)parameter;
     // LOG_D("bt_hid_timeout_handler_reset_at_middle1\n");
-    // bt_hid_mouse_reset_at_middle(bts2_app_data);
     bt_hid_mouse_move_without_reset(bts2_app_data, 0, -DRAG_SPEED_Ios);
     bt_hid_mouse_move_without_reset(bts2_app_data, 0, -DRAG_SPEED_Ios);
     bt_hid_mouse_move_without_reset(bts2_app_data, 0, -DRAG_SPEED_Ios);

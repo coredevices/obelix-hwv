@@ -276,7 +276,7 @@ EXTERN_C bool lv_win32_init(
     (LV_COLOR_DEPTH == 1)
     lv_disp_draw_buf_init(
         &display_buffer,
-        (lv_color_t *)g_pixel_buffer,
+        (lv_color_t *)malloc(hor_res * ver_res * sizeof(lv_color_t)),
         NULL,
         hor_res * ver_res);
 #else
@@ -305,7 +305,7 @@ EXTERN_C bool lv_win32_init(
     pointer_driver.read_cb = lv_win32_pointer_driver_read_callback;
     lv_win32_pointer_device_object = lv_indev_drv_register(&pointer_driver);
 #ifdef BSP_USING_LVGL_INPUT_AGENT
-	lv_indev_agent_init(&pointer_driver);
+    lv_indev_agent_init(&pointer_driver);
 #endif
 
     static lv_indev_drv_t keypad_driver;
@@ -314,7 +314,7 @@ EXTERN_C bool lv_win32_init(
     keypad_driver.read_cb = lv_win32_keypad_driver_read_callback;
     lv_win32_keypad_device_object = lv_indev_drv_register(&keypad_driver);
 #ifdef BSP_USING_LVGL_INPUT_AGENT
-	lv_indev_agent_init(&keypad_driver);
+    lv_indev_agent_init(&keypad_driver);
 #endif
 
     static lv_indev_drv_t encoder_driver;
@@ -323,7 +323,7 @@ EXTERN_C bool lv_win32_init(
     encoder_driver.read_cb = lv_win32_encoder_driver_read_callback;
     lv_win32_encoder_device_object = lv_indev_drv_register(&encoder_driver);
 #ifdef BSP_USING_LVGL_INPUT_AGENT
-	lv_indev_agent_init(&encoder_driver);
+    lv_indev_agent_init(&encoder_driver);
 #endif
 
     return true;
@@ -389,11 +389,8 @@ static HDC lv_win32_create_frame_buffer(
             BitmapInfo.bmiHeader.biWidth = Width;
             BitmapInfo.bmiHeader.biHeight = -Height;
             BitmapInfo.bmiHeader.biPlanes = 1;
-#if LV_COLOR_DEPTH == 32
+#if (LV_COLOR_DEPTH == 32) || (LV_COLOR_DEPTH == 24)
             BitmapInfo.bmiHeader.biBitCount = 32;
-            BitmapInfo.bmiHeader.biCompression = BI_RGB;
-#elif LV_COLOR_DEPTH == 24
-            BitmapInfo.bmiHeader.biBitCount = 24;
             BitmapInfo.bmiHeader.biCompression = BI_RGB;
 #elif LV_COLOR_DEPTH == 16
             BitmapInfo.bmiHeader.biBitCount = 16;
@@ -441,10 +438,8 @@ static HDC lv_win32_create_frame_buffer(
                                   0);
             if (hBitmap)
             {
-#if LV_COLOR_DEPTH == 32
+#if (LV_COLOR_DEPTH == 32) || (LV_COLOR_DEPTH == 24)
                 *PixelBufferSize = Width * Height * sizeof(UINT32);
-#elif LV_COLOR_DEPTH == 24
-                *PixelBufferSize = Width * Height * 3;
 #elif LV_COLOR_DEPTH == 16
                 *PixelBufferSize = Width * Height * sizeof(UINT16);
 #elif LV_COLOR_DEPTH == 8
@@ -647,12 +642,23 @@ static void lv_win32_display_driver_flush_callback(
 {
     if (lv_disp_flush_is_last(disp_drv))
     {
-#if (LV_COLOR_DEPTH == 32) || \
+#if (LV_COLOR_DEPTH == 24)
+        for (int y = area->y1; y <= area->y2; ++y)
+        {
+            for (int x = area->x1; x <= area->x2; ++x)
+            {
+                g_pixel_buffer[y * disp_drv->hor_res + x] =
+                    lv_color_to32(*color_p);
+                color_p++;
+            }
+        }
+#elif (LV_COLOR_DEPTH == 32) || \
     (LV_COLOR_DEPTH == 24) || \
     (LV_COLOR_DEPTH == 16 && LV_COLOR_16_SWAP == 0) || \
     (LV_COLOR_DEPTH == 8) || \
     (LV_COLOR_DEPTH == 1)
-        UNREFERENCED_PARAMETER(color_p);
+        //UNREFERENCED_PARAMETER(color_p);
+        memcpy(g_pixel_buffer, color_p, g_pixel_buffer_size);
 #elif (LV_COLOR_DEPTH == 16 && LV_COLOR_16_SWAP != 0)
         SIZE_T count = g_pixel_buffer_size / sizeof(UINT16);
         PUINT16 source = (PUINT16)color_p;
@@ -730,10 +736,10 @@ static void lv_win32_pointer_driver_read_callback(
         data->point.y = g_display->driver->ver_res - 1;
     }
 #ifdef BSP_USING_LVGL_INPUT_AGENT
-	{
-		extern int lv_indev_agent_filter(lv_indev_drv_t *drv, lv_indev_data_t *data);
-		lv_indev_agent_filter(indev_drv, data);
-	}
+    {
+        extern int lv_indev_agent_filter(lv_indev_drv_t *drv, lv_indev_data_t *data);
+        lv_indev_agent_filter(indev_drv, data);
+    }
 #endif
 }
 
@@ -819,10 +825,10 @@ static void lv_win32_encoder_driver_read_callback(
     data->enc_diff = g_mousewheel_value;
     g_mousewheel_value = 0;
 #ifdef BSP_USING_LVGL_INPUT_AGENT
-	{
-		extern int lv_indev_agent_filter(lv_indev_drv_t *drv, lv_indev_data_t *data);
-		lv_indev_agent_filter(indev_drv, data);
-	}
+    {
+        extern int lv_indev_agent_filter(lv_indev_drv_t *drv, lv_indev_data_t *data);
+        lv_indev_agent_filter(indev_drv, data);
+    }
 #endif
 }
 

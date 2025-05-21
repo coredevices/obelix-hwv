@@ -75,6 +75,10 @@
     #endif
 #endif
 
+#ifndef IWDT_SLEEP_TIMEOUT
+    #define IWDT_SLEEP_TIMEOUT 300
+#endif
+
 #define IWDT_RELOAD_DIFFTIME 5   // iwdt to wdt reload difference time
 
 /**

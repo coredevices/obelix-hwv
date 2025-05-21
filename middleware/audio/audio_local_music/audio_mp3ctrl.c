@@ -699,15 +699,53 @@ static void mp3ctrl_thread_entry_file(void *parameter)
             p_cmd = rt_slist_entry(first, mp3_cmt_t, snode);
             rt_slist_remove(&ctrl->cmd_slist, first);
             mp3_slist_unlock(ctrl);
-            offset = (uint32_t)p_cmd->cmd_paramter1 * (uint64_t)ctrl->bitrate / 8;
 #if RT_USING_DFS
             if (ctrl->is_file)
-                lseek(ctrl->fd, ctrl->tag_len + offset, SEEK_SET);
+                lseek(ctrl->fd, ctrl->tag_len, SEEK_SET);
             else
 #endif
-                buf_seek(ctrl, ctrl->tag_len + offset);
+                buf_seek(ctrl, ctrl->tag_len);
             ctrl->cache_bytesLeft = 0;
             ctrl->is_file_end = 0;
+
+            nFrames = 0;
+            ctrl->frame_index = 0;
+            ctrl->cache_read_ptr = ctrl->cache_ptr;
+            cache_full_occured = 0;
+            ctrl->cache_bytesLeft = 0;
+            int info_got = 0;
+            while (1)
+            {
+                load_file_to_cache(ctrl);
+                offset = MP3FindSyncWord(ctrl->cache_read_ptr, ctrl->cache_bytesLeft);
+                if (offset >= 0)
+                {
+                    ctrl->cache_read_ptr += offset;
+                    ctrl->cache_bytesLeft -= offset;
+                    load_file_to_cache(ctrl);
+                    int err = MP3Decode(hMP3Decoder, &ctrl->cache_read_ptr, &ctrl->cache_bytesLeft, outBuf, 0, 1);
+                    if (err == 0 && info_got == 0)
+                    {
+                        MP3GetLastFrameInfo(hMP3Decoder, &mp3FrameInfo);
+                        info_got = 1;
+                    }
+                    nFrames++;
+                    ctrl->frame_index++;
+                    if (info_got)
+                    {
+                        uint32_t seconds = ctrl->frame_index * ctrl->frameinfo.one_channel_sampels / ctrl->frameinfo.samplerate;
+                        if (seconds >= (uint32_t)p_cmd->cmd_paramter1)
+                        {
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+            callback_playing_progress(ctrl);
             audio_mem_free(p_cmd);
             rt_event_send(ctrl->api_event, API_EVENT_SEEK);
         }
@@ -848,7 +886,7 @@ look_write_result:
             continue;
         }
 
-        int err = MP3Decode(hMP3Decoder, &ctrl->cache_read_ptr, &ctrl->cache_bytesLeft, outBuf, 0);
+        int err = MP3Decode(hMP3Decoder, &ctrl->cache_read_ptr, &ctrl->cache_bytesLeft, outBuf, 0, 0);
 
         nFrames++;
         ctrl->frame_index++;
@@ -1878,7 +1916,7 @@ Exit:
 #endif
 }
 
-PUBLIC_API int mp3ctrl_seek(mp3ctrl_handle handle, off_t frame_offset)
+PUBLIC_API int mp3ctrl_seek(mp3ctrl_handle handle, uint32_t seconds)
 {
 
     if (!handle || handle->magic != MP3_HANDLE_MAGIC)
@@ -1886,11 +1924,11 @@ PUBLIC_API int mp3ctrl_seek(mp3ctrl_handle handle, off_t frame_offset)
         LOG_I("mp3 seek h=0x%x", (uint32_t)handle);
         return -1;
     }
-    LOG_I("mp3 seek h=0x%x o=%d", (uint32_t)handle, frame_offset);
+    LOG_I("mp3 seek h=0x%x o=%d", (uint32_t)handle, seconds);
     mp3_cmt_t *cmd = audio_mem_calloc(1, sizeof(mp3_cmt_t));
     RT_ASSERT(cmd);
     cmd->cmd = MP3_SEEK;
-    cmd->cmd_paramter1 = (void *)frame_offset;
+    cmd->cmd_paramter1 = (void *)seconds;
     mp3_slist_lock(handle);
     rt_slist_append(&handle->cmd_slist, &cmd->snode);
     mp3_slist_unlock(handle);
@@ -2188,6 +2226,15 @@ again:
             return;
         }
         LOG_I("next none");
+    }
+    else if (strcmp(argv[1], "seek") == 0)
+    {
+        LOG_I("seek start");
+        if (g_handle1)
+        {
+            mp3ctrl_seek(g_handle1, atoi(argv[2]));
+        }
+        LOG_I("seek end");
     }
 }
 

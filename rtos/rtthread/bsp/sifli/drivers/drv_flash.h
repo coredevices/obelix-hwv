@@ -499,6 +499,19 @@ void register_nor_device(uint32_t flash_base, uint32_t offset, uint32_t size, ch
  * @return none.
  */
 void register_nand_device(uint32_t flash_base, uint32_t offset, uint32_t size, char *name);
+
+/**
+ * @brief Register MTD-DHARA device.
+ * @param[in] flash_base base address for flash controller.
+ * @param[in] offset     device start address to access.
+ * @param[in] size       device access total size, in bytes.
+ * @param[in] dhara_name registered mtd_dhara device name.
+ * @param[in] nand_name  registered mtd_nand device name.
+ *                       If NULL, name would be constructed using dhara_name with suffix "_N"
+ * @return none.
+ */
+void register_mtd_dhara_device(uint32_t flash_base, uint32_t offset, uint32_t size, char *dhara_name, char *nand_name);
+
 #else
 #define register_nand_device(flash_base,offset,size,name)
 #endif

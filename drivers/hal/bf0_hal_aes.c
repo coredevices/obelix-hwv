@@ -177,6 +177,10 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_AES_run(uint8_t enc, uint8_t *in_data, uint
         while (hwp_aes_acc->STATUS & AES_ACC_STATUS_BUSY);
         if (hwp_aes_acc->IRQ & (AES_ACC_IRQ_BUS_ERR_STAT | AES_ACC_IRQ_SETUP_ERR_STAT))
             status = HAL_ERROR;
+        if (IS_DCACHED_RAM(out_data))
+        {
+            SCB_InvalidateDCache_by_Addr(out_data, size);
+        }
     }
     return status;
 }

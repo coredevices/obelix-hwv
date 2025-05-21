@@ -1,0 +1,16 @@
+# .gitattributes template
+
+# Set default behavior to automatically normalize line endings
+* text=auto
+
+# Define binary files to avoid automatic line ending normalization
+*.png binary
+
+# Define language-specific settings
+*.c text
+*.py text
+
+# Custom settings for specific files
+*.sh eol=lf
+# e.g. t32.men
+*.men eol=crlf

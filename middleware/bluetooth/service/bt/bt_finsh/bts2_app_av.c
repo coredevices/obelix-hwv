@@ -84,6 +84,11 @@ static U8 av_sbc_cfg[4][4] =
     { 0x48, 0x2A, 0x02, 0x30 }   /* mono, SNR, 4 bands, 12 blocks, 32k_hz */
 };
 
+#ifdef CFG_AV_AAC
+uint8_t prefer_codec[2] = {AV_MPEG24_AAC, AV_SBC};
+#else
+uint8_t prefer_codec[1] = {AV_SBC};
+#endif
 
 
 static bts2s_av_inst_data *global_inst;
@@ -207,18 +212,29 @@ static uint16_t bt_av_get_role_from_sep_type(uint8_t sep)
 
 static uint8_t bt_av_get_local_seid(bts2s_av_inst_data *inst, uint16_t cfg, uint8_t codec)
 {
+    uint32_t i = 0;
     uint8_t local_id = 0xFF;
+#ifdef CFG_AV_SNK
+    if (cfg == AV_AUDIO_SNK)
+        for (; i < MAX_NUM_LOCAL_SNK_SEIDS; i++)
+            if (inst->local_seid_info[i].is_enbd && !inst->local_seid_info[i].local_seid.in_use
+                    && (inst->local_seid_info[i].local_seid.codec == codec))
+            {
+                local_id = i;
+                break;
+            }
+#endif // CFG_AV_SNK
 
-    for (uint32_t i = 0; i < (MAX_NUM_LOCAL_SRC_SEIDS + MAX_NUM_LOCAL_SNK_SEIDS); i++)
-    {
-        if (inst->local_seid_info[i].is_enbd && !inst->local_seid_info[i].local_seid.in_use
-                && (inst->local_seid_info[i].local_seid.codec == codec))
-        {
-            local_id = i;
-            break;
-        }
-    }
-
+#ifdef CFG_AV_SRC
+    if (cfg == AV_AUDIO_SRC)
+        for (i = MAX_NUM_LOCAL_SNK_SEIDS; i < MAX_NUM_LOCAL_SNK_SEIDS + MAX_NUM_LOCAL_SRC_SEIDS; i++)
+            if (inst->local_seid_info[i].is_enbd && !inst->local_seid_info[i].local_seid.in_use
+                    && (inst->local_seid_info[i].local_seid.codec == codec))
+            {
+                local_id = i;
+                break;
+            }
+#endif //CFG_AV_SRC
     return local_id;
 }
 
@@ -299,6 +315,50 @@ void bt_av_store_sbc_cfg(bts2_sbc_cfg *cfg, U8 *sbc_ie)
     cfg->max_bitpool = *sbc_ie;
 }
 
+#ifdef CFG_AV_AAC
+void bt_av_store_aac_cfg(bts2_aac_cfg *cfg, U8 *aac_ie)
+{
+    U8 i, mask;
+    U32 tmp;
+
+    tmp = (U32)(*(aac_ie + 1)) << 8 | ((*(aac_ie + 2)) & 0xF0);
+
+    switch (tmp)
+    {
+    case 0x00000100:
+        cfg->sample_freq = 44100;
+        break;
+
+    case 0x00000080:
+        cfg->sample_freq = 48000;
+        break;
+
+    default:
+        INFO_TRACE("unsupported sample frequency\n");
+        break;
+    }
+
+    tmp = (U32)(*(aac_ie + 2)) & 0x0C;
+
+    switch (tmp)
+    {
+    case 0x00000008:
+        cfg->chnls = 1;
+        break;
+
+    case 0x00000004:
+        cfg->chnls = 2;
+        break;
+
+    default:
+        INFO_TRACE("unsupported channels field\n");
+        break;
+    }
+
+    tmp = ((U32)(*(aac_ie + 3)) << 16) | ((*(aac_ie + 4)) << 8) | (*(aac_ie + 5));
+    cfg->bit_rate = tmp;
+}
+#endif
 
 
 static void bt_av_hdl_enb_cfm(bts2_app_stru *bts2_app_data)
@@ -535,13 +595,73 @@ static void bt_av_sbc_cfg_para_select(bts2s_av_inst_data *inst, uint16_t con_idx
 
 }
 
+
+#ifdef CFG_AV_AAC
+static void bt_av_aac_cfg_para_select(bts2s_av_inst_data *inst, uint16_t con_idx, uint8_t *app_serv_cap, uint8_t *serv_cap)
+{
+    /*build app. svc capabilities (media and if supp cont protection) */
+    app_serv_cap[0] = AV_SC_MEDIA_CODEC;
+    app_serv_cap[1] = AAC_MEDIA_CODEC_SC_SIZE - 2;
+    app_serv_cap[2] = AV_AUDIO << 4;
+    app_serv_cap[3] = AV_MPEG24_AAC;
+
+    //select object type,only support MPEG-2 AAC LC
+    app_serv_cap[4] = *(serv_cap + 4);
+
+    //select sampling frequency
+    do
+    {
+        if (*(serv_cap + 5) & av_aac_capabilities[1])
+        {
+            /*... a workaround for sonorix (has very bad sound unless using 32k_hz) */
+            app_serv_cap[5] = 0x01;
+            app_serv_cap[6] = 0x00;
+            break;
+        }
+
+        if (*(serv_cap + 6) & 0xF0 & av_aac_capabilities[2])
+        {
+            /*... a workaround for sonorix (has very bad sound unless using 32k_hz) */
+            app_serv_cap[5] = 0x00;
+            app_serv_cap[6] = 0x80;
+            break;
+        }
+    }
+    while (0);
+
+    //select channels field
+    do
+    {
+        if (*(serv_cap + 6) & 0x04 & av_aac_capabilities[2])
+        {
+            /*... a workaround for sonorix (has very bad sound unless using 32k_hz) */
+            app_serv_cap[6] |= 0x04;
+            break;
+        }
+
+        if (*(serv_cap + 6) & 0x08 & av_aac_capabilities[2])
+        {
+            /*... a workaround for sonorix (has very bad sound unless using 32k_hz) */
+            app_serv_cap[6] |= 0x08;
+            break;
+        }
+    }
+    while (0);
+
+
+    //select bit rate
+    app_serv_cap[7] = *(serv_cap + 7);
+    app_serv_cap[8] = *(serv_cap + 8);
+    app_serv_cap[9] = *(serv_cap + 9);
+
+
+    bt_av_store_aac_cfg(&inst->con[con_idx].act_aac_cfg, app_serv_cap + 4);
+
+}
+#endif
+
 static void bt_av_find_sep_and_set_cfg(bts2s_av_inst_data *inst, uint16_t con_idx)
 {
-#ifdef CFG_AV_AAC
-    uint8_t prefer_codec[2] = {AV_MPEG24_AAC, AV_SBC};
-#else
-    uint8_t prefer_codec[1] = {AV_SBC};
-#endif
     uint8_t *serv_cap;
     uint16_t idx = 0;
     BOOL found = FALSE;
@@ -579,6 +699,8 @@ static void bt_av_find_sep_and_set_cfg(bts2s_av_inst_data *inst, uint16_t con_id
                     else if (prefer_codec[t] == AV_MPEG24_AAC)
                     {
                         //TODO: AAC codec select
+                        app_serv_cap_len = AAC_MEDIA_CODEC_SC_SIZE;
+                        bt_av_aac_cfg_para_select(inst, con_idx, app_serv_cap, serv_cap);
                     }
 #endif
                     else
@@ -747,10 +869,49 @@ static void bt_av_hdl_get_cap_ind(bts2_app_stru *bts2_app_data)
         {
             //TODO
             // Before competed, just reject in this case
+#ifndef CFG_AV_AAC
             av_get_capabilities_rsp_rej(msg->conn_id, msg->tlabel, AV_BAD_ACP_SEID);
+#else
+            if (inst->con[con_idx].local_seid_idx == 0xff)
+                inst->con[con_idx].local_seid_idx = i;
+
+            U8 *cap_data;
+            // U8 cap_len = av_cap_rsp[0][1] + 2 + AV_DELAY_REPORT_SC_SIZE + AV_MEDIA_TRASPORT_SIZE + AV_CONTENT_PROTECTION_SIZE;
+            U8 cap_len = av_cap_rsp[1][1] + 2 + AV_MEDIA_TRASPORT_SIZE;
+            cap_data = bmalloc(cap_len);
+            BT_OOM_ASSERT(cap_data);
+            if (cap_data)
+            {
+                cap_data[0] = AV_SC_MEDIA_TRS;
+                cap_data[1] = 0;
+
+                bmemcpy(cap_data + 2, &av_cap_rsp[1], av_cap_rsp[1][1] + 2);
+
+                // *(cap_data + cap_len - 6) = AV_SC_CONT_PROTECTION;
+                // *(cap_data + cap_len - 5) = 2;
+                // *(cap_data + cap_len - 4) = 2;
+                // *(cap_data + cap_len - 3) = 0;
+
+
+
+                // *(cap_data + cap_len - 2) = AV_SC_DELAY_REPORTING;
+                // *(cap_data + cap_len - 1) = 0;
+
+
+
+                INFO_TRACE(">> accept the get capabilities indication\n");
+
+                av_get_capabilities_rsp_acp(msg->conn_id,
+                                            msg->tlabel,
+                                            cap_len,
+                                            cap_data);
+                bfree(cap_data);
+            }
+#endif
         }
         else
         {
+            //!Unsupported codec
             av_get_capabilities_rsp_rej(msg->conn_id, msg->tlabel, AV_BAD_ACP_SEID);
         }
     }
@@ -1034,8 +1195,16 @@ static void bt_av_hdl_set_cfg_cfm(bts2_app_stru *bts2_app_data)
         uint8_t is_start = 0;
         inst->con[con_idx].stream_hdl = msg->shdl;
         if (inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.codec == AV_SBC)
+        {
             if (!bt_av_prepare_sbc(inst, con_idx))
                 is_start = 1;
+        }
+#ifdef CFG_AV_AAC
+        else if (inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.codec == AV_MPEG24_AAC)
+        {
+            is_start = 1;
+        }
+#endif
 
         if (is_start)
         {
@@ -1269,6 +1438,40 @@ static void bt_av_hdl_set_cfg_ind(bts2_app_stru *bts2_app_data)
             else if (codec == AV_MPEG24_AAC)
             {
                 //TODO: Parser AAC strcture
+                while (serv_cap != NULL)
+                {
+                    if (*serv_cap == AV_SC_MEDIA_CODEC)
+                    {
+                        if (((*(serv_cap + 2)) >> 4 == AV_AUDIO) && (*(serv_cap + 3) == AV_MPEG24_AAC))
+                        {
+                            res = AV_ACPT;
+                        }
+                        else
+                        {
+                            res = AV_UNSUPP_CFG;
+                            break;
+                        }
+                    }
+                    else if (*serv_cap == AV_SC_CONT_PROTECTION)
+                    {
+                        /*cont protection is not supp by this app */
+                        // res = AV_UNSUPP_CFG;
+                        // break;
+                    }
+                    else if (*serv_cap == AV_SC_DELAY_REPORTING)
+                    {
+                        delay_report_enable = 1;
+                    }
+                    else
+                    {
+                        res = av_vldate_svc_cap(serv_cap);
+                        if (res != AV_ACPT)
+                        {
+                            break;
+                        }
+                    }
+                    serv_cap = av_get_svc_cap(AV_SC_NEXT, msg->serv_cap_data, msg->serv_cap_len, &idx);
+                }
             }
             else
                 res = AV_UNSUPP_CFG;
@@ -1289,6 +1492,13 @@ static void bt_av_hdl_set_cfg_ind(bts2_app_stru *bts2_app_data)
                 else if (codec == AV_MPEG24_AAC)
                 {
                     //TODO: Prepare AAC
+                    serv_cap = av_get_svc_cap(AV_SC_MEDIA_CODEC, msg->serv_cap_data, msg->serv_cap_len, &idx);
+
+#ifdef CFG_AV_AAC
+                    bt_av_store_aac_cfg(&inst->con[con_idx].act_aac_cfg, serv_cap + 4);
+#endif
+
+                    p_ret = 0;
                 }
                 else
                     RT_ASSERT(0);
@@ -1439,6 +1649,11 @@ static void bt_av_hdl_cfg_ind(bts2_app_stru *bts2_app_data)
             else if (codec == AV_MPEG24_AAC)
             {
                 //TODO: Prepare AAC
+                serv_cap = av_get_svc_cap(AV_SC_MEDIA_CODEC, msg->serv_cap_data, msg->serv_cap_len, &idx);
+#ifdef CFG_AV_AAC
+                bt_av_store_aac_cfg(&inst->con[con_idx].act_aac_cfg, serv_cap + 4);
+#endif
+                p_ret = 0;
             }
             else
                 RT_ASSERT(0);
@@ -1795,11 +2010,17 @@ static void bt_av_hdl_abort_ind(bts2_app_stru *bts2_app_data)
     if (inst->con[con_idx].stream_hdl == msg->shdl)
     {
         INFO_TRACE(">> accept to abort the av stream\n");
+#ifdef CFG_AV_SNK
+        if (inst->con[con_idx].cfg == AV_AUDIO_SNK)
+            bt_avsnk_abort_handler(inst, con_idx);
+#endif // CFG_AV_SNK
 #ifdef CFG_AV_SRC
         if (inst->con[con_idx].cfg == AV_AUDIO_SRC)
             bt_avsrc_hdl_abort_ind(inst, con_idx);
 #endif
         av_abort_rsp(msg->shdl, msg->tlabel);
+        inst->con[con_idx].st = avconned;
+        inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.in_use = FALSE;
     }
     else
     {
@@ -1849,7 +2070,7 @@ static void bt_av_hdl_close_ind(bts2_app_stru *bts2_app_data)
         inst->con[con_idx].st = avconned;
         inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.in_use = FALSE;
 
-        bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
+        // bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
     }
     else
     {
@@ -2053,9 +2274,7 @@ static void bt_av_hdl_disc_ind(bts2_app_stru *bts2_app_data)
             inst->local_seid_info[local_seid_idx].local_seid.in_use = FALSE;
         }
 
-        bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
-
-        inst->con[con_idx].local_seid_idx = -1;
+        // bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
 
 #ifdef CFG_AV_SNK
         if (inst->con[con_idx].cfg == AV_AUDIO_SNK)
@@ -2072,6 +2291,8 @@ static void bt_av_hdl_disc_ind(bts2_app_stru *bts2_app_data)
             bt_avsnk_hdl_disc_handler(inst, con_idx);
         }
 #endif // CFG_AV_SNK
+
+        inst->con[con_idx].local_seid_idx = -1;
 
 #ifdef CFG_AV_SRC
         if (inst->con[con_idx].cfg == AV_AUDIO_SRC)
@@ -2384,7 +2605,7 @@ void bt_av_msg_handler(bts2_app_stru *bts2_app_data)
             inst->con[con_idx].st = avconned;
             inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.in_use = FALSE;
 
-            bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
+            // bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
         }
 
         U8 play_status = bt_av_get_a2dp_stream_state();
@@ -2477,7 +2698,7 @@ void bt_av_disconnect(uint8_t con_idx)
             inst->local_seid_info[local_seid_idx].local_seid.in_use = FALSE;
         }
 
-        bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
+        // bt_av_recovery_local_seid(inst, inst->con[con_idx].cfg);
     }
 }
 

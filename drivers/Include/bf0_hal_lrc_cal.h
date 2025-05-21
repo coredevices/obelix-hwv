@@ -83,6 +83,11 @@ extern "C" {
 
 uint32_t HAL_RC_CAL_get_reference_cycle_on_48M(void);
 
+uint32_t HAL_RC_CAL_get_average_cycle_on_48M(void);
+
+void HAL_RC_CAL_update_ave_cycle(uint32_t ave_cycle);
+
+
 #define HAL_RC_CAL_update_reference_cycle_on_48M(lp_cycle) HAL_RC_CAL_update_reference_cycle_on_48M_ex(lp_cycle,0,100)
 /**
 * @brief  Get actual frequency of low power RC. The acutal freqency = 48000000 * lp_cycle / ref_cycle

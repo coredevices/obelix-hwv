@@ -7,3 +7,7 @@ config CUSTOM_MEM_MAP
     bool 
 	select custom_mem_map
 	default y    
+
+config ENABLE_DFU
+    bool "enable dfu and add dfu sub-project"
+	default n

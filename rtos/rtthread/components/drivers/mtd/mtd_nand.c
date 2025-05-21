@@ -12,7 +12,7 @@
  * COPYRIGHT (C) 2012, Shanghai Real Thread
  */
 
-#include <drivers/mtd_nand.h>
+#include <rtdevice.h>
 #include "mem_map.h"
 #include <string.h>
 

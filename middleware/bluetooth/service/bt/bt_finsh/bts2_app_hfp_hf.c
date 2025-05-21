@@ -1274,6 +1274,10 @@ U8 bt_hfp_hf_get_ciev_info(BTS2S_HF_CIEV_IND *msg)
     char *str1 = "call";
     char *str2 = "callheld";
     char *str3 = "callsetup";
+    char *str4 = "service";
+    char *str5 = "signal";
+    char *str6 = "roam";
+    char *str7 = "battchg";
     bt_notify_cind_ind_t ind = {0};
     bts2_hfp_hf_inst_data *inst_data = bt_hfp_hf_get_context();
 
@@ -1301,6 +1305,39 @@ U8 bt_hfp_hf_get_ciev_info(BTS2S_HF_CIEV_IND *msg)
         USER_TRACE(">>ciev call setup callStatus %d\n", msg->val);
     }
 
+    ptr = strcmp(msg->name, str4);//service
+
+    if (0 == ptr)
+    {
+        ind.type = HFP_AG_CIND_SERVICE_TYPE;
+        ind.val = msg->val;
+    }
+
+    ptr = strcmp(msg->name, str5);//signal
+
+    if (0 == ptr)
+    {
+        ind.type = HFP_AG_CIND_SIGNAL_TYPE;
+        ind.val = msg->val;
+    }
+
+    ptr = strcmp(msg->name, str6);//roam
+
+    if (0 == ptr)
+    {
+        ind.type = HFP_AG_CIND_ROAM_TYPE;
+        ind.val = msg->val;
+    }
+
+    ptr = strcmp(msg->name, str7);//battchg
+
+    if (0 == ptr)
+    {
+        ind.type = HFP_AG_CIND_BATT_TYPE;
+        ind.val = msg->val;
+    }
+
+    USER_TRACE("CIEV name:%s val:%d", msg->name, msg->val);
     bt_interface_bt_event_notify(BT_NOTIFY_HFP_HF, BT_NOTIFY_HF_INDICATOR_UPDATE,
                                  &ind, sizeof(bt_notify_cind_ind_t));
     return msg->val;
@@ -1393,6 +1430,10 @@ void bt_hfp_hf_msg_hdl(bts2_app_stru *bts2_app_data)
             call_info.call_status = inst_data->cind_status.callStatus;
             call_info.callsetup_status = inst_data->cind_status.callHeldStatus;
             call_info.callheld_status = inst_data->cind_status.callHeldStatus;
+            call_info.roam = inst_data->cind_status.roam;
+            call_info.service = inst_data->cind_status.service;
+            call_info.signal = inst_data->cind_status.signal;
+            call_info.batt_level = inst_data->cind_status.batt_level;
             bt_interface_bt_event_notify(BT_NOTIFY_HFP_HF, BT_NOTIFY_HF_CALL_STATUS_UPDATE,
                                          &call_info, sizeof(bt_notify_all_call_status));
 
@@ -1810,6 +1851,10 @@ void bt_hfp_hf_msg_hdl(bts2_app_stru *bts2_app_data)
             inst_data->cind_status.callStatus = msg->cind_status.callStatus;
             inst_data->cind_status.callHeldStatus = msg->cind_status.callHeldStatus;
             inst_data->cind_status.callSetupStatus = msg->cind_status.callSetupStatus;
+            inst_data->cind_status.roam = msg->cind_status.roam;
+            inst_data->cind_status.service = msg->cind_status.service;
+            inst_data->cind_status.signal = msg->cind_status.signal;
+            inst_data->cind_status.batt_level = msg->cind_status.batt_level;
             break;
         }
 
@@ -1817,6 +1862,10 @@ void bt_hfp_hf_msg_hdl(bts2_app_stru *bts2_app_data)
         call_info.call_status = msg->cind_status.callStatus;
         call_info.callsetup_status = msg->cind_status.callHeldStatus;
         call_info.callheld_status = msg->cind_status.callHeldStatus;
+        call_info.roam = msg->cind_status.roam;
+        call_info.service = msg->cind_status.service;
+        call_info.signal = msg->cind_status.signal;
+        call_info.batt_level = msg->cind_status.batt_level;
         bt_interface_bt_event_notify(BT_NOTIFY_HFP_HF, BT_NOTIFY_HF_CALL_STATUS_UPDATE,
                                      &call_info, sizeof(bt_notify_all_call_status));
         break;

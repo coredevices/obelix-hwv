@@ -518,9 +518,9 @@ typedef struct
 /** @defgroup GPT_Encoder_Mode TIM Encoder Mode
   * @{
   */
-#define GPT_ENCODERMODE_TI1                (1 << GPT_SMCR_MSM)
-#define GPT_ENCODERMODE_TI2                (2 << GPT_SMCR_MSM)
-#define GPT_ENCODERMODE_TI3                (3 << GPT_SMCR_MSM)
+#define GPT_ENCODERMODE_TI1                (1 << GPT_SMCR_SMS_Pos)
+#define GPT_ENCODERMODE_TI2                (2 << GPT_SMCR_SMS_Pos)
+#define GPT_ENCODERMODE_TI3                (3 << GPT_SMCR_SMS_Pos)
 
 
 /**

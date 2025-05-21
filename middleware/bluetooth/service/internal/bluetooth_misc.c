@@ -268,9 +268,19 @@ void pta_ptc_config(uint8_t index, uint8_t sel_idx, uint8_t tripol, uint16_t del
 
 #endif // BLUETOOTH_PTC_CONFIG
 
+#if defined(FPGA)
+    extern uint8_t rom_config_get_default_is_fpga(void);
+#endif // (FPGA)
+
 void rf_ptc_config(uint8_t is_reset)
 {
-#ifdef BLUETOOTH_PTC_CONFIG
+#if defined(BLUETOOTH_PTC_CONFIG)
+
+#if defined(FPGA)
+    if (rom_config_get_default_is_fpga() == 1)
+        return;
+#endif // FPGA
+
     HAL_RCC_EnableModule(RCC_MOD_PTC2);
     if (is_reset)
     {

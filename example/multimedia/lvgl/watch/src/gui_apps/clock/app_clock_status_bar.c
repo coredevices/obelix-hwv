@@ -1,13 +1,24 @@
 #include "app_clock_status_bar.h"
 #include "app_mem.h"
 
+typedef struct
+{
+    lv_color_t title_color;
+    uint32_t  title_font_size;
+    lv_color_t content_color;
+    uint32_t  content_font_size;
+    lv_coord_t content_height;
+    const uint8_t *p_title;
+    const uint8_t *p_content;
+} notification_msg_cntxt_t;
+
 static lv_obj_t *app_clock_main_status_bar;
 static lv_obj_t *status_bar_area_up;
 static lv_obj_t *status_bar_area_down;
 
 static rt_bool_t alarm_enabled = RT_TRUE;
 static rt_bool_t timer_enabled = RT_TRUE;
-static lv_obj_t *bar_label1, *bar_label2;
+
 
 static lv_obj_t *app_clock_tileview;
 
@@ -21,6 +32,41 @@ static const lv_btnmatrix_ctrl_t btnm_ctrl_map[] =
 static const char *btnm_map[] = {"BT", "GPS", "\n",
                                  "ALARM", "TIMER", ""
                                 };
+static const notification_msg_cntxt_t notify_msgs[] =
+{
+    {
+        LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
+        LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_SUPER, LV_PCT(40),
+        "思澈科技欢迎您",
+        "思澈科技欢迎您"
+    },
+    {
+        LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
+        LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_HUGE, LV_PCT(20),
+        "思澈科技欢迎您",
+        "思澈科技欢迎您"
+    },
+    {
+        LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
+        LV_COLOR_MAKE(0x00, 0xFF, 0x00), FONT_BIGL, LV_PCT(20),
+        "思澈科技欢迎您",
+        "思澈科技欢迎您"
+    },
+    {
+        LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_SUBTITLE,
+        LV_COLOR_MAKE(0x00, 0x00, 0x00), FONT_NORMAL, LV_PCT(30),
+        "关于我们",
+        "思澈科技是一家专注于物联网技术的公司，提供一站式的物联网解决方案。最先提出嵌入式MCU+GPU的物联网解决方案，为客户提供更高性能、更低功耗的物联网产品。"
+    },
+
+    {
+        LV_COLOR_MAKE(0xFF, 0xFF, 0xFF), FONT_NORMAL,
+        LV_COLOR_MAKE(0x00, 0x00, 0xFF), FONT_SMALL, LV_PCT(20),
+        "我们是谁",
+        "思澈科技成立於2019年3月，總部位於上海張江高科技園區，在重慶、北京、深圳、蘇州均設有分子公司，團隊成員均來自於美國、中國的一線電晶體設計企業，包括Marvell、 Broadcom、Amazon、 紫光展銳、聯發科等，碩士以上學歷占比超過80%； 團隊骨幹具有豐富的產品定義->自主研發->大規模量產的全流程經驗，由這些骨幹成員主導研發的晶片累計出貨超過10億顆。"
+    },
+
+};
 
 
 #define PX_5mm LV_DPX(32) //160 is 1 inch(about 2.5cm)
@@ -51,74 +97,9 @@ static void app_clock_main_status_bar_event_cb(lv_event_t *event)
 {
     lv_obj_t *obj = lv_event_get_target(event);
 
-    //if (LV_EVENT_PRESSING != event->code)
-    //    rt_kprintf("app_clock_main_status_bar_event_cb %p, got event %s\n", obj, lv_event_to_name(event->code));
 
     switch (event->code)
     {
-    case LV_EVENT_SCROLL_BEGIN:
-    {
-        static int num = 2;
-        num++;
-        {
-            lv_color_t color = LV_COLOR_RED;
-            lv_ext_set_local_font(bar_label1, FONT_TITLE, color);
-        }
-        {
-            lv_color_t color = LV_COLOR_GRAY;
-            lv_ext_set_local_font(bar_label2, FONT_TITLE, color);
-        }
-        //lv_obj_realign(bar_label2);
-
-        if (1 == num % 3)
-        {
-            lv_label_set_text(bar_label1, "20:08 中文简体");// 陆标、台标之正体字差异 ");
-            lv_label_set_text(bar_label2,
-                              "界面初始化时读取文本或\n"
-                              "进制格式的xml文件，读取\n"
-                              "一个标签后，即根据标签\n"
-                              "建对应的控件，接着读取\n"
-                              "该标签的所有属性，调用\n"
-                              "接口设置属性值，遍历所\n"
-                              "标签就能创建出界面上的\n");
-        }
-        else if (2 == num % 3)
-        {
-            lv_color_t color = LV_COLOR_GREEN;
-            lv_label_set_text(bar_label1, "中文繁体,小号字体");
-            lv_ext_set_local_font(bar_label2, FONT_SMALL, color);
-            lv_label_set_text(bar_label2,
-                              "有很多的吧友列過這樣的\n"
-                              "單獨整理一下，打在電腦\n"
-                              "來了，何不分享到吧裡說\n"
-                              "也能給沒收藏那些老帖子\n"
-                              "細微的幫助。爭論全民應\n"
-                              "也能給沒收藏那些老帖子\n"
-                              "也能給沒收藏那些老帖子\n"
-                              "細微的幫助。爭論全民應\n"
-                              "也能給沒收藏那些老帖子\n"
-                              "細微的幫助。爭論全民應\n"
-                              "也能給沒收藏那些老帖子\n"
-                              "細微的幫助。爭論全民應\n"
-                              "個更正這樣的話題其實是\n"
-                              "所以然，不如效仿老吧友\n"
-                              "」							  \n");
-
-        }
-        else //if(3 == num++ % 1)
-        {
-            lv_color_t color = LV_COLOR_GREEN;
-
-            lv_label_set_text(bar_label1, "超大号字体");
-            lv_ext_set_local_font(bar_label2, FONT_SUPER, color);
-            lv_label_set_text(bar_label2, "20:08 思澈科技欢迎您");
-        }
-
-        lv_obj_scroll_to_view(bar_label1, LV_ANIM_ON);
-        lv_obj_scroll_to_view(bar_label2, LV_ANIM_ON);
-
-        break;
-    }
     case LV_EVENT_RELEASED:
     case LV_EVENT_VALUE_CHANGED:
     {
@@ -138,7 +119,7 @@ static void app_clock_main_status_bar_event_cb(lv_event_t *event)
     case LV_EVENT_SHORT_CLICKED:
     case LV_EVENT_LONG_PRESSED:
     case LV_EVENT_CLICKED:
-    case LV_EVENT_SCROLL_END:
+
     case LV_EVENT_FOCUSED:
     default:
         //printf("Released\n");
@@ -290,44 +271,42 @@ static void control_panel_content_init(lv_obj_t *par)
 */
 static void msg_list_content_init(lv_obj_t *par)
 {
-    lv_obj_t *label1;
+    lv_obj_t *label_header;
+    lv_obj_t *align_base;
+
+    label_header = lv_label_create(par);
+    lv_label_set_text(label_header, "Notifications");
+    lv_ext_set_local_font(label_header, FONT_TITLE, LV_COLOR_WHITE);
+    lv_obj_set_size(label_header, LV_PCT(100), LV_PCT(5));
+    lv_obj_align(label_header, LV_ALIGN_TOP_MID, 0, LV_PCT(5));
+
+    align_base = label_header;
+    for (uint32_t i = 0; i < sizeof(notify_msgs) / sizeof(notify_msgs[0]); i++)
+    {
+        lv_obj_t *title_label = lv_label_create(par);
+        lv_obj_set_width(title_label, LV_PCT(80));
+        lv_label_set_long_mode(title_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_ext_set_local_font(title_label, notify_msgs[i].title_font_size, notify_msgs[i].title_color);
+        lv_label_set_text(title_label, notify_msgs[i].p_title);
 
 
-    label1 = lv_label_create(par);
-    lv_label_set_text(label1, "notification");
-    lv_obj_align(label1, LV_ALIGN_TOP_MID, 0, 20);
-    lv_obj_set_height(label1, LV_PCT(5));
+        lv_obj_t *content_label_container = lv_obj_create(par);
+        lv_obj_set_size(content_label_container, LV_PCT(100), notify_msgs[i].content_height);
+        lv_ext_set_local_bg(content_label_container, LV_COLOR_GRAY, LV_OPA_80);
 
 
-    bar_label1 = lv_label_create(par);
-    lv_obj_set_width(bar_label1, LV_PCT(75));         /*Set the label width to max value to not show hor. scroll bars*/
-    lv_obj_set_height(bar_label1, LV_PCT(10));         /*Set the label width to max value to not show hor. scroll bars*/
-    lv_ext_set_local_bg(bar_label1, LV_COLOR_BLUE, LV_OPA_30);
-    lv_obj_align_to(bar_label1, label1, LV_ALIGN_OUT_BOTTOM_MID, 0, PX_5mm);
+        lv_obj_t *content_label = lv_label_create(content_label_container);
+        lv_obj_set_width(content_label, LV_PCT(100));
+        lv_label_set_long_mode(content_label, LV_LABEL_LONG_WRAP);
+        lv_ext_set_local_font(content_label, notify_msgs[i].content_font_size, notify_msgs[i].content_color);
+        lv_label_set_text(content_label, notify_msgs[i].p_content);
+        lv_obj_set_layout(content_label, LV_LAYOUT_FLEX);
 
 
-    //lv_label_set_long_mode(bar_label1, LV_LABEL_LONG_DOT);
-    //lv_ext_set_local_font(bar_label1, FONT_TITLE, LV_COLOR_RED);
-    //lv_label_set_text(bar_label1, "陸標");// 陸標、台標之正體字差異 ")
-    //lv_label_set_long_mode(bar_label1, LV_LABEL_LONG_DOT);
-
-    //lv_obj_t *
-    lv_obj_t *page = lv_obj_create(par);
-    lv_ext_set_local_bg(page, LV_COLOR_WHITE, LV_OPA_80);
-    lv_obj_set_size(page, LV_PCT(75), LV_PCT(50));
-    lv_obj_align_to(page, bar_label1, LV_ALIGN_OUT_BOTTOM_MID, 0, PX_5mm);
-
-
-    /*Create a label on the page*/
-    bar_label2 = lv_label_create(page);
-
-    lv_label_set_long_mode(bar_label2, LV_LABEL_LONG_WRAP);            /*Automatically break long lines*/
-    lv_obj_set_width(bar_label2, LV_PCT(100));            /*Set the label width to max value to not show hor. scroll bars*/
-    lv_obj_align(bar_label2, LV_ALIGN_TOP_MID, 0, 0);
-    //lv_obj_set_auto_realign(bar_label2, true);
-    //lv_ext_text_bg_sytel_set(bar_label2, LV_COLOR_GRAY, 255);
-    //lv_obj_set_height(bar_label2, lv_page_get_height_fit(page));      /*Set the label height to max value to not show hor. scroll bars*/
-
+        lv_obj_align_to(title_label, align_base, LV_ALIGN_OUT_BOTTOM_LEFT, 0, PX_5mm);
+        lv_obj_align_to(content_label_container, title_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 0);
+        align_base = content_label_container;
+    }
 }
 
 void app_clock_main_status_bar_init(lv_obj_t *par, lv_obj_t *clock_tileview)
@@ -365,7 +344,7 @@ void app_clock_main_status_bar_init(lv_obj_t *par, lv_obj_t *clock_tileview)
     //create tile view , page 0  for content, page 1 is transparent
     tileview = lv_tileview_create(par);
     app_clock_main_status_bar = tileview;
-    lv_obj_clear_flag(tileview, LV_OBJ_FLAG_SCROLL_ONE);
+    lv_obj_add_flag(tileview, LV_OBJ_FLAG_SCROLL_ONE);
     lv_obj_set_scrollbar_mode(tileview, LV_SCROLLBAR_MODE_OFF);
     lv_obj_set_style_bg_opa(tileview, LV_OPA_TRANSP, LV_PART_MAIN | LV_STATE_DEFAULT);
 
@@ -381,7 +360,7 @@ void app_clock_main_status_bar_init(lv_obj_t *par, lv_obj_t *clock_tileview)
         else
         {
             lv_color_t color = LV_COLOR_BLACK;
-            lv_obj_set_style_bg_opa(pages[i], LV_OPA_80, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_bg_opa(pages[i], LV_OPA_COVER, LV_PART_MAIN | LV_STATE_DEFAULT);
             lv_obj_set_style_bg_color(pages[i], color, LV_PART_MAIN | LV_STATE_DEFAULT);
         }
         lv_obj_set_size(pages[i], LV_HOR_RES_MAX, LV_VER_RES_MAX);
@@ -411,19 +390,3 @@ void app_clock_main_status_bar_deinit(void)
     status_bar_area_down = NULL;
     lv_ext_font_reset();
 }
-/*
-lvsf_msg_content_create(lv_obj_t *par, lv_obj *icon, char *header, char *text)
-{
-    bar_label1 = lv_label_create(par, NULL);
-    lv_obj_set_pos(bar_label1, 0, 60);
-    lv_obj_set_width(bar_label1, LV_VER_RES_MAX - 100);
-    lv_obj_align(bar_label1, pages[0], LV_ALIGN_IN_TOP_MID, 0, 60);
-    lv_obj_set_auto_realign(bar_label1, true);
-
-    lv_obj_t *page = lv_page_create(par, NULL);
-    lv_obj_set_pos(page, 0, 120);
-    lv_obj_set_size(page, LV_HOR_RES_MAX, LV_VER_RES_MAX - 160);
-
-}
-
-*/

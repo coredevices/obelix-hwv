@@ -76,6 +76,9 @@
 #undef OS_TIMER_FLAG_PERIODIC
 #define OS_TIMER_FLAG_PERIODIC         RT_TIMER_FLAG_PERIODIC
 
+#undef OS_TIMER_FLAG_SOFT
+#define OS_TIMER_FLAG_SOFT         RT_TIMER_FLAG_SOFT_TIMER
+
 #undef OS_ASSERT
 #define OS_ASSERT                      RT_ASSERT
 
@@ -88,8 +91,6 @@
     #endif
 #endif
 
-#define os_status_t rt_err_t
-
 #define os_enter_critical() rt_enter_critical()
 
 #define os_exit_critical() rt_exit_critical()
@@ -100,17 +101,6 @@
 
 #define os_interrupt_enter()        rt_interrupt_enter()
 #define os_interrupt_exit()         rt_interrupt_leave()
-
-#ifdef RT_USING_SEMAPHORE
-
-#undef OS_SEM_DECLAR
-#define OS_SEM_DECLAR(sema) \
-    os_semaphore_t sema;
-#endif
-
-#undef OS_THREAD_DECLAR
-#define OS_THREAD_DECLAR(tid) \
-    os_thread_t tid;
 
 #undef OS_TIMER_DECLAR
 #define OS_TIMER_DECLAR(timer_id) \
@@ -123,79 +113,9 @@
     rt_mutex_t mutex
 #endif
 
-#ifdef RT_USING_MESSAGEQUEUE
-#undef OS_MESSAGE_QUEUE_DECLAR
-#define OS_MESSAGE_QUEUE_DECLAR(queue) \
-    os_message_queue_t queue
-#endif
-
-#ifdef RT_USING_MAILBOX
-#undef OS_MAILBOX_DECLAR
-#define OS_MAILBOX_DECLAR(mailbox) \
-    os_mailbox_t mailbox
-#endif
-
-
-#ifdef RT_USING_EVENT
-#undef OS_EVENT_DECLAR
-#define OS_EVENT_DECLAR(event) \
-    os_event_t event
-#endif
-
-#ifdef RT_USING_SEMAPHORE
-
-#define os_sem_create(sema, count) \
-    sema = (os_semaphore_t)rt_sem_create(STRINGIFY(sema), count, RT_IPC_FLAG_FIFO)
-
-#define os_sem_take(sema, timeout) \
-    rt_sem_take((rt_sem_t)sema, timeout)
-
-#define os_sem_release(sem) \
-    rt_sem_release((rt_sem_t)sem)
-
-#define os_sem_delete(sem) \
-    rt_sem_delete((rt_sem_t)sem)
-#endif // RT_USING_SEMAPHORE
-
-
-
-#define os_thread_create(tid, entry, parameter, stack_memroy, stack_size, priority, tick) \
-    tid = os_thread_create_int(STRINGIFY(tid), entry, parameter, stack_memroy, stack_size, priority, tick)
-
 #define os_delay(ms) \
     rt_thread_mdelay((int32_t)ms)
 
-
-// static init method could put timer to retention section
-#define os_timer_create(timer_id, func, parameter, flag) \
-    rt_timer_init((rt_timer_t)timer_id, STRINGIFY(timer_id), func, parameter, 0, flag)
-
-#define os_timer_start(timer_id, duration) \
-    rt_timer_start_int((rt_timer_t)timer_id, duration)
-
-#define os_timer_stop(timer_id) \
-    rt_timer_stop((rt_timer_t)timer_id)
-
-
-#define os_timer_delete(timer_id) \
-    rt_timer_detach((rt_timer_t)timer_id)
-
-
-#ifdef RT_USING_MUTEX
-
-#define os_mutex_create(mutex) \
-    mutex = (os_mutex_t)rt_mutex_create(STRINGIFY(mutex), RT_IPC_FLAG_FIFO)
-
-#define os_mutex_take(mutex, timeout) \
-    rt_mutex_take((rt_mutex_t)mutex, timeout)
-
-#define os_mutex_release(mutex) \
-    rt_mutex_release((rt_mutex_t)mutex)
-
-#define os_mutex_delete(mutex) \
-    rt_mutex_delete((rt_mutex_t)mutex)
-
-#endif // RT_USING_MUTEX
 
 #ifdef RT_USING_MESSAGEQUEUE
 #define os_message_queue_create(queue, max_count, msg_size, mem_pool, pool_size) \
@@ -215,8 +135,8 @@
 
 #ifdef RT_USING_MAILBOX
 
-#define os_mailbox_create(mailbox, size, mem_pool) \
-    mailbox = os_mailbox_create_int(STRINGIFY(mailbox), size, mem_pool)
+#define os_mailbox_create(name, size, mem_pool) \
+    os_mailbox_create_int(name, size, mem_pool)
 
 #define os_mailbox_put(mailbox, data) \
     rt_mb_send((rt_mailbox_t)(((os_handle_t)mailbox)->handle), data)

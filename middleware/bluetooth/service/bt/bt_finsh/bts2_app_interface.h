@@ -57,6 +57,7 @@
 #include "drivers/bt_device.h"
 #include "bts2_app_interface_type.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -121,20 +122,6 @@ bt_err_t bt_interface_conn_to_source_ext(unsigned char *mac, bt_profile_t ext_pr
  * @param[in] ext_profile : Profile value
  *
  * @return           bt_err_t
- *
- *                   BT_ERROR_INPARAM            = 0x10000001,  input param error
- *                   BT_ERROR_UNSUPPORTED        = 0x10000002,  unsupported function
- *                   BT_ERROR_TIMEOUT            = 0x10000003,  error timout
- *                   BT_ERROR_DISCONNECTED       = 0x10000004,  the bt device is disconnected
- *                   BT_ERROR_STATE              = 0x10000005,  current state  unsupported this function
- *                   BT_ERROR_PARSING            = 0x10000006,  parsing at response error
- *                   BT_ERROR_POWER_OFF          = 0x10000007,  current bt device has been power off
- *                   BT_ERROR_NOTIFY_CB_FULL     = 0x10000008,  register notify cb is more than BT_MAX_EVENT_NOTIFY_CB_NUM
- *                   BT_ERROR_DEVICE_EXCEPTION   = 0x10000009,  current bt device has happend exception
- *                   BT_ERROR_RESP_FAIL          = 0x10000010,  at cmd response fail
- *                   BT_ERROR_AVRCP_NO_REG       = 0x10000011,  set absolute volume, but remote device dont register the event
- *                   BT_ERROR_IN_PROGRESS        = 0x10000012,  for non-blocking processing, wait until the corresponding event is reported
- *                   BT_ERROR_OUT_OF_MEMORY      = 0x10000013,  System heap is not enough
  **/
 bt_err_t bt_interface_disc_ext(unsigned char *mac, bt_profile_t ext_profile);
 
@@ -153,6 +140,31 @@ int8_t bt_interface_cancel_connect_req(unsigned char *mac);
  * @return                  int8_t
  **/
 int8_t bt_interface_disconnect_req(unsigned char *mac);
+
+/**
+ * @brief                   To report IO capabilities of the peer
+ *                          device for the Simple pairing process
+ * @param[in] mac           Remote device address
+ * @param[in] io_capability    IO capability
+ *             IO_CAPABILITY_DISPLAY_ONLY         Display Only 
+ *             IO_CAPABILITY_DISPLAY_YES_NO,      Display Yes/No
+ *             IO_CAPABILITY_KEYBOARD_ONLY,       Keyboard Only 
+ *             IO_CAPABILITY_NO_INPUT_NO_OUTPUT,  No Input/Output
+ *             IO_CAPABILITY_REJECT_REQ           Use this to reject the IO capability request
+ * @param[in] mitm          true, if MITM protection is required.
+ * @param[in] bonding       Default: true
+ * @return                  int8_t
+ **/
+int8_t bt_interface_io_req_res(unsigned char *mac, BTS2E_SC_IO_CAPABILITY io_capability, uint8_t mitm, uint8_t bonding);
+
+/**
+ * @brief                   To accepts or rejects the numerical value
+ *                          of the Simple pairing process
+ * @param[in] mac           Remote device address
+ * @param[in] confirm       1, if accepts.
+ * @return                  int8_t
+ **/
+int8_t bt_interface_user_confirm_res(unsigned char *mac, uint8_t confirm);
 
 /**
  * @brief            Change local name
@@ -178,14 +190,7 @@ void bt_interface_rd_local_bd_addr(void);
  * @brief            exit sniff mode
  *
  **/
-void bt_interface_exit_sniff_mode(unsigned char *mac);
-
-/**
- * @brief            write link policy setting mode
- * @param[in] mac    Remote device address
- * @param[in] link_policy_mode   want to enable link policy mode
- **/
-void bt_interface_wr_link_policy_setting(unsigned char *mac, uint16_t link_policy_mode);
+void bt_interface_exit_sniff_mode(void);
 
 /**
  * @brief            Read rssi with the specified device
@@ -298,7 +303,7 @@ void bt_interface_unregister_av_snk_sdp(void);
  **/
 void bt_interface_register_av_snk_sdp(void);
 
-#ifdef CFG_AV_SRC
+#if defined(CFG_AV_SRC) || defined(_SIFLI_DOXYGEN_)
 /**
  * @brief            Get current a2dp stream state
  * @return           Return the state of a2dp stream
@@ -375,7 +380,7 @@ void bt_interface_avrcp_previous(void);
 void bt_interface_avrcp_rewind(void);
 
 /**
- * @brief            As CT role to adjust the volume of remote device through avrcp
+ * @brief            As an avrcp ct role (such as headphones, speakers, etc.) device, adjust the volume of the opposite device (such as mobile phone, computer, etc.).
  * @param[in] volume The volume value you want to adjust
  * @return           The result of adjusting the volume
  *
@@ -383,11 +388,34 @@ void bt_interface_avrcp_rewind(void);
 bt_err_t bt_interface_avrcp_set_absolute_volume_as_ct_role(U8 volume);
 
 /**
- * @brief            As TG role to adjust the volume of remote device through avrcp
+ * @brief            As an avrcp tg role (such as mobile phone, computer, etc.) device, adjust the volume of the opposite device (such as headphones, speakers, etc.)
  * @param[in] volume The volume value you want to adjust
  *
  **/
 bt_err_t bt_interface_avrcp_set_absolute_volume_as_tg_role(U8 volume);
+
+
+/**
+ * @brief            Provide a method which convert absolute volume to local volume.
+ *                   This method fixes 0 and 127 to local volume 0 and local_max_vol.
+ *                   Remain volumes are average divided by local_max_vol - 1.
+ * @param[in] abs_vol The absolute volume used in AVRCP
+ * @param[in] local_max_vol The max volume level used in audio server or PA.
+ * @return           Converted local volume.
+ **/
+U8 bt_interface_avrcp_abs_vol_2_local_vol(U8 abs_vol, U8 local_max_vol);
+
+
+/**
+ * @brief            Provide a method which convert local volume to absolute volume.
+ *                   This method fixes 0 and local_max_vol to absolute volume 0 and 127.
+ *                   Remain volumes are average divided by local_max_vol - 1.
+ * @param[in] local_vol The local volume used in audio server or PA
+ * @param[in] local_max_vol The max volume level used in audio server or PA.
+ * @return           Converted absolute volume.
+ **/
+U8 bt_interface_avrcp_local_vol_2_abs_vol(U8 local_vol, U8 local_max_vol);
+
 
 /**
  * @brief            playback status register request
@@ -439,6 +467,7 @@ void bt_interface_avrcp_set_playback_status(U8 playback_status);
  **/
 void bt_interface_avrcp_set_can_play(void);
 
+
 /**
  * @brief            Check the avrcp role valid
  * @param[in] role   Avrcp role
@@ -448,6 +477,7 @@ void bt_interface_avrcp_set_can_play(void);
 BOOL bt_interface_check_avrcp_role_valid(U8 role);
 
 /**
+ * @deprecated - please use bt_interface_set_avrcp_role_ext
  * @brief            Set the avrcp role
  * @param[in] bd_addr    The pointer of bd address
  * @param[in] role    Avrcp role
@@ -455,6 +485,15 @@ BOOL bt_interface_check_avrcp_role_valid(U8 role);
  *
  **/
 bt_err_t bt_interface_set_avrcp_role(BTS2S_BD_ADDR *bd_addr, U8 role);
+
+/**
+ * @brief            Set the avrcp role
+ * @param[in] rmt_addr    The pointer of bd address
+ * @param[in] role    Avrcp role
+ * @return           The results of send spp data
+ *
+ **/
+bt_err_t bt_interface_set_avrcp_role_ext(bt_notify_device_mac_t *rmt_addr, U8 role);
 
 /**
  * @brief            Get the playback status of avrcp
@@ -536,7 +575,9 @@ void bt_interface_add_hid_descriptor(U8 *data, U8 len);
   * @{
   */
 
+#if defined(CFG_SPP_SRV) || defined(_SIFLI_DOXYGEN_)
 /**
+ * @deprecated - please use bt_interface_spp_send_data_ext
  * @brief            Send data through spp
  * @param[in] data   The pointer of spp data
  * @param[in] len    The length of spp data
@@ -548,6 +589,27 @@ void bt_interface_add_hid_descriptor(U8 *data, U8 len);
 bt_err_t bt_interface_spp_send_data(U8 *data, U16 len, BTS2S_BD_ADDR *bd_addr, U8 srv_chl);
 
 /**
+ * @brief            Send data through spp
+ * @param[in] data   The pointer of spp data
+ * @param[in] len    The length of spp data
+ * @param[in] rmt_addr    Device mac address(eg:char mac[6] = {11,22,33,44,55,66})
+ * @param[in] srv_chl    The service channel of spp
+ * @return           The results of send spp data
+ *
+ **/
+bt_err_t bt_interface_spp_send_data_ext(U8 *data, U16 len, bt_notify_device_mac_t *rmt_addr, U8 srv_chl);
+
+/**
+ * @brief            spp through put test function
+ * @param[in] rand_len    The length of random data
+ * @param[in] rmt_addr    Device mac address(eg:char mac[6] = {11,22,33,44,55,66})
+ * @param[in] srv_chl    The service channel of spp
+ * @return           The results of send random data
+ *
+ **/
+bt_err_t bt_interface_spp_prepare_send_rand_data(U32 rand_len, bt_notify_device_mac_t *rmt_addr, U8 srv_chl);
+
+/**
  * @brief            Add spp uuid
  * @param[in] uuid   The pointer of spp uuid
  * @param[in] uuid_len    The length of spp uuid
@@ -557,6 +619,7 @@ bt_err_t bt_interface_spp_send_data(U8 *data, U16 len, BTS2S_BD_ADDR *bd_addr, U
 bt_err_t bt_interface_add_spp_uuid(U8 *uuid, U8 uuid_len, char *srv_name);
 
 /**
+ * @deprecated - please use bt_interface_spp_srv_data_rsp_ext
  * @brief            Send spp data response
  * @param[in] bd_addr    The pointer of bd address
  * @param[in] srv_chl    The service channel of spp
@@ -566,6 +629,16 @@ bt_err_t bt_interface_add_spp_uuid(U8 *uuid, U8 uuid_len, char *srv_name);
 bt_err_t bt_interface_spp_srv_data_rsp(BTS2S_BD_ADDR *bd_addr, U8 srv_chl);
 
 /**
+ * @brief            Send spp data response
+ * @param[in] rmt_addr    Device mac address(eg:char mac[6] = {11,22,33,44,55,66})
+ * @param[in] srv_chl    The service channel of spp
+ * @return           The results of send spp data response
+ *
+ **/
+bt_err_t bt_interface_spp_srv_data_rsp_ext(bt_notify_device_mac_t *rmt_addr, U8 srv_chl);
+
+/**
+ * @deprecated - please use bt_interface_dis_spp_by_addr_and_chl_ext
  * @brief            Disconnect spp by bd address and service channel
  * @param[in] bd_addr    The pointer of bd address
  * @param[in] srv_chl    The service channel of spp
@@ -575,11 +648,65 @@ bt_err_t bt_interface_spp_srv_data_rsp(BTS2S_BD_ADDR *bd_addr, U8 srv_chl);
 bt_err_t bt_interface_dis_spp_by_addr_and_chl(BTS2S_BD_ADDR *bd_addr, U8 srv_chl);
 
 /**
+ * @brief            Disconnect spp by bd address and service channel
+ * @param[in] rmt_addr    Device mac address(eg:char mac[6] = {11,22,33,44,55,66})
+ * @param[in] srv_chl    The service channel of spp
+ * @return           The results of disconnect spp
+ *
+ **/
+bt_err_t bt_interface_dis_spp_by_addr_and_chl_ext(bt_notify_device_mac_t *rmt_addr, U8 srv_chl);
+
+/**
+ * @brief            Get spp service instance device_id by address
+ * @param[in] bd_addr    The pointer of bd address
+ * @return           The device_id of connection
+ *
+ **/
+U8 bt_interface_spp_get_device_id_by_addr(BTS2S_BD_ADDR *bd_addr);
+
+/**
  * @brief            Disconnect all connected spp
  * @return           The results of disconnect spp
  *
  **/
 bt_err_t bt_interface_dis_spp_all(void);
+
+/**
+ * @brief            Dump all spp connection info
+ *
+ **/
+void bt_interface_dump_all_spp_connection_info(void);
+
+/**
+ * @brief            Send file to peer device
+ * @param[in] mac    Device mac address(eg:char mac[6] = {11,22,33,44,55,66})
+ * @param[in] srv_chl    The service channel of spp
+ * @param[in] file_name    The file name
+ **/
+bt_err_t bt_interface_spp_srv_send_file(bt_notify_device_mac_t *rmt_addr, U8 srv_chl, char *file_name);
+
+#if defined(CFG_SPP_CLT) || defined(_SIFLI_DOXYGEN_)
+/**
+ * @brief            Connect spp by uuid and bd address
+ * @param[in] bd_addr    The pointer of bd address
+ * @param[in] uuid   The pointer of spp uuid
+ * @param[in] uuid_len    The length of spp uuid
+ * @return           The results of connect spp
+ *
+ **/
+bt_err_t bt_interface_spp_client_conn_req(BTS2S_BD_ADDR *bd_addr, U8 *uuid, U8 uuid_len);
+
+/**
+ * @brief            sdp inquiry spp by uuid and bd address
+ * @param[in] bd_addr    The pointer of bd address
+ * @param[in] uuid   The pointer of spp uuid
+ * @param[in] uuid_len    The length of spp uuid
+ * @return           The results of sdp inquiry spp
+ *
+ **/
+bt_err_t bt_interface_spp_client_sdp_search_req(BTS2S_BD_ADDR *bd_addr, U8 *uuid, U8 uuid_len);
+#endif
+#endif
 /// @}  BT_SPP_SRV
 
 #if defined(CFG_BR_GATT_SRV) || defined(_SIFLI_DOXYGEN_)
@@ -857,18 +984,27 @@ bt_err_t bt_interface_set_wbs_status(U8 status);
 
 #endif
 
-#ifdef BT_FINSH_PAN
+#if defined(BT_FINSH_PAN) || defined(_SIFLI_DOXYGEN_)
 /** @defgroup BT_PAN_SRV  BT PAN profile interfaces
   * @{
   */
 
 /**
+ * @deprecated - please use bt_interface_update_pan_addr_ext
  * @brief                         update the address used by pan
  *
  * @param[in] bd_addr              the address used by pan
  *
  **/
 void bt_interface_update_pan_addr(BTS2S_BD_ADDR *bd_addr);
+
+/**
+ * @brief                         update the address used by pan
+ *
+ * @param[in] mac    Device mac address(eg:char mac[6] = {11,22,33,44,55,66})
+ *
+ **/
+void bt_interface_update_pan_addr_ext(bt_notify_device_mac_t *local_addr);
 
 /**
  * @brief                         check whether pan profile is in sniff mode

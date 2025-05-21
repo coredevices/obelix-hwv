@@ -447,7 +447,8 @@ static bt_cm_err_t bt_cm_profile_connect(uint32_t profile_bit, bt_cm_conned_dev_
                 if (profile_bit == BT_CM_PAN)
                 {
 #ifdef BT_FINSH_PAN
-                    // err = bt_pan_conn(&(conn->info.bd_addr));
+                    extern int bt_pan_conn_by_addr(BTS2S_BD_ADDR * remote_addr);
+                    err = bt_pan_conn_by_addr(&(conn->info.bd_addr));
 #endif
                 }
                 else
@@ -1863,6 +1864,16 @@ void bt_cm(uint8_t argc, char **argv)
                 {
                     sc_rd_paired_dev_link_key_req(bts2_task_get_app_task_id(), &g_bt_bonded_dev.info[i].bd_addr);
                 }
+            }
+        }
+        else if (strcmp(argv[1], "get_name") == 0)
+        {
+            bt_cm_env_t *env = bt_cm_get_env();
+            uint32_t i;
+            for (i = 0; i < BT_CM_MAX_CONN; i++)
+            {
+                if (env->conn_device[i].state >= BT_CM_STATE_CONNECTED)
+                    gap_rd_rmt_name_req(bts2_task_get_app_task_id(), env->conn_device[i].info.bd_addr);
             }
         }
 #ifdef BSP_BQB_TEST

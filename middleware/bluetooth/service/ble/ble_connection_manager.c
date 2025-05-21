@@ -1298,6 +1298,12 @@ uint8_t connection_manager_set_bond_ack(uint8_t state)
     return CM_STATUS_OK;
 }
 
+void connection_manager_bond_pin_code_set(uint32_t pin)
+{
+    connection_manager_env_t *env = cm_get_env();
+    env->pin_code = pin;
+}
+
 uint8_t connection_manager_bond_ack_reply(uint8_t conn_idx, uint8_t command, bool accept)
 {
 
@@ -1345,6 +1351,7 @@ uint8_t connection_manager_bond_ack_reply(uint8_t conn_idx, uint8_t command, boo
         cfm->accept = accept;
         cfm->conn_idx = conn_idx;
         cfm->request = GAPC_TK_EXCH;
+        memset(cfm->cfm_data.tk.key, 0, 0x10);
 
         uint32_t pin_code = env->pin_code;
         cfm->cfm_data.tk.key[0] = (uint8_t)((pin_code & 0x000000FF) >>  0);
@@ -1580,6 +1587,7 @@ static void process_bond_req_ind(ble_gap_bond_req_ind_t *ind)
                 tk_exchange.request = GAPC_TK_EXCH;
                 tk_exchange.confirm_data = pin_code;
                 tk_exchange.conn_idx = connection_index;
+                tk_exchange.type = GAP_TK_DISPLAY;
                 env->pin_code = pin_code;
                 connection_manager_event_process(CM_BOND_AUTH_INFOR_CONFIRM,
                                                  sizeof(connection_manager_bond_ack_infor_t),
@@ -1600,7 +1608,19 @@ static void process_bond_req_ind(ble_gap_bond_req_ind_t *ind)
         break;
         case GAP_TK_KEY_ENTRY:
         {
-            // TODO: Get key entry from upper layer
+            if (env->bond_ack == BOND_PENDING)
+            {
+                connection_manager_bond_ack_infor_t tk_exchange;
+                tk_exchange.request = GAPC_TK_EXCH;
+                tk_exchange.type = GAP_TK_KEY_ENTRY;
+                tk_exchange.conn_idx = connection_index;
+
+                connection_manager_event_process(CM_BOND_AUTH_INFOR_CONFIRM,
+                                                 sizeof(connection_manager_bond_ack_infor_t),
+                                                 &tk_exchange);
+                bt_mem_free(cfm);
+                return;
+            }
         }
         break;
         case GAP_TK_OOB:
@@ -2552,7 +2572,11 @@ static uint8_t cm_update_parameter(uint8_t conn_idx, uint8_t interval_level, uin
 // default use l2cap update
 uint8_t connection_manager_update_parameter(uint8_t conn_idx, uint8_t interval_level, uint8_t *data)
 {
+#ifdef SOC_SF32LB55X
+    return cm_update_parameter(conn_idx, interval_level, data, UPDATE_TYPE_LL);
+#else
     return cm_update_parameter(conn_idx, interval_level, data, UPDATE_TYPE_L2CAP);
+#endif
 }
 
 uint8_t connection_manager_update_parameter_with_type(uint8_t conn_idx, uint8_t interval_level, uint8_t *data, enum connection_manager_update_type type)
@@ -2974,12 +2998,9 @@ static void cm_cmd(uint8_t argc, char **argv)
 #ifndef BLE_CM_BOND_DISABLE
             for (int i = 0; i < MAX_PAIR_DEV; i++)
             {
-                LOG_I("%d, addr %x:%x:%x:%x:%x:%x, key: %x,%x,%x,%x,%x,%x,%x,%x", g_bond_info.priority[i],
-                      g_bond_info.peer_addr[i].addr.addr[5], g_bond_info.peer_addr[i].addr.addr[4], g_bond_info.peer_addr[i].addr.addr[3],
-                      g_bond_info.peer_addr[i].addr.addr[2], g_bond_info.peer_addr[i].addr.addr[1], g_bond_info.peer_addr[i].addr.addr[0],
-                      g_bond_info.ltk[i].ltk.key[15], g_bond_info.ltk[i].ltk.key[14], g_bond_info.ltk[i].ltk.key[13],
-                      g_bond_info.ltk[i].ltk.key[12], g_bond_info.ltk[i].ltk.key[11], g_bond_info.ltk[i].ltk.key[10],
-                      g_bond_info.ltk[i].ltk.key[9], g_bond_info.ltk[i].ltk.key[8]);
+                LOG_I("bonded dev %d", g_bond_info.priority[i]);
+                LOG_HEX("addr", 16, g_bond_info.peer_addr[i].addr.addr, BD_ADDR_LEN);
+                LOG_HEX("ltk", 16, g_bond_info.ltk[i].ltk.key, GAP_KEY_LEN);
             }
 #endif //BLE_CM_BOND_DISABLE
         }

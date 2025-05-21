@@ -236,10 +236,21 @@ typedef struct
     U32 bytes_per_sample;
 } bts2_sbc_cfg;
 
+#ifdef CFG_AV_AAC
+typedef struct
+{
+    U16 sample_freq;
+    U8  chnls;
+    U32 bit_rate;
+} bts2_aac_cfg;
+#endif
 
 typedef struct
 {
     bts2_sbc_cfg act_cfg;
+#ifdef CFG_AV_AAC
+    bts2_aac_cfg act_aac_cfg;
+#endif
     uint8_t local_seid_idx;
     U8 rmt_seid[MAX_NUM_RMT_SEIDS];
     bts2_rmt_capa_t rmt_capa[MAX_NUM_RMT_SEIDS];
@@ -304,6 +315,11 @@ typedef struct
 #if defined(AUDIO_USING_MANAGER) && defined(AUDIO_BT_AUDIO)
     audio_client_t audio_client;
 #endif
+#if PKG_USING_VBE_DRC
+    void *vbe;
+    uint8_t *vbe_out;
+#endif
+
     play_data_t *pt_curdata;
 } bts2s_avsnk_inst_data;
 #endif  // CFG_AV_SNK
@@ -347,6 +363,7 @@ typedef struct
     extern void bt_avsnk_hdl_disc_handler(bts2s_av_inst_data *inst, uint8_t con_idx);
     extern int8_t bt_avsnk_hdl_start_cfm(bts2s_av_inst_data *inst, uint8_t con_idx);
     extern void bt_avsnk_close_handler(bts2s_av_inst_data *inst, uint8_t con_idx);
+    extern void bt_avsnk_abort_handler(bts2s_av_inst_data *inst, uint8_t con_idx);
     extern uint8_t bt_avsnk_hdl_start_ind(bts2s_av_inst_data *inst, BTS2S_AV_START_IND *msg, uint8_t con_idx);
     extern void bt_avsnk_hdl_suspend_ind(bts2s_av_inst_data *inst, uint8_t con_idx);
     extern void bt_avsnk_hdl_streamdata_ind(bts2s_av_inst_data *inst, uint8_t con_idx, BTS2S_AV_STREAM_DATA_IND *msg);

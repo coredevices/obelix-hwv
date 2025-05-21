@@ -8,7 +8,13 @@ menu "Config LCD on board"
         bool "Enable LCD on the board"
         select BSP_USING_LCDC
         default n
-    source "$SIFLI_SDK/customer/boards/Kconfig_lcd"
+
+    if !FPGA
+        source "$SIFLI_SDK/customer/boards/Kconfig_lcd"
+    endif
+    if FPGA
+        source "$SIFLI_SDK/customer/boards/Kconfig_lcd_fpga"
+    endif
 endmenu
 menu "Select board peripherals"
 source "$SIFLI_SDK/customer/peripherals/Kconfig"
@@ -29,6 +35,8 @@ choice
         bool "uart5"
     config CONSOLE_UART6
         bool "uart6"
+    config CONSOLE_PC
+        bool "PC Simulator"        
 endchoice
 config RT_CONSOLE_DEVICE_NAME
     string 
@@ -38,6 +46,7 @@ config RT_CONSOLE_DEVICE_NAME
     default "uart4" if CONSOLE_UART4    
     default "uart5" if CONSOLE_UART5    
     default "uart6" if CONSOLE_UART6
+    default "console" if CONSOLE_PC
     
 menuconfig BSP_USING_KEY1
     bool "Use KEY1"

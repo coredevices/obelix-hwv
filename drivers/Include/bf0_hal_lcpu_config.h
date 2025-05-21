@@ -55,6 +55,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 #include "bf0_hal_def.h"
+#include "lcpu_config_type.h"
 
 /** @addtogroup BF0_HAL_Driver
   * @{
@@ -74,45 +75,9 @@ extern "C" {
 
 #define HAL_LCPU_CONFIG_SN_MAX_NUM 128
 
-/**
-  * @brief  ENUM definition of configration type.
-*/
-#if (!defined(SF32LB52X)) && (!defined(SF32LB52X_58))
-typedef enum
-{
-    HAL_LCPU_CONFIG_ADC_CALIBRATION,      /*!< ADC calibration value. */
-    HAL_LCPU_CONFIG_SDADC_CALIBRATION,    /*!< SDADC calibration value. */
-    HAL_LCPU_CONFIG_SN,                   /*!< mcu serial number. */
-    HAL_LCPU_CONFIG_CHIP_REV,             /*!< Chip revision. */
-    HAL_LCPU_CONFIG_BATTERY_CALIBRATION,  /*!< Battery calibration value. */
-    HAL_LCPU_CONFIG_MAX,
-} HAL_LCPU_CONFIG_TYPE_T;
-#else
-typedef enum
-{
-    HAL_LCPU_CONFIG_XTAL_ENABLED,      /*!< ADC calibration value. */
-    HAL_LCPU_CONFIG_LPCYCLE_CURR,             /*!< Chip revision. */
-    HAL_LCPU_CONFIG_LPCYCLE_AVE,  /*!< Battery calibration value. */
-    HAL_LCPU_CONFIG_WDT_TIME,          /*!< SDADC calibration value. */
-    HAL_LCPU_CONFIG_WDT_STATUS,  /*!< Battery calibration value. */
-    HAL_LCPU_CONFIG_WDT_CLK_FEQ,
-    HAL_LCPU_CONFIG_BT_TX_PWR,  /*!< Battery calibration value. */
-    HAL_LCPU_CONFIG_BT_RC_CAL_IN_L,   /*!< Enable RCCal for BT in LCPU. */
-    HAL_LCPU_CONFIG_SOFT_CVSD,        /*!< Enable soft cvsd encode decode for BT in LCPU. */
-    // Following type only support after revID >= 4
-    HAL_LCPU_CONFIG_BT_EM_BUF,  /*!< BT custormized EM buffer. */
-    HAL_LCPU_CONFIG_BT_ACT_CFG,  /*!< BT custormized link related config. */
-    HAL_LCPU_CONFIG_BT_CONFIG,  /*!< BT custormized other config. */
-    HAL_LCPU_CONFIG_BT_KE_BUF,  /*!< BT custormized KE buffer. */
-    HAL_LCPU_CONFIG_SEC_ADDR, /*!< Security protection address. */
-    HAL_LCPU_CONFIG_HCPU_TX_QUEUE, /*!< TX buffer of HCPU IPC queue. */
-    HAL_LCPU_CONFIG_MAX,
-} HAL_LCPU_CONFIG_TYPE_T;
-#endif // !
 
-#if (!defined(SF32LB52X)) && (!defined(SF32LB52X_58))
 /**
-  * @brief  Structure definition of @ref HAL_LCPU_CONFIG_ADC_CALIBRATION.
+  * @brief  Structure definition of @ref HAL_LCPU_CONFIG_ADC_CALIBRATION for LCPU_CONFIG_V1.
 */
 typedef struct
 {
@@ -124,8 +89,21 @@ typedef struct
 #endif
 } HAL_LCPU_CONFIG_ADC_T;
 
+
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_SDADC_CALIBRATION.
+  * @brief  Structure definition of @ref HAL_LCPU_CONFIG_ADC_CALIBRATION for LCPU_CONFIG_V2.
+*/
+typedef struct
+{
+    uint16_t vol10;     /*!< Reg value for low voltage. */
+    uint16_t vol25;      /*!< Reg value for high voltage. */
+    uint16_t low_mv;     /*!< voltage for low with mv . */
+    uint16_t high_mv;    /*!< voltage for high with mv. */
+} HAL_LCPU_CONFIG_ADC_V2_T;
+
+
+/**
+  * @brief  Structure definition of #HAL_LCPU_CONFIG_SDADC_CALIBRATION for LCPU_CONFIG_V1.
 */
 typedef struct
 {
@@ -134,16 +112,36 @@ typedef struct
 } HAL_LCPU_CONFIG_SDMADC_T;
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_SN.
+  * @brief  Structure definition of #HAL_LCPU_CONFIG_SDADC_CALIBRATION for LCPU_CONFIG_V2.
+*/
+typedef struct
+{
+    uint32_t vol_mv;
+    uint32_t value;
+} HAL_LCPU_CONFIG_SDMADC_V2_T;
+
+
+/**
+  * @brief  Structure definition of #HAL_LCPU_CONFIG_SN for LCPU_CONFIG_V1.
 */
 typedef struct
 {
     uint8_t sn[HAL_LCPU_CONFIG_SN_MAX_NUM];
 } HAL_LCPU_CONFIG_SN_T;
 
+/**
+  * @brief  Structure definition of #HAL_LCPU_CONFIG_SN for LCPU_CONFIG_V2.
+*/
+typedef struct
+{
+    uint16_t sn_len;
+    uint8_t sn[HAL_LCPU_CONFIG_SN_MAX_NUM];
+} HAL_LCPU_CONFIG_SN_V2_T;
+
+
 
 /**
-  * @brief  Structure definition of #HAL_LCPU_CONFIG_BATTERY_CALIBRATION.  ax+b   a*10000 for integer
+  * @brief  Structure definition of #HAL_LCPU_CONFIG_BATTERY_CALIBRATION for LCPU_CONFIG_V1.  ax+b   a*10000 for integer
 */
 typedef struct
 {
@@ -151,9 +149,18 @@ typedef struct
     uint32_t a;
     int32_t b;
 } HAL_LCPU_CONFIG_BATTERY_T;
-#endif // !
 
-#if defined(SF32LB52X)||defined(SF32LB52X_58)
+/**
+  * @brief  Structure definition of #HAL_LCPU_CONFIG_BATTERY_CALIBRATION for LCPU_CONFIG_V2.  ax+b   a*10000 for integer
+*/
+typedef struct
+{
+    int magic;
+    uint32_t a;
+    int32_t b;
+} HAL_LCPU_CONFIG_BATTERY_V2_T;
+
+
 
 #define HAL_LCPU_CONFIG_EM_BUF_MAX_NUM 40
 
@@ -232,7 +239,17 @@ typedef struct
     int8_t max_nb_of_hci_completed;
 } hal_lcpu_ble_mem_config_t;
 
-#endif // SF32LB54X
+/**
+  * @brief  Structure definition of #HAL_LCPU_CONFIG_BT_ACTMOVE_CONFIG.
+*/
+typedef struct
+{
+    //  max valid bit is 5, buf and size should be aligned.
+    uint8_t bit_valid;
+    uint8_t act_mov;
+    uint8_t sco_pingpong;
+
+} hal_lcpu_bluetooth_actmove_config_t;
 
 /**
   * @} LPCONFIG_exported_constants

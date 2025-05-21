@@ -17,13 +17,13 @@
 extern "C" {
 #endif
 
-static void rt_bt_lwip_event_handle(struct rt_bt_prot *port, struct rt_bt_lwip_pan_dev* bt_dev, int event);
-BTS2S_ETHER_ADDR bt_pan_get_remote_mac_address(struct rt_bt_lwip_pan_dev* bt_dev);
-BTS2S_ETHER_ADDR bt_pan_get_mac_address(struct rt_bt_lwip_pan_dev* bt_dev, void*args);
+static void rt_bt_lwip_event_handle(struct rt_bt_prot *port, struct rt_bt_pan_instance* bt_instance, int event);
+BTS2S_ETHER_ADDR bt_pan_get_remote_mac_address(struct rt_bt_pan_instance* bt_instance);
+BTS2S_ETHER_ADDR bt_pan_get_mac_address(struct rt_bt_pan_instance* bt_instance, void*args);
 static rt_err_t rt_bt_lwip_protocol_control(rt_device_t device, int cmd,void* args);
-static rt_err_t rt_bt_lwip_protocol_recv(struct rt_bt_lwip_pan_dev* bt_dev, void *buff, int len);
+static rt_err_t rt_bt_lwip_protocol_recv(struct rt_bt_pan_instance* bt_instance, void *buff, int len);
 static rt_err_t rt_bt_lwip_protocol_send(rt_device_t device, struct pbuf *p);
-static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, struct rt_bt_lwip_pan_dev* bt_dev);
+static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, struct rt_bt_pan_instance* bt_instance);
 static void rt_bt_lwip_protocol_unregister(struct rt_bt_prot *prot);
 int rt_bt_lwip_init(void);
 extern BTS2S_ETHER_ADDR bd2etheraddr (const BTS2S_BD_ADDR *bd);
@@ -32,8 +32,8 @@ extern BTS2S_ETHER_ADDR bd2etheraddr (const BTS2S_BD_ADDR *bd);
 */
 
 
-// #ifdef __cplusplus
-// }
-// #endif
+#ifdef __cplusplus
+}
+#endif
 
 #endif

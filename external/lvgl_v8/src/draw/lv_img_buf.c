@@ -420,6 +420,11 @@ uint32_t lv_img_buf_get_img_size(lv_coord_t w, lv_coord_t h, lv_img_cf_t cf)
         case LV_IMG_CF_TRUE_COLOR_ALPHA:
         case LV_IMG_CF_RGB565A8:
             return LV_IMG_BUF_SIZE_TRUE_COLOR_ALPHA(w, h);
+		case LV_IMG_CF_RGB888:
+        case LV_IMG_CF_RGBA5658:
+			return (w * h * 3);
+        case LV_IMG_CF_RGB565:
+            return (w * h * 2);
         case LV_IMG_CF_TRUE_COLOR_CHROMA_KEYED:
             return LV_IMG_BUF_SIZE_TRUE_COLOR_CHROMA_KEYED(w, h);
         case LV_IMG_CF_ALPHA_1BIT:

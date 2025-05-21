@@ -174,19 +174,19 @@ typedef struct
 
 /**
   * @brief  Select pin function only.
-  * @param  pad: physical pin
+  * @param  pad: physical pin, #pin_pad
   * @param  func: Pin function.
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
   */
 void HAL_PIN_Select(int pad, int func, int hcpu);
 
 
 /**
  * @brief  Set pin function.
- * @param  pad: physical pin, #pin_pad_hcpu or #pin_pad_lcpu
+ * @param  pad: physical pin, #pin_pad
  * @param  func: Pin function.
  * @param  flags: flag of the pin (pullup/pulldown), @ref PIN_flags
- * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
  * @retval -1 if invalid, otherwise 0
  */
 int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu);
@@ -194,8 +194,8 @@ int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu);
 
 /**
   * @brief  Set pin for analog function, fix for ROM patch, avoid pin_const update.
-  * @param  pad: physical pin
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+  * @param  pad: physical pin, #pin_pad
+  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
   * @retval -1 if invalid, otherwise 0
   */
 int HAL_PIN_Set_Analog(int pad, int hcpu);
@@ -203,28 +203,28 @@ int HAL_PIN_Set_Analog(int pad, int hcpu);
 
 /**
   * @brief  Update pin flags.
-  * @param  pad: physical pin
+  * @param  pad: physical pin, #pin_pad
   * @param  flags: Flags for the pin to update
   * @param  mask: Mask of the flags
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
   * @retval -1 if invalid, otherwise 0
   */
 int HAL_PIN_Update(int pad, uint32_t flags, uint32_t mask, int hcpu);
 
 /**
   * @brief  Get pin function.
-  * @param  pad: physical pin, refer #pin_pad_hcpu and #pin_pad_lcpu
+  * @param  pad: physical pin, refer #pin_pad
   * @param  p_func: Pointer of variable to save pin function.
   * @param  p_mode: Pointer of varibale to save flag of the pin mode, see PIN_ModeTypeDef
-  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+  * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
   * @retval -1 if invalid, else function idx(>= 0)
   */
 int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p_mode, int hcpu);
 
 /**
  * @brief  Set pin DS0.
- * @param  pad physical pin, #pin_pad_hcpu or #pin_pad_lcpu
- * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @param  pad physical pin, #pin_pad
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
  * @param  set 1: select, 0: deselect
  * @retval -1 if invalid, otherwise 0
  */
@@ -232,14 +232,19 @@ int HAL_PIN_Set_DS0(int pad, int hcpu, uint8_t set);
 
 /**
  * @brief  Set pin DS1.
- * @param  pad physical pin, refer #pin_pad_hcpu and #pin_pad_lcpu
- * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu
+ * @param  pad physical pin, refer #pin_pad
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
  * @param  set 1: select, 0: deselect
  * @retval -1 if invalid, otherwise 0
  */
 int HAL_PIN_Set_DS1(int pad, int hcpu, uint8_t set);
 
-
+/**
+ * @brief  Set pin mode
+ * @param  pad physical pin, refer #pin_pad
+ * @param  hcpu: 1: pin for hcpu; 0: pin for lcpu. It's obsolete, not used anymore
+ * @retval -1 if invalid, otherwise 0
+ */
 int HAL_PIN_SetMode(int pad, int hcpu, PIN_ModeTypeDef mode);
 
 

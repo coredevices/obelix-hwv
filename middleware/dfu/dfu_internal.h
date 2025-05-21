@@ -177,8 +177,8 @@ typedef enum
     DFU_CTRL_OFFLINE_INSTALL,
     DFU_CTRL_REBOOT_INSTALL_PREPARE,
     DFU_CTRL_REBOOT_INSTALL,
-    DFU_CTRL_OFFLINE_INSTALL_V2_PREPARE,
-    DFU_CTRL_OFFLINE_INSTALL_V2,
+    DFU_CTRL_PACKAGE_INSTALL_PREPARE,
+    DFU_CTRL_PACKAGE_INSTALL,
 } dfu_ctrl_state_t;
 
 typedef enum
@@ -321,9 +321,9 @@ typedef enum
 
 typedef enum
 {
-    OFFLINE_INSTALL_TYPE_IMAGE,
-    OFFLINE_INSTALL_TYPE_OTA_MANAGER,
-} dfu_offline_install_type_t;
+    PACKAGE_INSTALL_TYPE_IMAGE,
+    PACKAGE_INSTALL_TYPE_OTA_MANAGER,
+} dfu_package_install_type_t;
 
 typedef struct
 {
@@ -678,7 +678,7 @@ typedef struct
     uint32_t offset;
     uint32_t size;
     uint8_t data[2048];
-} flash_write_offline_t;
+} flash_write_package_t;
 
 
 typedef struct
@@ -703,7 +703,7 @@ typedef struct
     uint16_t image_count;
     uint32_t crc;
     uint8_t image_info[0];
-} dfu_offline_install_packet_v2_t;
+} dfu_package_install_packet_t;
 
 
 typedef struct
@@ -719,7 +719,7 @@ typedef struct
     uint8_t flag;
     uint32_t offset;
     uint32_t len;
-} dfu_offline_image_info_v2_t;
+} dfu_package_image_info_t;
 
 
 int dfu_packet_erase_flash(dfu_image_header_int_t *header, uint32_t offset, uint32_t size);
@@ -873,7 +873,7 @@ void dfu_offline_install_start();
 
 uint8_t dfu_get_download_state();
 
-int dfu_image_install_flash_offline(dfu_ctrl_env_t *env, uint8_t image_id, uint32_t length, uint32_t image_offset, uint8_t image_flag);
+int dfu_image_install_flash_package(dfu_ctrl_env_t *env, uint8_t image_id, uint32_t length, uint32_t image_offset, uint8_t image_flag);
 
 uint32_t dfu_crc32mpeg2(uint8_t *data, uint32_t len);
 

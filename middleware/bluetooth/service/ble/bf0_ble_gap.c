@@ -618,7 +618,12 @@ uint8_t ble_gap_delete_advertising(ble_gap_adv_delete_t *del)
 
 #ifdef BLE_GAP_CENTRAL
 uint8_t ble_gap_scan_start(ble_gap_scan_start_t *scan_param)
+{
+    scan_param->prop = GAPM_SCAN_PROP_PHY_1M_BIT | GAPM_SCAN_PROP_ACTIVE_1M_BIT;
+    return ble_gap_scan_start_ex(scan_param);
+}
 
+uint8_t ble_gap_scan_start_ex(ble_gap_scan_start_t *scan_param)
 {
     BLE_GAP_EMPTY_CHECK(scan_param);
     uint8_t ret = GAP_ERR_COMMAND_DISALLOWED;
@@ -649,6 +654,7 @@ uint8_t ble_gap_scan_start(ble_gap_scan_start_t *scan_param)
 
     return ret;
 }
+
 
 
 uint8_t ble_gap_scan_stop(void)
@@ -1265,8 +1271,7 @@ void ble_gap_event_process(sibles_msg_para_t *header, uint8_t *data_ptr, uint16_
             cmd->operation = GAPM_START_ACTIVITY;
             cmd->actv_idx = act_info->scan_info.act_index;
             cmd->u_param.scan_param.type = scan_param->type;
-            //cmd->u_param.scan_param.prop = GAPM_SCAN_PROP_ACTIVE_1M_BIT | GAPM_SCAN_PROP_PHY_1M_BIT;
-            cmd->u_param.scan_param.prop = GAPM_SCAN_PROP_PHY_1M_BIT | GAPM_SCAN_PROP_ACTIVE_1M_BIT;
+            cmd->u_param.scan_param.prop =  scan_param->prop;
             cmd->u_param.scan_param.dup_filt_pol = scan_param->dup_filt_pol;
             cmd->u_param.scan_param.scan_param_1m.scan_intv = scan_param->scan_param_1m.scan_intv;
             cmd->u_param.scan_param.scan_param_1m.scan_wd = scan_param->scan_param_1m.scan_wd;
@@ -1316,6 +1321,11 @@ void ble_gap_event_process(sibles_msg_para_t *header, uint8_t *data_ptr, uint16_
         {
             // Except start stop cmd, others are all happened when init action completed. No need to notify upper layer
             act_info->init_info.state = BLE_GAP_ACTV_STARTED;
+
+            ble_gap_create_connection_stop_ind_t evt;
+            evt.actv_idx = ind->actv_idx;
+            evt.reason = ind->reason;
+            ble_event_publish(BLE_GAP_CREATE_CONNECTION_STOP_IND, &evt, sizeof(ble_gap_create_connection_stop_ind_t));
         }
         else if (ind->actv_type == GAPM_ACTV_TYPE_PER_SYNC)
         {

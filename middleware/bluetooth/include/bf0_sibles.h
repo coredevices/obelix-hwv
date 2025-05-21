@@ -122,6 +122,7 @@ enum bf0_sifli_event_t
     SIBLES_REMOTE_SVC_CHANGE_IND,
     SIBLES_ATT_UPDATE_PERM_IND,
     SIBLES_DIS_SET_VAL_RSP,
+    SIBLES_ATT_SET_VISIBILITY_IND,
 };
 
 /**
@@ -462,6 +463,12 @@ typedef struct
 
 typedef struct
 {
+    uint16_t handle;
+    uint8_t status;
+} sibles_att_set_visibility_ind_t;
+
+typedef struct
+{
     uint8_t state;
     uint8_t uuid[ATT_UUID_128_LEN];
     uint8_t uuid_len;
@@ -552,6 +559,14 @@ void sibles_stop_svc(sibles_hdl hdl);
 int8_t sibles_search_service(uint8_t conn_idx, uint8_t uuid_len, uint8_t *uuid);
 
 /**
+ * @brief  Find expect descriptor in characteristic.
+  * @param[in]  char characteristic content for search.
+  * @param[in]  descriptor descriptor want to find.
+  * @retval result.
+ */
+uint16_t sibles_descriptor_handle_find(sibles_svc_search_char_t *chara, uint16_t descriptor);
+
+/**
   * @brief  Register callback for a specified service of peer device.
   * @param[in]  conn_idx connection index.
   * @param[in]  start_hdl service start handle.
@@ -627,6 +642,7 @@ uint16_t sibles_get_uuid_by_attr(uint8_t attr);
 sibles_hdl sibles_get_sible_handle_and_index_by_attr(uint8_t attr, uint8_t *write_index);
 void sibles_get_all_gatt_handle(sibles_local_svc_t *svc);
 void sibles_update_att_permission(uint16_t handle, uint16_t access_mask, uint16_t perm);
+void sibles_set_att_visibility(uint16_t handle, uint8_t hide);
 
 /**
   * @brief  User implmentation function. Stack will call this function to get max mtu.

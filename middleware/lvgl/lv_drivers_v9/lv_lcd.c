@@ -397,7 +397,6 @@ static void lcd_flush(lv_display_t *disp_drv, const lv_area_t *refresh_area, uin
         return;
     }
 
-    lcd_flushing_disp_drv = disp_drv;
 
 
 
@@ -406,6 +405,9 @@ static void lcd_flush(lv_display_t *disp_drv, const lv_area_t *refresh_area, uin
     rt_err_t err;
     err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
     RT_ASSERT(RT_EOK == err);
+
+    lcd_flushing_disp_drv = disp_drv;
+
 #ifdef BSP_USING_LCD_FRAMEBUFFER
     drv_lcd_fb_write_send(&clip_area, &src_area, (uint8_t *)color_p, lcd_flush_done,
                           disp_drv->flushing_last);

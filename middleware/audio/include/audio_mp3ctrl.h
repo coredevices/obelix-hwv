@@ -61,7 +61,7 @@ int mp3ctrl_close(mp3ctrl_handle handle);
 int mp3ctrl_play(mp3ctrl_handle handle);
 int mp3ctrl_pause(mp3ctrl_handle handle);
 int mp3ctrl_resume(mp3ctrl_handle handle);
-int mp3ctrl_seek(mp3ctrl_handle handle, off_t frame_offset);
+int mp3ctrl_seek(mp3ctrl_handle handle, uint32_t seconds);
 int mp3ctrl_getinfo(const char *filename, mp3_info_t *info);
 int mp3_get_id3_start(const char *filename, mp3_id3_info_t *info);
 void mp3_get_id3_end(mp3_id3_info_t *info);

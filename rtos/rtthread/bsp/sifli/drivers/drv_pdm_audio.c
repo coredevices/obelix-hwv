@@ -51,6 +51,7 @@
 #include <string.h>
 #include "board.h"
 #include "drv_config.h"
+#include "stdlib.h"
 
 #if defined(BSP_USING_PDM) ||defined(_SIFLI_DOXYGEN_)
 

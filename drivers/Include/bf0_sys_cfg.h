@@ -98,11 +98,7 @@ extern "C" {
 #define CFG_SYS_SIZE            (64)
 #endif // SF32LB52X
 
-#ifdef SF32LB52X_58
-#define BSP_CFG_IN_HCPU         (1)
-#else
-#define BSP_CFG_IN_HCPU         (0)
-#endif // SF32LB52X
+
 
 #ifndef SF32LB55X
 typedef struct

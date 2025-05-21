@@ -127,6 +127,7 @@ enum sibles_adv_event_t
     SIBLES_ADV_EVT_REQUEST_PEER_DEVICE_ADDR,  /**< Request user provide peer device addr for directed advertising. */
     SIBLES_ADV_EVT_REQUEST_SET_WHITE_LIST,    /**< Request user set while list for advertising filter policy. No data
                                                    as input parameter */
+    SIBLES_ADV_EVT_ADV_DELETED,               /**< Advertising deleted. */
 };
 
 
@@ -393,6 +394,13 @@ typedef struct
     uint8_t adv_mode;                         /**< Running adv mode (@see enum sibles_adv_running_mode_t). */
 } sibles_adv_evt_stopped_t;
 
+/**
+ * @brief The structure of #SIBLES_ADV_EVT_ADV_DELETED.
+ */
+typedef struct
+{
+    uint8_t status;                           /**< Advertising deleted status. status is delete result from #hl_err */
+} sibles_adv_evt_deleted_t;
 
 /**
  * @brief Advertising configuration init.

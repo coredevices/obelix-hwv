@@ -51,6 +51,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "os_adaptor.h"
+#include "os_adaptor_rtthread.h"
+
 
 #include "bf0_sibles_util.h"
 #include "ble_stack.h"
@@ -149,7 +151,7 @@ ipc_queue_handle_t sifli_get_mbox_write_dev(void)
     return ipc_queue_handle;
 }
 
-os_status_t sifli_mbox_send(uint8_t *data)
+rt_err_t sifli_mbox_send(uint8_t *data)
 {
     return os_mailbox_put(g_bf0_sible_mb, (uint32_t)data);
 }
@@ -559,7 +561,11 @@ void sifli_mbox_entry(void *param)
     uint32_t ptr;
 
     os_event_create(evt_mailbox);
+#ifdef OS_ADAPTOR_V2
+    g_bf0_sible_mb = os_mailbox_create("sible_mb", 16, NULL);
+#else
     os_mailbox_create(g_bf0_sible_mb, 16, NULL);
+#endif
 #ifdef SIBLES_TRANSPARENT_ENABLE
     is_trans_enable = 1; //TODO : Change to NVDS read
     if (is_trans_enable)
@@ -639,12 +645,14 @@ void sifli_mbox_entry(void *param)
 
 void sifli_env_init(void)
 {
-
-    //g_sifli_sem = rt_sem_create("sibles_sem", 0, RT_IPC_FLAG_FIFO);
+#ifdef OS_ADAPTOR_V2
+    g_sifli_sem = os_sem_create("sibles", 0);
+    g_sifli_tid = os_thread_create("mbox", sifli_mbox_entry, NULL, sifli_mbox_thread_stack, sizeof(sifli_mbox_thread_stack), RT_MAIN_THREAD_PRIORITY + 2, 10);
+#else
     os_sem_create(g_sifli_sem, 0);
-
-
     os_thread_create(g_sifli_tid, sifli_mbox_entry, NULL, sifli_mbox_thread_stack, sizeof(sifli_mbox_thread_stack), RT_MAIN_THREAD_PRIORITY + 2, 10);
+#endif
+
 }
 
 
@@ -686,7 +694,11 @@ rt_err_t sifli_sem_release_ex(void)
 
 void sifli_mbox_entry(void *param)
 {
+#ifdef OS_ADAPTOR_V2
+    g_sifli_sem2 = os_sem_create("mbox", 0);
+#else
     os_sem_create(g_sifli_sem2, 0);
+#endif
     extern int bluetooth_init(void);
     ble_power_on();
     //while (!g_block_host)
@@ -726,10 +738,13 @@ void sifli_env_init(void)
 {
 
 #if defined(BLUETOOTH) && !defined(BSP_USING_PC_SIMULATOR) && !defined(SOC_SF32LB55X)
-
+#ifdef OS_ADAPTOR_V2
+    g_sifli_sem = os_sem_create("sifli", 0);
+    g_sifli_tid = os_thread_create("mbox", sifli_mbox_entry, NULL, NULL, SIFLI_MBOX_THREAD_STACK_SIZE, RT_THREAD_PRIORITY_HIGH - 1, 10);
+#else
     os_sem_create(g_sifli_sem, 0);
     os_thread_create(g_sifli_tid, sifli_mbox_entry, NULL, NULL, SIFLI_MBOX_THREAD_STACK_SIZE, RT_THREAD_PRIORITY_HIGH - 1, 10);
-
+#endif
 #if 0
     //TODO Wait controller ready signal
     extern int bluetooth_init(void);

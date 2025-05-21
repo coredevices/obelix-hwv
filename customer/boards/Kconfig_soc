@@ -144,6 +144,18 @@ if !BSP_USING_PC_SIMULATOR
             bool "Using RAM array instead of const array"
             depends on SOC_SF32LB52X
             default n
+            
+        choice LCPU_CONFIG_VERSION
+            prompt "Select hal lcpu config version"
+            default LCPU_CONFIG_V2 if SOC_SF32LB58X
+            default LCPU_CONFIG_AUTO
+            config LCPU_CONFIG_AUTO
+                bool "Auto adapt lcpu config version via chip ID"
+            config LCPU_CONFIG_V1
+                bool "Select for 1st version for hal lcpu config"
+            config LCPU_CONFIG_V2
+                bool "Select for 2nd version for hal lcpu config"
+        endchoice
 
     endmenu
 endif

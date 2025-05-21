@@ -62,6 +62,9 @@
 #if defined(BSP_USING_LCD_FRAMEBUFFER)
     #include "drv_lcd_fb.h"
 #endif
+#if defined(DRV_EPIC_NEW_API)
+    #include "drv_epic.h"
+#endif
 
 #if (16 != LV_COLOR_DEPTH) && (24 != LV_COLOR_DEPTH) && (32 != LV_COLOR_DEPTH)
     #error "Unsupported color depth"
@@ -271,20 +274,239 @@ static void rounder_cb(lv_disp_drv_t *disp_drv, lv_area_t *area)
 #endif
 
 }
+#ifdef DRV_EPIC_NEW_API
+extern uint32_t lv_img_2_epic_cf2(uint32_t cf);
+static drv_epic_render_list_t rl;
+void set_px_cb_assert(lv_disp_drv_t *disp_drv, uint8_t *buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y,
+                      lv_color_t color, lv_opa_t opa)
+{
+    (void) disp_drv; /*Unused*/
+    (void) buf; /*Unused*/
+    (void) buf_w; /*Unused*/
+    (void) x; /*Unused*/
+    (void) y; /*Unused*/
+    (void) color; /*Unused*/
+    (void) opa; /*Unused*/
+
+    LV_ASSERT(0);
+}
 
 
+static void merge_all_inv_area_to_one(void)
+{
+    lv_disp_t *disp_refr = _lv_refr_get_disp_refreshing();
+
+    if (disp_refr->inv_p > 1)
+    {
+        lv_area_t all_inv_area_joined;
+        uint32_t first = 1;
+        for (uint32_t join_in = 0; join_in < disp_refr->inv_p; join_in++)
+        {
+            if (disp_refr->inv_area_joined[join_in] != 0) continue;
+
+            /*Join all inv areas to 'all_inv_area_joined'*/
+            if (first)
+            {
+                lv_area_copy(&all_inv_area_joined, &disp_refr->inv_areas[join_in]);
+                first = 0;
+            }
+            else
+                _lv_area_join(&all_inv_area_joined, &disp_refr->inv_areas[join_in], &all_inv_area_joined);
+        }
+
+        lv_area_copy(&disp_refr->inv_areas[0], &all_inv_area_joined);
+        disp_refr->inv_area_joined[0] = 0;
+        disp_refr->inv_p = 1;
+    }
+}
+
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+void pre_render_start(lv_disp_t *disp)
+{
+}
+#endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
 
 static void render_start(lv_disp_drv_t *disp_drv)
 {
+    lv_disp_t *disp_refr = _lv_refr_get_disp_refreshing();
+
+    if (disp_refr->inv_p)
+    {
+        drv_epic_render_buf render_buf;
+        EPIC_AreaTypeDef ow_area;
+
+        render_buf.cf = lv_img_2_epic_cf2(LV_IMG_CF_TRUE_COLOR);
+        render_buf.data = disp_drv->draw_buf->buf_act;
+        render_buf.area.x0 = 0;
+        render_buf.area.y0 = 0;
+        render_buf.area.x1 = LV_HOR_RES_MAX - 1;
+        render_buf.area.y1 = LV_VER_RES_MAX - 1;
+        rl = drv_epic_alloc_render_list(&render_buf, &ow_area);
+        RT_ASSERT(rl != NULL);
+
+#if 1 //Not supported partial invalid area now
+        disp_refr->inv_areas[0].x1 = 0;
+        disp_refr->inv_areas[0].y1 = 0;
+        disp_refr->inv_areas[0].x2 = LV_HOR_RES_MAX - 1;
+        disp_refr->inv_areas[0].y2 = LV_VER_RES_MAX - 1;
+        disp_refr->inv_area_joined[0] = 0;
+        disp_refr->inv_p = 1;
+#else
+        /*Merge to one area*/
+        merge_all_inv_area_to_one();
+
+        if (HAL_EPIC_AreaIsValid(&ow_area))
+        {
+            disp_refr->inv_areas[0].x1 = LV_MIN(disp_refr->inv_areas[0].x1, ow_area.x0);
+            disp_refr->inv_areas[0].y1 = LV_MIN(disp_refr->inv_areas[0].y1, ow_area.y0);
+            disp_refr->inv_areas[0].x2 = LV_MAX(disp_refr->inv_areas[0].x2, ow_area.x1);
+            disp_refr->inv_areas[0].y2 = LV_MAX(disp_refr->inv_areas[0].y2, ow_area.y1);
+        }
+#endif
+    }
+}
 
 
+static void lcd_flush_done(lcd_fb_desc_t *fb_desc)
+{
+    rt_err_t err;
+    err = rt_sem_release(&lcd_sema);
+    RT_ASSERT(RT_EOK == err);
+
+
+}
 #if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+static void lcd_flush_done_and_switch_buf(lcd_fb_desc_t *fb_desc)
+{
+    rt_err_t err;
+    err = rt_sem_release(&lcd_sema);
+    RT_ASSERT(RT_EOK == err);
+
     switch_draw_buf();
     update_fb();
+}
 #endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
+
+static void partial_done_cb(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *p_dst, void *usr_data, uint32_t last)
+{
+    LCD_AreaDef flush_area =
+    {
+        .x0 = p_dst->x_offset,
+        .x1 = p_dst->x_offset + p_dst->width - 1,
+        .y0 = p_dst->y_offset,
+        .y1 = p_dst->y_offset + p_dst->height - 1
+    };
+    rt_err_t err;
+    err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
+    RT_ASSERT(RT_EOK == err);
+
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+    if (last)
+        drv_lcd_fb_write_send(&flush_area, &flush_area, (uint8_t *)p_dst->data, lcd_flush_done_and_switch_buf, last);
+    else
+#endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
+        drv_lcd_fb_write_send(&flush_area, &flush_area, (uint8_t *)p_dst->data, lcd_flush_done, last);
+}
+
+
+static void lcd_flush_new_api(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area, lv_color_t *color_p)
+{
+    EPIC_MsgTypeDef msg;
+
+    msg.content.rd.area.x0 = disp_drv->draw_ctx->clip_area->x1 + disp_drv->offset_x;
+    msg.content.rd.area.x1 = disp_drv->draw_ctx->clip_area->x2 + disp_drv->offset_x;
+    msg.content.rd.area.y0 = disp_drv->draw_ctx->clip_area->y1 + disp_drv->offset_y;
+    msg.content.rd.area.y1 = disp_drv->draw_ctx->clip_area->y2 + disp_drv->offset_y;
+
+    if ((msg.content.rd.area.x0 > msg.content.rd.area.x1) || (msg.content.rd.area.y0 > msg.content.rd.area.y1))
+    {
+        ;
+    }
+    else
+    {
+        msg.id = EPIC_MSG_RENDER_DRAW;
+        msg.render_list = (drv_epic_render_list_t) rl;
+        msg.content.rd.pixel_align = info.draw_align;
+        msg.content.rd.partial_done_cb = partial_done_cb;
+        msg.content.rd.usr_data = NULL;
+        drv_epic_render_msg_commit(&msg);
+    }
+
+
+    /* Inform the graphics library that you are ready with the flushing*/
+    lv_disp_flush_ready(disp_drv);
 
 }
 
+
+#else /*DRV_EPIC_NEW_API*/
+
+static void render_start(lv_disp_drv_t *disp_drv)
+{
+}
+
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+static uint8_t use_new_framebuffer;
+
+#if defined(BSP_USING_RAMLESS_LCD)
+void pre_render_start(lv_disp_t *disp)
+{
+    /* Update one framebuffer partially, may cause Tearing effect on RAMLESS LCD,
+       so update whole screen always
+    */
+    disp->inv_p = 1;
+    lv_area_set(&disp->inv_areas[0], 0, 0,
+                lv_disp_get_hor_res(disp) - 1, lv_disp_get_ver_res(disp) - 1);
+    disp->inv_area_joined[0] = 0;
+    use_new_framebuffer = 1;
+}
+
+#else /*!BSP_USING_RAMLESS_LCD*/
+
+void pre_render_start(lv_disp_t *disp)
+{
+    int32_t i;
+    uint32_t inv_percent, pixels = 0;
+
+    for (i = 0; i < (int)disp->inv_p; i++)
+    {
+        if (disp->inv_area_joined[i] == 0)
+        {
+            pixels += lv_area_get_size(&(disp->inv_areas[i]));
+        }
+    }
+
+    inv_percent = pixels * 100 / (lv_disp_get_hor_res(disp) * lv_disp_get_ver_res(disp));
+
+    /*
+        Two LCD framebuffer will be used if invalid area percentage larger than this value,
+        else only one will be used.
+    */
+#define FULL_SCREEN_RENDERING_THRESHOLD   50
+    /*
+        If the percentage of invalid areas is more than 'FULL_SCREEN_RENDERING_THRESHOLD', we considered that
+        the rendering time will be larger than LCD flushing time. And an new
+        PSRAM framebuffer will be actived, and we invalidate whole screen to avoid
+        copy previous PSRAM framebuffer to new one.
+    */
+    if (inv_percent > FULL_SCREEN_RENDERING_THRESHOLD)
+    {
+        /*Invalidate whole screen*/
+        disp->inv_p = 1;
+        lv_area_set(&disp->inv_areas[0], 0, 0,
+                    lv_disp_get_hor_res(disp) - 1, lv_disp_get_ver_res(disp) - 1);
+        disp->inv_area_joined[0] = 0;
+        use_new_framebuffer = 1;
+    }
+    else
+    {
+        use_new_framebuffer = 0;
+    }
+
+
+}
+#endif /*BSP_USING_RAMLESS_LCD*/
+#endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
 
 
 static void wait_flush_done(lv_disp_drv_t *disp_drv)
@@ -332,6 +554,8 @@ static rt_err_t lcd_flush_done(rt_device_t dev, void *buffer)
 
 #endif /* BSP_USING_LCD_FRAMEBUFFER */
 
+extern uint32_t drv_epic_get_error(void);
+
 void lcd_flush(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area, lv_color_t *color_p)
 {
     LCD_AreaDef clip_area =   //Buf clip area
@@ -358,16 +582,23 @@ void lcd_flush(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area, lv_color_t *c
         return;
     }
 
-    lcd_flushing_disp_drv = disp_drv;
-
-
-
-
 
     rt_err_t err;
     err = rt_sem_take(&lcd_sema, rt_tick_from_millisecond(LCD_FLUSH_EXP_MS));
     RT_ASSERT(RT_EOK == err);
+
+
+    lcd_flushing_disp_drv = disp_drv;
+
 #ifdef BSP_USING_LCD_FRAMEBUFFER
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+    if (use_new_framebuffer)
+    {
+        switch_draw_buf();
+        update_fb();
+        use_new_framebuffer = 0;
+    }
+#endif /* LCD_FB_USING_TWO_COMPRESSED ||  LCD_FB_USING_TWO_UNCOMPRESSED*/
     drv_lcd_fb_write_send(&clip_area, &src_area, (uint8_t *)color_p, lcd_flush_done,
                           disp_drv->draw_buf->flushing_last);
 #else
@@ -379,6 +610,8 @@ void lcd_flush(lv_disp_drv_t *disp_drv, const lv_area_t *buf_area, lv_color_t *c
 #endif /* BSP_USING_LCD_FRAMEBUFFER */
 
 }
+#endif /*DRV_EPIC_NEW_API*/
+
 
 
 
@@ -552,18 +785,48 @@ lv_disp_drv_t *lv_lcd_init(const char *name)
     rt_device_control(device, RTGRAPHIC_CTRL_SET_BUF_FORMAT, &cf);
     rt_sem_init(&lcd_sema, "lv_lcd", 1, RT_IPC_FLAG_FIFO);
     static lv_disp_draw_buf_t disp_buf;
+    lv_disp_drv_init(&disp_drv);
+
+#ifndef DRV_EPIC_NEW_API
+
 #if defined(LV_FB_TWO_NOT_SCREEN_SIZE)||defined(LV_FB_TWO_SCREEN_SIZE)
     lv_disp_buf_init3(&disp_buf, (void *)buf1_1, (void *)buf1_2, FB_ALIGNED_HOR_RES, LV_FB_LINE_NUM, LV_IMG_CF_TRUE_COLOR);
 #else
     lv_disp_buf_init3(&disp_buf, (void *)buf1_1, (void *)NULL, FB_ALIGNED_HOR_RES, LV_FB_LINE_NUM, LV_IMG_CF_TRUE_COLOR);
 #endif /* LV_FB_TWO_NOT_SCREEN_SIZE ||  LV_FB_TWO_SCREEN_SIZE*/
 
-    lv_disp_drv_init(&disp_drv);
+
 #if defined(LV_FB_ONE_SCREEN_SIZE)||defined(LV_FB_TWO_SCREEN_SIZE)
     disp_drv.direct_mode  = 1;
 #else
     disp_drv.direct_mode  = 0;
 #endif /* LV_FB_ONE_SCREEN_SIZE ||  LV_FB_TWO_SCREEN_SIZE*/
+
+
+    disp_drv.flush_cb = lcd_flush;
+    disp_drv.wait_cb = wait_flush_done;
+
+
+#else
+
+    lv_disp_buf_init3(&disp_buf, (void *)get_draw_buf(),
+                      (void *)NULL, FB_ALIGNED_HOR_RES, LV_VER_RES_MAX, LV_IMG_CF_TRUE_COLOR);
+
+
+    disp_drv.direct_mode  = 1;
+
+
+    disp_drv.flush_cb = lcd_flush_new_api;
+    disp_drv.wait_cb = NULL;
+    disp_drv.set_px_cb = set_px_cb_assert;
+
+    drv_epic_setup_render_buffer((uint8_t *)buf1_1, (uint8_t *)buf1_2, sizeof(buf1_1));
+
+#endif /*DRV_EPIC_NEW_API*/
+    disp_drv.draw_buf = &disp_buf;
+    disp_drv.monitor_cb = perf_monitor;
+    disp_drv.rounder_cb = rounder_cb;
+    disp_drv.render_start_cb = render_start;
 
     uint32_t align_size = (info.draw_align != 0) ? info.draw_align : 1;
     disp_drv.hor_res          = LV_HOR_RES_MAX;
@@ -581,14 +844,6 @@ lv_disp_drv_t *lv_lcd_init(const char *name)
     }
 
 
-    disp_drv.draw_buf = &disp_buf;
-
-    disp_drv.monitor_cb = perf_monitor;
-    disp_drv.flush_cb = lcd_flush;
-    disp_drv.wait_cb = wait_flush_done;
-
-    disp_drv.rounder_cb = rounder_cb;
-    disp_drv.render_start_cb = render_start;
 
 #ifdef BSP_USING_LCD_FRAMEBUFFER
     drv_lcd_fb_init(name);

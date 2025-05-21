@@ -8,7 +8,7 @@
   例如在HCPU的console里发送`send "Hello LCPU, this is HCPU"`，在LCPU的console出现打印`rx: Hello LCPU, this is HCPU`
 
 ## 工程说明
-- common工程支持的开发板有
+- 工程支持的开发板有
     - eh-lb551
     - eh-lb555
     - ec-lb583
@@ -16,6 +16,6 @@
     - eh-lb561
     - eh-lb563
 - 编译方法: 进入hcpu目录执行命令`scons --board=<board_name> -j8`， 其中board_name为板子名称，例如编译eh-lb561板子，完整命令为`scons --board=eh-lb561 -j8`
-  编译生成的image文件存放在HCPU的build_<board_name>目录下，common工程的用法参考通<<用工程构建方法>>          
+  编译生成的image文件存放在HCPU的build_<board_name>目录下，工程的用法参考<<通用工程构建方法>>          
 - HCPU和LCPU使用queue 2作为通信通道，HCPU给LCPU的发送buffer大小为256字节，LCPU给HCPU的发送buffer也为256字节，
   相应的宏定义在`/src/common/ipc_config.h`和各自工程的`linker_scripts/custom_mem_map.h`中，HCPU的主函数在`src/hcpu/main.c`， LCPU的主函数在`src/lcpu/main.c`

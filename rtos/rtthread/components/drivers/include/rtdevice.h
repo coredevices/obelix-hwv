@@ -48,6 +48,11 @@ extern "C" {
 #include "drivers/mtd_nand.h"
 #endif /* RT_USING_MTD_NAND */
 
+#ifdef RT_USING_MTD_DHARA
+#include "drivers/mtd_dhara.h"
+#endif /* RT_USING_MTD_DHARA */
+
+
 #ifdef RT_USING_USB_DEVICE
 #include "drivers/usb_device.h"
 #endif /* RT_USING_USB_DEVICE */

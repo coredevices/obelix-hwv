@@ -63,10 +63,22 @@ scons --board=em-lb52d -j8
 ```
 * 注意功能引引脚跟设备引脚并不是一一对应的关系，设备引脚请参考原理图
 ![alt text](assets/yinjiaopeizhi.png)
-### 历程输出结果展示
+### 例程输出结果展示
 ![alt text](assets/tf_id.png)
-下图为其中抓取发送CMD指令的波形
+是否读取ID成功log打印结果如下
+* 如果没有插tf卡或者读取失败则Log打印为
+```c
+[err]SD card goto IDLE mode timeout
+[SD]msd init failed,spi_dev=xxxxxxxx 
+```
+* 读取ID成功则Log打印为
+```c
+ [SD] msd init ok
+ find sd0 ok!
+ tf_id:2000b3e4(后四位为TF卡ID，以16)
+ ``` 
 
+下图为其中抓取发送CMD指令的波形
 CMD0的波形（发送CMD0将设备设置为SPI模式）
 ![alt text](assets/CMD0.png)
 CMD8的波形(校验卡的协议是否是SD2.0)

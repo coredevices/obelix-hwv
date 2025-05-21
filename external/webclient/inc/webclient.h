@@ -20,6 +20,14 @@
 #include <rtthread.h>
 #include <stddef.h>
 
+#ifdef PKG_USING_MBEDTLS
+#ifdef RT_USING_SAL
+#define WEBCLIENT_USING_SAL_TLS
+#else
+#define WEBCLIENT_USING_MBED_TLS
+#endif
+#endif
+
 #if defined(WEBCLIENT_USING_MBED_TLS) || defined(WEBCLIENT_USING_SAL_TLS)
 #include <tls_client.h>
 #endif

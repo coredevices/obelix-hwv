@@ -20,6 +20,7 @@ except:
 
 src=['bf0_pin_const.c']
 src += ['Templates/system_bf0_ap.c']
+src += ['lcpu_config_type.c']
 if GetDepend(['BF0_HCPU']) and not GetDepend(['CFG_BOOTLOADER']):
     if GetDepend('SF32LB52X_REV_AUTO') or GetDepend('SF32LB52X_REV_A') or (not GetDepend('SF32LB52X_REV_B')):
         src += ['lcpu_patch.c']
@@ -29,6 +30,7 @@ if GetDepend(['BF0_HCPU']) and not GetDepend(['CFG_BOOTLOADER']):
         src += ['bt_rf_fulcal.c']
     src += ['bt_rf_cw_config.c']
     src += ['bt_power_config.c']
+    src += ['bf0_lcpu_init.c']
     if not GetDepend(['CFG_FACTORY_DEBUG']):
         src += ['bt_rf_test.c']
     if GetDepend(['FPGA']):
@@ -44,28 +46,28 @@ if GetDepend(['BF0_HCPU']):
         ASFLAGS = ' --cpreproc'
         CCFLAGS = ' -march=armv8-m.main+cdecp1'
     if rtconfig.PLATFORM == 'gcc':
-        src += ['Templates/gcc/startup_bf0_hcpu.s']
+        src += ['Templates/gcc/startup_bf0_hcpu.S']
     elif rtconfig.PLATFORM == 'armcc':
         src += ['Templates/arm/startup_bf0_hcpu.S']
     elif rtconfig.PLATFORM == 'iar':
-        src += ['Templates/iar/startup_bf0_hcpu.s']
+        src += ['Templates/iar/startup_bf0_hcpu.S']
 elif GetDepend(['BF0_LCPU']):
     if  rtconfig.PLATFORM != 'gcc':
         ASFLAGS = ' --cpreproc'
         CCFLAGS = ' -march=armv8-m.main+cdecp1'    
     if rtconfig.PLATFORM == 'gcc':
         if GetDepend(['ROM_ATTR']):
-            src += ['Templates/gcc/startup_bf0_lcpu_rom.s']
+            src += ['Templates/gcc/startup_bf0_lcpu_rom.S']
         else:
-            src += ['Templates/gcc/startup_bf0_lcpu.s']
+            src += ['Templates/gcc/startup_bf0_lcpu.S']
     elif rtconfig.PLATFORM == 'armcc':
         if GetDepend(['ROM_ATTR']):
             src += ['Templates/arm/startup_bf0_lcpu_rom.S']
         else:
             src += ['Templates/arm/startup_bf0_lcpu.S']
     elif rtconfig.PLATFORM == 'iar':
-        src += ['Templates/iar/startup_bf0_lcpu.s']
-        src += ['Templates/iar/startup_bf0_lcpu_rom.s']
+        src += ['Templates/iar/startup_bf0_lcpu.S']
+        src += ['Templates/iar/startup_bf0_lcpu_rom.S']
 
 path = [cwd, cwd + '/../Include']
 path = path + [cwd + '/../../../external/CMSIS/Include']

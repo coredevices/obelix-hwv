@@ -61,7 +61,6 @@
 //#define DBG_LVL               DBG_INFO
 #include <log.h>
 
-extern uint8_t a2dp_set_speaker_volume(uint8_t volume);
 
 #ifdef BT_USING_AVRCP
 bt_err_t bt_sifli_set_avrcp_volume(rt_bt_device_t *dev, bt_volume_set_t *set)
@@ -69,16 +68,12 @@ bt_err_t bt_sifli_set_avrcp_volume(rt_bt_device_t *dev, bt_volume_set_t *set)
     int volume, temp_volume;
     temp_volume = set->volume.media_volume;
     bt_err_t ret = BT_EOK;
-    uint8_t volume_conversion[16] = {0, 8, 16, 25, 34, 43, 52, 61, 70, 79, 87, 96, 104, 112, 120, 127};
+    uint8_t max_vol = 15;
+#ifdef     AUDIO_USING_MANAGER
+    max_vol = audio_server_get_max_volume();
+#endif // AUDIO_USING_MANAGER
+    volume = bt_interface_avrcp_local_vol_2_abs_vol(temp_volume, max_vol);
 
-    if (temp_volume < 16)
-    {
-        volume = volume_conversion[temp_volume];
-    }
-    else
-    {
-        volume = 127;
-    }
 #ifndef BT_CONNECT_SUPPORT_MULTI_LINK
     if (BT_STATE_CONNECTED == rt_bt_get_connect_state(dev, BT_PROFILE_AVRCP))
 #endif
@@ -95,7 +90,9 @@ bt_err_t bt_sifli_set_avrcp_volume(rt_bt_device_t *dev, bt_volume_set_t *set)
 
     if (BT_EOK == ret)
     {
-        a2dp_set_speaker_volume(volume);
+#ifdef AUDIO_USING_MANAGER
+        audio_server_set_private_volume(AUDIO_TYPE_BT_MUSIC, temp_volume);
+#endif // AUDIO_USING_MANAGER
     }
 
     return ret;

@@ -15,9 +15,7 @@
             {
                 "offset": "0x00010000", 
                 "max_size": "0x00010000", 
-                "tags": [
-                    "FLASH_BOOT_LOADER"
-                ], 
+                "tags": [], 
                 "ftab": {
                     "name": "bootloader", 
                     "address": [
@@ -72,7 +70,14 @@
         "regions": [
             {
                 "offset": "0x00000000", 
-                "max_size": "0x00400000", 
+                "max_size": "0x00040000", 
+                "tags": [
+                    "PSRAM_CODE"
+                ]
+            },
+            {
+                "offset": "0x00040000", 
+                "max_size": "0x003C0000", 
                 "tags": [
                     "PSRAM_DATA"
                 ]

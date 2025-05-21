@@ -588,6 +588,8 @@ static const uint32_t ref_residual_cnt_tbl_tx_5g[79] =
     39864
 };
 
+uint8_t dpsk_gain[79];
+
 __WEAK uint8_t bt_is_in_BQB_mode(void)
 {
     return 0;
@@ -1141,7 +1143,8 @@ uint32_t bt_rfc_init()
     //RD FULCAL
     bt_txon_cmd[i++] = RD_FULCAL ;
     bt_txon_cmd[i++] = WR(0x40) ;
-    //bt_txon_cmd[i++] = WR(0x88) ;
+    bt_txon_cmd[i++] = AND(24) ;
+    bt_txon_cmd[i++] = WR(0xA4) ;
 
     //EDR VCO3G_EN
     bt_txon_cmd[i++] = RD(0x24) ;
@@ -2765,6 +2768,7 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     }
 
     //oslo calibration
+    uint32_t gpadc_cfg, gpadc_ctrl1, gpadc_ctrl2;
     uint16_t adc_value;
     uint16_t max_adc_value = 0;
     uint8_t  fc[79];
@@ -2802,6 +2806,9 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     hwp_bt_rfc->EDR_CAL_REG1 &= ~BT_RFC_EDR_CAL_REG1_BRF_EDR_OSLO_BM_LV ;
     hwp_bt_rfc->EDR_CAL_REG1 |= 0x10 << BT_RFC_EDR_CAL_REG1_BRF_EDR_OSLO_BM_LV_Pos ;
 
+    gpadc_cfg   = hwp_gpadc->ADC_CFG_REG1;
+    gpadc_ctrl1 = hwp_gpadc->ADC_CTRL_REG;
+    gpadc_ctrl2 = hwp_gpadc->ADC_CTRL_REG2;
     hwp_gpadc->ADC_CFG_REG1 |= GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG      | \
                                GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN   | \
                                GPADC_ADC_CFG_REG1_ANAU_GPADC_SE         | \
@@ -2920,16 +2927,18 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     hwp_bt_phy->TX_CTRL &= ~BT_PHY_TX_CTRL_MOD_METHOD_BLE & ~BT_PHY_TX_CTRL_MOD_METHOD_BR ;
 
     hwp_bt_rfc->EDR_OSLO_REG &= ~BT_RFC_EDR_OSLO_REG_BRF_EDR_EN_OSLO_FCAL_LV ;
-    hwp_gpadc->ADC_CFG_REG1 &= ~GPADC_ADC_CFG_REG1_ANAU_GPADC_EN_BG      & \
-                               ~GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN   & \
-                               ~GPADC_ADC_CFG_REG1_ANAU_GPADC_SE         & \
-                               ~GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN ;
+
+    //restore gpadc setting
+    hwp_gpadc->ADC_CFG_REG1  = gpadc_cfg   ;
+    hwp_gpadc->ADC_CTRL_REG  = gpadc_ctrl1 ;
+    hwp_gpadc->ADC_CTRL_REG2 = gpadc_ctrl2 ;
+
     //write to rf_mem
     reg_addr = rslt_start_addr  ;
     reg_data = 0;
 
-    hwp_bt_rfc->CAL_ADDR_REG2 &= 0xffff;
-    hwp_bt_rfc->CAL_ADDR_REG2 += reg_addr << 16;
+    //hwp_bt_rfc->CAL_ADDR_REG2 &= 0xffff;
+    //hwp_bt_rfc->CAL_ADDR_REG2 += reg_addr << 16;
     for (i = 0; i < 79; i++)
     {
         //store bttx cal result
@@ -4346,10 +4355,10 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
         }
 
         //fix offset i and q
-        //hwp_bt_rfc->TXDC_CAL_REG2  &= ~BT_RFC_TXDC_CAL_REG2_TX_DC_CAL_OFFSET_I;
-        //hwp_bt_rfc->TXDC_CAL_REG2  &= ~BT_RFC_TXDC_CAL_REG2_TX_DC_CAL_OFFSET_Q;
+        hwp_bt_rfc->TXDC_CAL_REG2  &= ~BT_RFC_TXDC_CAL_REG2_TX_DC_CAL_OFFSET_I;
         hwp_bt_rfc->TXDC_CAL_REG2  &= ~BT_RFC_TXDC_CAL_REG2_TX_DC_CAL_OFFSET_Q;
-        //hwp_bt_rfc->TXDC_CAL_REG2  |= offset_q[i] << BT_RFC_TXDC_CAL_REG2_TX_DC_CAL_OFFSET_Q_Pos;
+        hwp_bt_rfc->TXDC_CAL_REG2  |= offset_i[i] << BT_RFC_TXDC_CAL_REG2_TX_DC_CAL_OFFSET_I_Pos;
+        hwp_bt_rfc->TXDC_CAL_REG2  |= offset_q[i] << BT_RFC_TXDC_CAL_REG2_TX_DC_CAL_OFFSET_Q_Pos;
         //set rx mixer phase for coef calibration
         hwp_bt_phy->MIXER_CFG1 &= ~BT_PHY_MIXER_CFG1_RX_MIXER_PHASE_1;
         hwp_bt_phy->MIXER_CFG1 |= 0x80 << BT_PHY_MIXER_CFG1_RX_MIXER_PHASE_1_Pos;//1.5MHz
@@ -4649,6 +4658,32 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
             tmxcap_sel[i] += 1;
     }
 
+    //store tmxcap_sel cal result and dpsk_gain cal result
+    reg_addr = hwp_bt_rfc->CAL_ADDR_REG2;
+    reg_addr >>= 16;
+    uint32_t d0, d1, d2;
+    dpsk_gain[0] = 0x5E;
+    for (i = 0; i < 79; i++)
+    {
+
+        dpsk_gain[i] = (dpsk_gain[0] - (i * 14) / 78);
+        //dig gain saturation
+        if (dpsk_gain[i] > 0x5E) dpsk_gain[i] = 0x5E;
+
+        data = read_memory(BT_RFC_MEM_BASE + reg_addr);
+        //data &= 0xFFFFFFF;
+        data &= 0x1F77FFF;
+        d0 = (dpsk_gain[i] >> 1) & 0x1;
+        d0 = d0 << 15;
+        d1 = (dpsk_gain[i] >> 1) & 0x2;
+        d1 = d1 << 18;
+        d2 = (dpsk_gain[i] >> 1) & 0x1c;
+        d2 = d2 << 23;
+        data |= d0 | d1 | d2;
+        data |= tmxcap_sel[i] << 28;
+        write_memory(BT_RFC_MEM_BASE + reg_addr, data);
+        reg_addr += 4;
+    }
     //disable sine wave tx and dc cal module
     hwp_bt_phy->TX_DC_CAL_CFG0 &= ~BT_PHY_TX_DC_CAL_CFG0_TX_DC_CAL_EN ;
 
@@ -4762,25 +4797,13 @@ uint32_t bt_rfc_txdc_cal(uint32_t rslt_start_addr)
         reg_addr += 4;
     }
 
-    //store tmxcap_sel cal result
-    reg_addr = hwp_bt_rfc->CAL_ADDR_REG2;
-    reg_addr >>= 16;
-    for (i = 0; i < 79; i++)
-    {
-        data = read_memory(BT_RFC_MEM_BASE + reg_addr);
-        data &= 0xFFFFFFF;
-        data |= tmxcap_sel[i] << 28;
-        write_memory(BT_RFC_MEM_BASE + reg_addr, data);
-        reg_addr += 4;
-    }
-
     //replace edr cal related cmd in bt_bton_cmd with wait cmd
     reg_addr = hwp_bt_rfc->CU_ADDR_REG3;
     reg_addr &= 0xFFFF;
     for (i = 0; i < 10; i++)
     {
         data = 0x50045004;
-        write_memory(BT_RFC_MEM_BASE + reg_addr + 29 * 4, data);
+        write_memory(BT_RFC_MEM_BASE + reg_addr + 30 * 4, data);
         reg_addr += 4;
     }
 
@@ -4865,12 +4888,28 @@ void bt_rf_opt_cal(void)
     //hwp_bt_phy->TX_CTRL &= ~BT_PHY_TX_CTRL_MAC_PWR_CTRL_EN_Msk;
 
     // RF CBPF
+    hwp_bt_rfc->RBB_REG1 &= ~(BT_RFC_RBB_REG1_BRF_PKDET_VTH1I_BT_Msk | BT_RFC_RBB_REG1_BRF_PKDET_VTH1Q_BT_Msk
+                              | BT_RFC_RBB_REG1_BRF_PKDET_VTH2I_BT_Msk | BT_RFC_RBB_REG1_BRF_PKDET_VTH2Q_BT_Msk);
+    hwp_bt_rfc->RBB_REG1 |= (0x03 << BT_RFC_RBB_REG1_BRF_PKDET_VTH1I_BT_Pos | 0x03 << BT_RFC_RBB_REG1_BRF_PKDET_VTH1Q_BT_Pos
+                             | 0x03 << BT_RFC_RBB_REG1_BRF_PKDET_VTH2I_BT_Pos | 0x03 << BT_RFC_RBB_REG1_BRF_PKDET_VTH2Q_BT_Pos);
+
     hwp_bt_rfc->RBB_REG2 &= ~BT_RFC_RBB_REG2_BRF_CBPF_FC_LV_Msk;
     hwp_bt_rfc->RBB_REG2 |= 0x3 << BT_RFC_RBB_REG2_BRF_CBPF_FC_LV_Pos;
     hwp_bt_rfc->RBB_REG4 &= ~(BT_RFC_RBB_REG4_BRF_PKDET_VTH1I_LV_Msk | BT_RFC_RBB_REG4_BRF_PKDET_VTH1Q_LV_Msk
                               | BT_RFC_RBB_REG4_BRF_PKDET_VTH2I_LV_Msk | BT_RFC_RBB_REG4_BRF_PKDET_VTH2Q_LV_Msk);
-    hwp_bt_rfc->RBB_REG4 |= (0x03 << BT_RFC_RBB_REG4_BRF_PKDET_VTH1I_LV_Pos) | (0x03 << BT_RFC_RBB_REG4_BRF_PKDET_VTH1Q_LV_Pos)
-                            | (0x00 << BT_RFC_RBB_REG4_BRF_PKDET_VTH2I_LV_Pos) | (0x00 << BT_RFC_RBB_REG4_BRF_PKDET_VTH2Q_LV_Pos);
+
+    uint8_t revid;
+    revid = __HAL_SYSCFG_GET_REVID();
+    if (revid <= 1)
+    {
+        hwp_bt_rfc->RBB_REG4 |= (0x03 << BT_RFC_RBB_REG4_BRF_PKDET_VTH1I_LV_Pos) | (0x03 << BT_RFC_RBB_REG4_BRF_PKDET_VTH1Q_LV_Pos)
+                                | (0x00 << BT_RFC_RBB_REG4_BRF_PKDET_VTH2I_LV_Pos) | (0x00 << BT_RFC_RBB_REG4_BRF_PKDET_VTH2Q_LV_Pos);
+    }
+    else
+    {
+        hwp_bt_rfc->RBB_REG4 |= (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH1I_LV_Pos) | (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH1Q_LV_Pos)
+                                | (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH2I_LV_Pos) | (0x0A << BT_RFC_RBB_REG4_BRF_PKDET_VTH2Q_LV_Pos);
+    }
 
     // Mixer
     hwp_bt_phy->MIXER_CFG1 &= ~BT_PHY_MIXER_CFG1_RX_MIXER_PHASE_1_Msk;
@@ -5004,7 +5043,7 @@ void bt_rf_cal(void)
     HAL_Set_backup(RTC_BACKUP_BT_TXPWR, RF_PWR_PARA(bt_rf_get_max_tx_pwr(), bt_rf_get_min_tx_pwr(), bt_rf_get_init_tx_pwr(), (0x80 | bt_is_in_BQB_mode())));
 #endif
 }
-char *g_rf_ful_ver = "1.0.0.2";
+char *g_rf_ful_ver = "1.0.1.0_3106";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = 0xFF;

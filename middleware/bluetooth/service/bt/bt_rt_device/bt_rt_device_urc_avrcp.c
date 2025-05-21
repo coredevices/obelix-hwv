@@ -145,13 +145,18 @@ void urc_func_bt_avrcp_absolute_volume_sifli(uint8_t volume)
 {
     bt_notify_t args;
     bt_volume_set_t vol = {0};
+    uint8_t max_vol = 15;
+#ifdef AUDIO_USING_MANAGER
+    max_vol = audio_server_get_max_volume();
+#endif // AUDIO_USING_MANAGER
+    uint8_t local_vol = bt_interface_avrcp_abs_vol_2_local_vol(volume, max_vol);
     vol.mode = BT_VOLUME_MEDIA;
-    vol.volume.media_volume = volume;
+    vol.volume.media_volume = local_vol;
     args.event = BT_EVENT_VOL_CHANGED;
     args.args = &vol;
 
     rt_bt_event_notify(&args);
-    LOG_I("URC BT avrcp ab-volue ind:%d", volume);
+    LOG_I("URC BT avrcp ab-volue ind:%d local %d", volume, local_vol);
 }
 
 int bt_sifli_notify_avrcp_event_hdl(uint16_t event_id, uint8_t *data, uint16_t data_len)

@@ -42,11 +42,11 @@
 
 
 ### 编译和烧录
-切换到例程project/common目录，运行scons命令执行编译：
+切换到例程project目录，运行scons命令执行编译：
 ```c
 > scons --board=eh-lb525 -j32
 ```
-切换到例程`project/common/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
+切换到例程`project/build_xx`目录，运行`uart_download.bat`，按提示选择端口即可进行下载：
 ```c
 $ ./uart_download.bat
 

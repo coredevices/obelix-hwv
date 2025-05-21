@@ -59,10 +59,10 @@ extern "C" {
     {                                           \
        .name                    = "i2s1",       \
        .dma_handle              = MIC_DMA_INSTANCE, \
-       .dma_request             = MIC_DMA_REQUEST,  \
+       .dma_request             = I2S1_RX_DMA_REQUEST,  \
        .is_record               = 1,            \
        .i2s_handle              = hwp_i2s1,      \
-       .reqdma_tx               = I2S_TX_DMA_REQUEST, \
+       .reqdma_tx               = I2S1_TX_DMA_REQUEST, \
        .hdma_tx                 = I2S_TX_DMA_INSTANCE, \
     }
 #endif /* BF0_MIC_CONFIG */
@@ -74,10 +74,10 @@ extern "C" {
     {                                           \
        .name                    = "i2s2",       \
        .dma_handle              = MIC_DMA_INSTANCE, \
-       .dma_request             = MIC_DMA_REQUEST,  \
+       .dma_request             = I2S2_RX_DMA_REQUEST,  \
        .is_record               = 1,            \
        .i2s_handle              = hwp_i2s2,      \
-       .reqdma_tx               = I2S_TX_DMA_REQUEST, \
+       .reqdma_tx               = I2S2_TX_DMA_REQUEST, \
        .hdma_tx                 = I2S_TX_DMA_INSTANCE, \
     }
 #endif /* BF0_I2S2_CONFIG */

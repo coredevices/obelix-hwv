@@ -5,7 +5,7 @@ from building import *
 cwd = GetCurrentDir()
 
 src = []
-if GetDepend('RT_DFS_ELM_DHARA_ENABLED') or GetDepend('RT_LFS_DHARA_ENABLED'):
+if GetDepend('RT_DFS_ELM_DHARA_ENABLED') or GetDepend('RT_LFS_DHARA_ENABLED') or GetDepend('RT_USING_MTD_DHARA'):
     src = Glob('dhara/*.c')
     if GetDepend('RT_DFS_ELM_DHARA_NOR_MODE'):
         SrcRemove(src, "dhara/nand.c")

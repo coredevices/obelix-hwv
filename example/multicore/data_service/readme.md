@@ -12,7 +12,7 @@
   消息内容携带一个计数值，每次累加
 
 ## 工程说明
-- common工程支持的开发板有
+- 工程支持的开发板有
     - eh-lb551
     - eh-lb555
     - ec-lb583
@@ -20,7 +20,7 @@
     - eh-lb561
     - eh-lb563
 - 编译方法: 进入hcpu目录执行命令`scons --board=<board_name> -j8`， 其中board_name为板子名称，例如编译eh-lb561板子，完整命令为`scons --board=eh-lb561 -j8`
-  编译生成的image文件存放在HCPU的build_<board_name>目录下，common工程的用法参考通<<用工程构建方法>>          
+  编译生成的image文件存放在HCPU的build_<board_name>目录下，工程的用法参考通<<用工程构建方法>>          
 - test service自定义的消息ID和结构定义在`src/common/test_service.h`，
   `test_service_data_rsp_t`为`MSG_SERVICE_TEST_DATA_RSP`消息体的结构，
   `test_service_data_ntf_ind_t`为`MSG_SERVICE_DATA_NTF_IND`消息体的结构，

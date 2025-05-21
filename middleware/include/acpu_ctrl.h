@@ -188,6 +188,17 @@ void acpu_main(uint8_t task_name, void *param);
  */
 void acpu_send_result(void *val, uint32_t val_size);
 
+/** ACPU send result with given error_code to HCPU
+ *
+ * It can be called by ACPU to return task result to HCPU
+ *
+ * @param[in] val        data needs to be sent to HCPU. It's copied to shared buffer which would be read by HCPU
+ * @param[in] val_size   data size, it's limited by ACPU_TASK_OUTPUT_VAL_SIZE
+ * @param[in] error_code   error code
+ *
+ */
+void acpu_send_result2(void *val, uint32_t val_size, uint8_t error_code);
+
 
 /// @}  acpu_ctrl
 /// @}  file

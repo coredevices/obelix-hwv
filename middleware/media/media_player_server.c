@@ -1043,7 +1043,7 @@ static int mediaplayer_start(ffmpeg_handle thiz, bool is_file)
         thiz->av_pkt_queue = os_message_queue_create_int("avpkt", NETWORK_BUFFER_CAPACITY, sizeof(AVPacket), NULL, 0);
         RT_ASSERT(thiz->av_pkt_queue != NULL);
 
-        thiz->video_decode_thread = os_thread_create_int("vid_dec", video_audio_decode_thread, thiz,
+        thiz->video_decode_thread = os_thread_create("vid_dec", video_audio_decode_thread, thiz,
                                     ffmpeg_thread_stack, sizeof(ffmpeg_thread_stack),
                                     network_decode_task_prio,
                                     RT_THREAD_TICK_DEFAULT);
@@ -1061,7 +1061,7 @@ static int mediaplayer_start(ffmpeg_handle thiz, bool is_file)
 
         if (thiz->cfg.audio_enable)
         {
-            thiz->audio_decode_thread = os_thread_create_int("aud_dec", audio_decode_thread, thiz,
+            thiz->audio_decode_thread = os_thread_create("aud_dec", audio_decode_thread, thiz,
                                         ffmpeg_audio_dec_thread_stack, ffmpeg_audio_dec_thread_stack_size,
                                         audio_dec_task_prio,
                                         RT_THREAD_TICK_DEFAULT);
@@ -1070,7 +1070,7 @@ static int mediaplayer_start(ffmpeg_handle thiz, bool is_file)
 
         if (thiz->cfg.video_enable)
         {
-            thiz->video_decode_thread = os_thread_create_int("vid_dec", video_decode_thread, thiz,
+            thiz->video_decode_thread = os_thread_create("vid_dec", video_decode_thread, thiz,
                                         ffmpeg_video_dec_thread_stack, ffmpeg_video_dec_thread_stack_size,
                                         video_dec_task_prio,
                                         RT_THREAD_TICK_DEFAULT);
@@ -1504,7 +1504,7 @@ static bool demux_sifli_ezip_media(ffmpeg_handle thiz)
 
     if (thiz->cfg.audio_enable)
     {
-        thiz->audio_decode_thread = os_thread_create_int("ezipaud", ezip_audio_decode_thread, thiz,
+        thiz->audio_decode_thread = os_thread_create("ezipaud", ezip_audio_decode_thread, thiz,
                                     ffmpeg_audio_dec_thread_stack, ffmpeg_audio_dec_thread_stack_size,
                                     audio_dec_task_prio,
                                     RT_THREAD_TICK_DEFAULT);

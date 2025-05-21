@@ -55,7 +55,7 @@ HFP_HF通话获取状态信息的demo：
 通过命令hfp_cmd audio_connect 来连接通话音频，通话音频建立成功打印:"HFP HF audio_connected"
 
 11. 断开通话音频
-通过命令hfp_cmd audio_connect 来断开通话音频，通话音频断开成功打印:"HHFP HF audio_disconnected"
+通过命令hfp_cmd audio_disconnect 来断开通话音频，通话音频断开成功打印:"HFP HF audio_disconnected"
 
 12. 调节对端蓝牙设备音量
 通过命令hfp_cmd volume_control [val]来实现，val在0-15之间有效。通话音量调节结束打印:"change volume value complete"
@@ -84,7 +84,7 @@ $ ./uart_download.bat
 
 please input the serial port num:5
 ```
-关于编译、下载的详细步骤，请参考[快速入门](/quickstart/get-started.md)的相关介绍。
+关于编译、下载的详细步骤，请参考[快速入门](/quickstart/get-started-gcc.md)的相关介绍。
 
 ## 例程的预期结果
 <!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->

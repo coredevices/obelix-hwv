@@ -1216,11 +1216,7 @@ typedef enum
     /** PAD_PA80 */
     PAD_PA80,
     PIN_PAD_MAX_H,
-} pin_pad_hcpu;
 
-/** LCPU pin pad */
-typedef enum
-{
     PIN_PAD_UNDEF_L,
     /** PAD_PB00 */
     PAD_PB00,
@@ -1321,7 +1317,10 @@ typedef enum
     /** PAD_PB48 */
     PAD_PB48,
     PIN_PAD_MAX_L,
-} pin_pad_lcpu;
+} pin_pad;
+
+/** LCPU pin pad */
+
 #define PIN_FUNC_SEL_NUM  (16)
 
 /** HCPU pad function definition table */

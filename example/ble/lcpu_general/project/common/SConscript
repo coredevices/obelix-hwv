@@ -14,7 +14,7 @@ for d in list:
 Import('SIFLI_SDK')
 
 #Add test code
-objs.extend(SConscript(os.path.join(cwd, '..\\..\\src\\SConscript'), variant_dir="lcpu_general", duplicate=0))
+objs.extend(SConscript(os.path.join(cwd, '../../src/SConscript'), variant_dir="lcpu_general", duplicate=0))
 
 
 

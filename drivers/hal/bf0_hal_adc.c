@@ -297,6 +297,35 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_ADC_DeInit(ADC_HandleTypeDef *hadc)
     return tmp_hal_status;
 }
 
+void HAL_ADC_HwInit(bool cold_boot)
+{
+#if defined(SF32LB55X) || defined(SF32LB56X) || defined(SF32LB58X) || defined(SF32LB52X)
+#ifdef SOC_BF0_HCPU
+    if (cold_boot)
+    {
+        /* init adc by HCPU when cold boot */
+        hwp_gpadc1->ADC_CTRL_REG &= ~GPADC_ADC_CTRL_REG_TIMER_TRIG_EN;
+    }
+#ifdef SF32LB52X
+    else
+    {
+        /* gpadc1 is by HPSYS side on SF32LB52X */
+        hwp_gpadc1->ADC_CTRL_REG &= ~GPADC_ADC_CTRL_REG_TIMER_TRIG_EN;
+    }
+#endif /* SF32LB52X */
+#else
+#ifndef SF32LB52X
+    if (!cold_boot)
+    {
+        /* init adc by LCPU for non-cold boot as gpadc1 is in LPSYS except SF32LB52X,
+         */
+        hwp_gpadc1->ADC_CTRL_REG &= ~GPADC_ADC_CTRL_REG_TIMER_TRIG_EN;
+    }
+#endif /* !SF32LB52X */
+#endif /* SOC_BF0_HCPU */
+#endif /* SF32LB55X || SF32LB56X || SF32LB58X || SF32LB52X */
+}
+
 /**
   * @}
   */

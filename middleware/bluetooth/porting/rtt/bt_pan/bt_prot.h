@@ -11,7 +11,7 @@
 #ifndef __BT_PROT_H__
 #define __BT_PROT_H__
 
-#include "bt_lwip_pan_dev.h"
+#include "bts2_app_pan.h"
 
 
 
@@ -40,9 +40,9 @@ struct rt_bt_prot;
 
 struct rt_bt_prot_ops
 {
-    rt_err_t (*prot_recv)(struct rt_bt_lwip_pan_dev *bt_dev, void *buff, int len);
-    struct rt_bt_prot *(*dev_reg_callback)(struct rt_bt_prot *prot, struct rt_bt_lwip_pan_dev *bt_dev);
-    void (*dev_unreg_callback)(struct rt_bt_prot *prot, struct rt_bt_lwip_pan_dev *bt_dev);
+    rt_err_t (*prot_recv)(struct rt_bt_pan_instance *bt_instance, void *buff, int len);
+    struct rt_bt_prot *(*dev_reg_callback)(struct rt_bt_prot *prot, struct rt_bt_pan_instance *bt_instance);
+    void (*dev_unreg_callback)(struct rt_bt_prot *prot, struct rt_bt_pan_instance *bt_instance);
 };
 
 
@@ -53,17 +53,23 @@ struct rt_bt_prot
 };
 
 
-typedef void (*rt_bt_prot_event_handler)(struct rt_bt_prot *port, struct rt_bt_lwip_pan_dev *bt_dev, int event);
+typedef void (*rt_bt_prot_event_handler)(struct rt_bt_prot *port, struct rt_bt_pan_instance *bt_instance, int event);
 
-static void rt_bt_prot_event_handle(struct rt_bt_lwip_pan_dev *bt_dev, rt_bt_dev_event_t event);
-rt_err_t rt_bt_prot_attach_pan_dev(struct rt_bt_lwip_pan_dev *bt_dev);
+static void rt_bt_prot_event_handle(struct rt_bt_pan_instance *bt_instance, rt_bt_instance_event_t event);
+rt_err_t rt_bt_prot_attach_pan_instance(struct rt_bt_pan_instance *panInstance);
 
-rt_err_t rt_bt_prot_detach_pan_dev(struct rt_bt_lwip_pan_dev *bt_dev);
+rt_err_t rt_bt_prot_detach_pan_instance(struct rt_bt_pan_instance *bt_instance);
 rt_err_t rt_bt_prot_regisetr(struct rt_bt_prot *prot);
 //rt_err_t rt_bt_prot_event_register(struct rt_bt_prot *prot, rt_bt_prot_event_t event, rt_bt_prot_event_handler handler);
 rt_err_t rt_bt_prot_event_unregister(struct rt_bt_prot *prot, rt_bt_prot_event_t event);
-rt_err_t rt_bt_prot_send_data(struct rt_bt_lwip_pan_dev *bt_dev, void *buff, int len);
-rt_err_t rt_bt_prot_recv_data(struct rt_bt_lwip_pan_dev *bt_dev, void *buff, int len);
+rt_err_t rt_bt_prot_transfer_instance(struct rt_bt_pan_instance *bt_instance, void *buff, int len);
+rt_err_t rt_bt_instance_transfer_prot(struct rt_bt_pan_instance *bt_instance, void *buff, int len);
+extern void rt_lwip_instance_register_event_handler(struct rt_bt_pan_instance *bt_instance, rt_bt_instance_event_t event, rt_bt_instance_event_handler handler);
+
+
+
+
+
 
 #ifdef __cplusplus
 }

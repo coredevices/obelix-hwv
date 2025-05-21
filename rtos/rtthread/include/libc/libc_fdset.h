@@ -18,37 +18,42 @@
 #include <rtconfig.h>
 
 #if defined(RT_USING_NEWLIB) || defined(_WIN32)
-#include <sys/types.h>
+    #include <sys/types.h>
+#endif
+
 #if defined(HAVE_SYS_SELECT_H)
-#include <sys/select.h>
+    #include <sys/select.h>
 #endif
 
 #else
 
 #ifdef SAL_USING_POSIX
 
-#ifdef FD_SETSIZE
-#undef FD_SETSIZE
+    #ifdef FD_SETSIZE
+        #undef FD_SETSIZE
+    #endif
+
+    #define FD_SETSIZE      DFS_FD_MAX
 #endif
 
-#define FD_SETSIZE      DFS_FD_MAX
+#ifndef   FD_SETSIZE
+    #define  FD_SETSIZE  32
 #endif
-
-#  ifndef   FD_SETSIZE
-#   define  FD_SETSIZE  32
-#  endif
 
 #  define   NBBY    8       /* number of bits in a byte */
 
 typedef long    fd_mask;
 #  define   NFDBITS (sizeof (fd_mask) * NBBY)   /* bits per mask */
-#  ifndef   howmany
-#   define  howmany(x,y)    (((x)+((y)-1))/(y))
-#  endif
+#ifndef   howmany
+    #define  howmany(x,y)    (((x)+((y)-1))/(y))
+#endif
 
 /* We use a macro for fd_set so that including Sockets.h afterwards
    can work.  */
-typedef struct _types_fd_set {
+#ifndef FD_SET_DEFINED
+#define FD_SET_DEFINED
+typedef struct _types_fd_set
+{
     fd_mask fds_bits[howmany(FD_SETSIZE, NFDBITS)];
 } _types_fd_set;
 
@@ -58,7 +63,7 @@ typedef struct _types_fd_set {
 #  define   FD_CLR(n, p)    ((p)->fds_bits[(n)/NFDBITS] &= ~(1L << ((n) % NFDBITS)))
 #  define   FD_ISSET(n, p)  ((p)->fds_bits[(n)/NFDBITS] & (1L << ((n) % NFDBITS)))
 #  define   FD_ZERO(p)      memset((void*)(p), 0, sizeof(*(p)))
-
 #endif
 
 #endif
+

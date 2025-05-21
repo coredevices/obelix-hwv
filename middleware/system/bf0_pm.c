@@ -74,6 +74,8 @@
 #define LOG_TAG       "sys.pm"
 #include "log.h"
 
+extern void mpu_config(void);
+
 
 #define RET_MEM_PC_OFFSET       (0)
 #define RET_MEM_LR_OFFSET       (4)

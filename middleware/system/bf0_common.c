@@ -137,9 +137,6 @@ typedef struct
     #endif /* SOC_BF0_LCPU */
 #endif /* USING_IPC_QUEUE */
 
-#if defined(SOC_BF0_HCPU)
-    static uint8_t g_lcpu_rf_cal_disable;
-#endif /* SOC_BF0_HCPU */
 
 /** @addtogroup mailbox library
  * @ingroup middleware
@@ -231,9 +228,9 @@ int sys_init_hl_debug_queue(void)
 
     q_cfg.qid = SYS_HL_DEBUG_QUEUE;
     q_cfg.tx_buf_size = 0;
-    q_cfg.tx_buf_addr = NULL;
-    q_cfg.tx_buf_addr_alias = NULL;
-    q_cfg.rx_buf_addr = NULL;
+    q_cfg.tx_buf_addr = (uint32_t)NULL;
+    q_cfg.tx_buf_addr_alias = (uint32_t)NULL;
+    q_cfg.rx_buf_addr = (uint32_t)NULL;
     q_cfg.rx_ind = debug_queue_rx_ind;
     q_cfg.user_data = 0;
 
@@ -290,9 +287,9 @@ int sys_init_lh_debug_queue(void)
 
     q_cfg.qid = SYS_LH_DEBUG_QUEUE;
     q_cfg.tx_buf_size = 0;
-    q_cfg.tx_buf_addr = NULL;
-    q_cfg.tx_buf_addr_alias = NULL;
-    q_cfg.rx_buf_addr = NULL;
+    q_cfg.tx_buf_addr = (uint32_t)NULL;
+    q_cfg.tx_buf_addr_alias = (uint32_t)NULL;
+    q_cfg.rx_buf_addr = (uint32_t)NULL;
     q_cfg.rx_ind = debug_queue_rx_ind;
     q_cfg.user_data = 0;
 
@@ -378,240 +375,14 @@ INIT_APP_EXPORT(sys_init_debug_trigger);
 #endif // defined(SF32LB55X) && defined(USING_IPC_QUEUE)
 #endif // RT_DEBUG
 
-
-#if defined(SOC_BF0_HCPU)
-extern void lcpu_patch_install();
-
-RT_WEAK char *rf_ful_ver(uint8_t *cal_en)
-{
-    *cal_en = 0xFF;
-    return "null";
-}
-static uint8_t lcpu_is_disable_rf_cal(void)
-{
-    return g_lcpu_rf_cal_disable;
-}
-
-#ifdef SF32LB52X
-RT_WEAK void lcpu_patch_install_rev_b(void)
-{
-    // do nothing
-}
-#endif
-
-static void lcpu_patch_install_select()
-{
-#if defined(SF32LB55X)
-    /***************SF32LB55X start******************/
-#if defined(BSP_CHIP_ID_COMPATIBLE)
-    extern void lcpu_patch_install_a3();
-
-    uint8_t rev_id = __HAL_SYSCFG_GET_REVID();
-    if (rev_id == HAL_CHIP_REV_ID_A3)
-        lcpu_patch_install_a3();
-    else
-#else // !BSP_CHIP_ID_COMPATIBLE
-    lcpu_patch_install();
-#endif // BSP_CHIP_ID_COMPATIBLE
-        /***************SF32LB55X end******************/
-#elif defined(SF32LB52X_58)
-    // Donothing
-#elif defined(SF32LB52X)
-    /***************SF32LB52X start******************/
-    uint8_t rev_id = __HAL_SYSCFG_GET_REVID();
-    if (rev_id < HAL_CHIP_REV_ID_A4)
-    {
-#if !defined(SF32LB52X_REV_B)
-        lcpu_patch_install();
-#else // SF32LB52X_REV_B
-        RT_ASSERT(0 && "Wrongly config");
-#endif // !SF32LB52X_REV_B
-    }
-    else
-    {
-#if !defined(SF32LB52X_REV_A)
-        memset((void *)0x20400000, 0, 0x500);
-        lcpu_patch_install_rev_b();
-#else // SF32LB52X_REV_A
-        RT_ASSERT(0 && "Wrongly config");
-#endif // !SF32LB52X_REV_A
-    }
-    /***************SF32LB52X end******************/
-#else // others
-    lcpu_patch_install();
-#endif
-    }
-
-
-static void lcpu_ble_patch_install()
-{
-#ifdef BSP_USING_LCPU_PATCH
-
-
-    // Clear EM section
-#if defined(SF32LB55X)
-    memset((void *)0x20134000, 0, 0x2000);
-#elif defined(SF32LB58X)
-    memset((void *)0x204F0000, 0, 0x2000);
-#endif // SF32LB55X
-
-    lcpu_patch_install_select();
-
-#else // !BSP_USING_LCPU_PATCH
-    //volatile uint32_t *p = (uint32_t *)(LCPU_PATCH_START_ADDR_S);
-    //*p = 0;
-#endif // BSP_USING_LCPU_PATCH
-
-    if (lcpu_is_disable_rf_cal() == 0)
-    {
-        extern void bt_rf_cal(void);
-#if !defined(FPGA)
-        bt_rf_cal();
-        {
-            uint8_t cal_en;
-            char *rfver = rf_ful_ver(&cal_en);
-            LOG_I("rf ful ver:%s,calen:0x%x", rfver, cal_en);
-        }
-
-#else
-        //#if (defined(SOC_SF32LB58X) || defined(SOC_SF32LB56X)) && (defined(BSP_BLE_SIBLES) || defined(CFG_EMB))
-#if (!defined(APP_BSP_TEST) && ((defined(SOC_SF32LB58X) || defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X))))
-        extern void bt_rf_cal_9364(void);
-        bt_rf_cal_9364();
-#endif
-#endif
-    }
-
 #ifdef BSP_USING_ADC1
+void adc_resume(void)
+{
     rt_device_t dev = rt_device_find("bat1");
     if (dev)
         rt_adc_init((rt_adc_device_t)dev);
+}
 #endif
-
-// rf cal used em memory, to avoid wrongly init value bring wrongly result, just clear the section.
-#if defined(SF32LB56X)
-    memset((void *)0x20418000, 0, 0x5000);
-#elif defined(SF32LB52X)
-    memset((void *)0x20408000, 0, 0x5000);
-#endif
-
-
-}
-
-RT_WEAK void lcpu_img_install(void)
-{
-}
-
-
-void lcpu_disable_rf_cal(uint8_t is_disable)
-{
-    g_lcpu_rf_cal_disable = is_disable;
-}
-
-void lcpu_rom_config_default(void)
-{
-#ifdef SOC_SF32LB52X
-
-    uint8_t rev_id = __HAL_SYSCFG_GET_REVID();
-
-#ifdef LXT_DISABLE
-    uint8_t is_enable_lxt = 0;
-    uint8_t is_lcpu_rccal = 1;
-#else // !LXT_DISABLE
-    uint8_t is_enable_lxt = 1;
-    uint8_t is_lcpu_rccal = 0;
-#endif // LXT_DISABLE
-    uint32_t wdt_staus = 0xFF;
-    uint32_t wdt_time = 10;
-    uint16_t wdt_clk = 32768;
-
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_XTAL_ENABLED, &is_enable_lxt, 1);
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_STATUS, &wdt_staus, 4);
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_TIME, &wdt_time, 4);
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_CLK_FEQ, &wdt_clk, 2);
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_RC_CAL_IN_L, &is_lcpu_rccal, 1);
-
-#if defined(SF32LB52X_REV_B) || defined(SF32LB52X_REV_AUTO)
-    if (rev_id >= HAL_CHIP_REV_ID_A4)
-    {
-        uint32_t tx_queue = HCPU2LCPU_MB_CH1_BUF_START_ADDR;
-        hal_lcpu_bluetooth_rom_config_t config = {0};
-        config.bit_valid |= 1 << 10 | 1 << 6;
-        config.is_fpga = 0;
-        config.default_xtal_enabled = is_enable_lxt;
-        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_HCPU_TX_QUEUE, &tx_queue, 4);
-        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
-    }
-#endif // defined(SF32LB52X_REV_B) || defined(SF32LB52X_REV_AUTO)
-#endif // SOC_SF32LB52X
-
-}
-
-
-RT_WEAK void lcpu_rom_config(void)
-{
-    lcpu_rom_config_default();
-}
-
-uint8_t lcpu_power_on(void)
-{
-    HAL_HPAON_WakeCore(CORE_ID_LCPU);
-    HAL_RCC_Reset_and_Halt_LCPU(0);
-
-#ifdef SOC_SF32LB55X
-    uint8_t rev_id = __HAL_SYSCFG_GET_REVID();
-    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_CHIP_REV, &rev_id, 1);
-#endif
-
-    lcpu_rom_config();
-
-    LOG_I("turn on lcpu");
-
-#ifndef SF32LB55X
-    /* LPSYS HCLK cannot exceed 24MHz when loading code */
-    if (HAL_RCC_GetHCLKFreq(CORE_ID_LCPU) > 24000000)
-    {
-        /* restore to default value */
-        HAL_RCC_LCPU_SetDiv(2, 1, 5);
-        RT_ASSERT(HAL_RCC_GetHCLKFreq(CORE_ID_LCPU) <= 24000000);
-    }
-#endif /* SF32LB55X */
-
-#ifdef SF32LB52X
-    uint8_t rev_id = __HAL_SYSCFG_GET_REVID();
-    if (rev_id < HAL_CHIP_REV_ID_A4)
-#endif // SF32LB52X
-    {
-#if !defined(SF32LB52X) || (defined(SF32LB52X) && !defined(SF32LB52X_REV_B))
-        lcpu_img_install();
-#endif // !defined(SF32LB52X) || (defined(SF32LB52X) && !defined(SF32LB52X_REV_B))
-    }
-
-    HAL_LPAON_ConfigStartAddr((uint32_t *)HCPU_LCPU_CODE_START_ADDR);
-    lcpu_ble_patch_install();
-    HAL_RCC_ReleaseLCPU();
-#ifdef SF32LB52X
-    HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST();
-#ifdef USING_SEC_ENV
-    hcpu_exit_safe_mode();
-#endif
-#endif /* SF32LB52X */
-
-    return 0;
-}
-
-uint8_t lcpu_power_off(void)
-{
-    HAL_RCC_Reset_and_Halt_LCPU(0);
-    return 0;
-}
-
-#else
-uint8_t lcpu_power_on(void)
-{
-    return 0;
-}
-#endif /* SOC_BF0_HCPU */
 
 
 #define HUMAN_FORMAT "%.2f%c"
@@ -769,35 +540,35 @@ __ROM_USED void print_sysinfo(char *buf, uint32_t buf_len)
 
     if (buf)  memset(buf, 0, buf_len);
 
-    print_clk_str(buf, buf_len,   "HPSYS\nSYSCLK: "HUMAN_FORMAT"\n", clk_setting.hpsys_clk.sysclk);
-    print_clk_str(buf, buf_len,   "HCLK: "HUMAN_FORMAT"\n", clk_setting.hpsys_clk.hclk);
-    print_clk_str(buf, buf_len,   "PCLK1: "HUMAN_FORMAT"\n", clk_setting.hpsys_clk.pclk1);
-    print_clk_str(buf, buf_len,   "PCLK2: "HUMAN_FORMAT"\n", clk_setting.hpsys_clk.pclk2);
+    print_clk_str(buf, buf_len,   "HPSYS\nSYSCLK: "HUMAN_FORMAT"Hz\n", clk_setting.hpsys_clk.sysclk);
+    print_clk_str(buf, buf_len,   "HCLK: "HUMAN_FORMAT"Hz\n", clk_setting.hpsys_clk.hclk);
+    print_clk_str(buf, buf_len,   "PCLK1: "HUMAN_FORMAT"Hz\n", clk_setting.hpsys_clk.pclk1);
+    print_clk_str(buf, buf_len,   "PCLK2: "HUMAN_FORMAT"Hz\n", clk_setting.hpsys_clk.pclk2);
 
 
-    print_clk_str(buf, buf_len,   "\nLPSYS\nSYSCLK: "HUMAN_FORMAT"\n", clk_setting.lpsys_clk.sysclk);
-    print_clk_str(buf, buf_len,   "HCLK: "HUMAN_FORMAT"\n", clk_setting.lpsys_clk.hclk);
-    print_clk_str(buf, buf_len,   "PCLK1: "HUMAN_FORMAT"\n", clk_setting.lpsys_clk.pclk1);
-    print_clk_str(buf, buf_len,   "PCLK2: "HUMAN_FORMAT"\n", clk_setting.lpsys_clk.pclk2);
+    print_clk_str(buf, buf_len,   "\nLPSYS\nSYSCLK: "HUMAN_FORMAT"Hz\n", clk_setting.lpsys_clk.sysclk);
+    print_clk_str(buf, buf_len,   "HCLK: "HUMAN_FORMAT"Hz\n", clk_setting.lpsys_clk.hclk);
+    print_clk_str(buf, buf_len,   "PCLK1: "HUMAN_FORMAT"Hz\n", clk_setting.lpsys_clk.pclk1);
+    print_clk_str(buf, buf_len,   "PCLK2: "HUMAN_FORMAT"Hz\n", clk_setting.lpsys_clk.pclk2);
 
 
-    print_clk_str(buf, buf_len,   "\nBLESYS\nSYSCLK: "HUMAN_FORMAT"\n", clk_setting.blesys_clk.sysclk);
-    print_clk_str(buf, buf_len,   "HCLK: "HUMAN_FORMAT"\n", clk_setting.blesys_clk.hclk);
+    print_clk_str(buf, buf_len,   "\nBLESYS\nSYSCLK: "HUMAN_FORMAT"Hz\n", clk_setting.blesys_clk.sysclk);
+    print_clk_str(buf, buf_len,   "HCLK: "HUMAN_FORMAT"Hz\n", clk_setting.blesys_clk.hclk);
 
 
 #ifdef SF32LB55X
 #if  ((defined BSP_USING_FLASH)||(defined BSP_USING_SPI_FLASH))
-    print_clk_str(buf, buf_len,   "\nMemory\nFLASH1: "HUMAN_FORMAT"\n", clk_setting.flash1_clk);
-    print_clk_str(buf, buf_len,   "FLASH2: "HUMAN_FORMAT"\n", clk_setting.flash2_clk);
+    print_clk_str(buf, buf_len,   "\nMemory\nFLASH1: "HUMAN_FORMAT"Hz\n", clk_setting.flash1_clk);
+    print_clk_str(buf, buf_len,   "FLASH2: "HUMAN_FORMAT"Hz\n", clk_setting.flash2_clk);
 #if ((defined BSP_ENABLE_FLASH3) || (defined BSP_ENABLE_QSPI3))
-    print_clk_str(buf, buf_len,   "FLASH3: "HUMAN_FORMAT"\n", clk_setting.flash3_clk);
+    print_clk_str(buf, buf_len,   "FLASH3: "HUMAN_FORMAT"Hz\n", clk_setting.flash3_clk);
 #endif  /* BSP_ENABLE_FLASH3 */
 #if ((defined BSP_ENABLE_FLASH4) || (defined BSP_ENABLE_QSPI4))
-    print_clk_str(buf, buf_len,   "FLASH4: "HUMAN_FORMAT"\n", clk_setting.flash4_clk);
+    print_clk_str(buf, buf_len,   "FLASH4: "HUMAN_FORMAT"Hz\n", clk_setting.flash4_clk);
 #endif  /* BSP_ENABLE_FLASH4 */
 #endif /* BSP_USING_NOR_FLASH */
 #ifdef BSP_USING_PSRAM
-    print_clk_str(buf, buf_len,   "PSRAM: "HUMAN_FORMAT"\n", clk_setting.psram_clk);
+    print_clk_str(buf, buf_len,   "PSRAM: "HUMAN_FORMAT"Hz\n", clk_setting.psram_clk);
 #endif /* BSP_USING_PSRAM */
 
 #else
@@ -805,19 +576,19 @@ __ROM_USED void print_sysinfo(char *buf, uint32_t buf_len)
     print_clk_str(buf, buf_len,   "\nMemory\n", 0);
 
 #if  defined (BSP_ENABLE_MPI1)
-    print_clk_str(buf, buf_len,   "MPI1: "HUMAN_FORMAT"\n", clk_setting.mpi1_clk);
+    print_clk_str(buf, buf_len,   "MPI1: "HUMAN_FORMAT"Hz\n", clk_setting.mpi1_clk);
 #endif /* BSP_ENABLE_MPI1 */
 #if  defined (BSP_ENABLE_MPI2)
-    print_clk_str(buf, buf_len,   "MPI2: "HUMAN_FORMAT"\n", clk_setting.mpi2_clk);
+    print_clk_str(buf, buf_len,   "MPI2: "HUMAN_FORMAT"Hz\n", clk_setting.mpi2_clk);
 #endif /* BSP_ENABLE_MPI2 */
 #if  defined (BSP_ENABLE_MPI3)
-    print_clk_str(buf, buf_len,   "MPI3: "HUMAN_FORMAT"\n", clk_setting.mpi3_clk);
+    print_clk_str(buf, buf_len,   "MPI3: "HUMAN_FORMAT"Hz\n", clk_setting.mpi3_clk);
 #endif /* BSP_ENABLE_MPI3 */
 #if  defined (BSP_ENABLE_MPI4)
-    print_clk_str(buf, buf_len,   "MPI4: "HUMAN_FORMAT"\n", clk_setting.mpi4_clk);
+    print_clk_str(buf, buf_len,   "MPI4: "HUMAN_FORMAT"Hz\n", clk_setting.mpi4_clk);
 #endif /* BSP_ENABLE_MPI4 */
 #if  defined (BSP_ENABLE_MPI5)
-    print_clk_str(buf, buf_len,   "MPI5: "HUMAN_FORMAT"\n", clk_setting.mpi5_clk);
+    print_clk_str(buf, buf_len,   "MPI5: "HUMAN_FORMAT"Hz\n", clk_setting.mpi5_clk);
 #endif /* BSP_ENABLE_MPI5 */
 
 
@@ -892,7 +663,7 @@ void *sifli_memset(void *s, int c, rt_ubase_t count)
             if (res != 0)
                 break;
 
-            res = EXT_DMA_TRANS_SYNC((uint32_t)buffer, (uint32_t)aligned_addr, fill / 4, 1000);
+            res = EXT_DMA_TRANS_SYNC((uint32_t)&buffer, (uint32_t)aligned_addr, fill / 4, 1000);
             if (res == 0)
             {
                 aligned_addr += fill / 4;
@@ -1126,6 +897,9 @@ static char *cmd_line(int argc, char **argv)
 }
 
 #if defined(SOC_BF0_HCPU) && !defined(CFG_BOOTLOADER)
+uint8_t lcpu_power_on(void);
+uint8_t lcpu_power_off(void);
+
 __ROM_USED int lcpu(int argc, char **argv)
 {
     if (argc > 1)

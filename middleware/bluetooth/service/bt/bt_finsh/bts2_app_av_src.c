@@ -425,7 +425,7 @@ int bt_avsrc_get_plyback_conn(bts2s_av_inst_data *inst)
 
     for (i = 0; i < MAX_CONNS; i++)
     {
-        if ((inst->local_seid_info[inst->con[i].local_seid_idx].local_seid.sep_type == AV_SRC) &&
+        if ((inst->con[i].local_seid_idx != 0xff) && (inst->local_seid_info[inst->con[i].local_seid_idx].local_seid.sep_type == AV_SRC) &&
                 (inst->local_seid_info[inst->con[i].local_seid_idx].local_seid.in_use == TRUE))
         {
             found = TRUE;

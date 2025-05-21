@@ -614,7 +614,7 @@ uint8_t dpsk_gain[79] =
 #define BT_CHANNEL_NUM 120
 
 #ifdef CMD_CONST
-CONST static uint16_t rxon_cmd[] =
+static CONST uint16_t rxon_cmd[] =
 {
     //VDDPSW/RFBG_EN/LO_IARY_EN
     RD(0x10), RD(0x10), OR(18), OR(17), OR(16), WR(0x10),  // 5
@@ -662,7 +662,7 @@ CONST static uint16_t rxon_cmd[] =
 };
 
 
-CONST static uint16_t rxoff_cmd[] =
+static CONST uint16_t rxoff_cmd[] =
 {
     //VDDPSW/RFBG/LODIST5G_RX_EN/LO_IARY_EN
     RD(0x10), RD(0x10), AND(18), AND(17), AND(16), AND(9), WR(0x10), // 6
@@ -692,7 +692,7 @@ CONST static uint16_t rxoff_cmd[] =
     END, //53
 };
 
-CONST static uint16_t txon_cmd[] =
+static CONST uint16_t txon_cmd[] =
 {
     //VDDPSW/RFBG_EN/LO_IARY_EN
     RD(0x10), RD(0x10), OR(17), OR(18), OR(16), WR(0x10),  // 5
@@ -733,7 +733,7 @@ CONST static uint16_t txon_cmd[] =
     END, //47
 };
 
-CONST static uint16_t txoff_cmd[] =
+static CONST uint16_t txoff_cmd[] =
 {
     //VDDPSW /RFBG_EN/LO_IARY_EN/ LODIST5G_BLETX_EN
     RD(0x10), RD(0x10), AND(8), AND(16), AND(17), AND(18), WR(0x10), // 6
@@ -781,7 +781,7 @@ CONST static uint16_t txoff_cmd[] =
 
 
 
-CONST static uint16_t bt_txon_cmd[] =
+static CONST uint16_t bt_txon_cmd[] =
 {
     //VDDPSW/RFBG_EN/LO_IARY_EN
     RD(0x10), RD(0x10), OR(16), OR(17), OR(18), WR(0x10),  // 5
@@ -856,7 +856,7 @@ CONST static uint16_t bt_txon_cmd[] =
 };
 
 
-CONST static uint16_t bt_txoff_cmd[] =
+static CONST uint16_t bt_txoff_cmd[] =
 {
     // EDR_PA_PU
     // EDR_TMXBUF_PU EDR_TMX_PU
@@ -2084,7 +2084,7 @@ uint32_t bt_rfc_lo_cal(uint32_t rslt_start_addr)
     const uint32_t residual_cnt_vth = 33864;
     const uint32_t residual_cnt_vtl = 30224;
     uint32_t p0;
-    uint32_t p1;
+    uint32_t p1=0;
 
 
     uint32_t pre_acal_up;
@@ -2112,9 +2112,9 @@ uint32_t bt_rfc_lo_cal(uint32_t rslt_start_addr)
     uint8_t fcal_cnt_fs;
 
     uint8_t idac0;
-    uint8_t idac1;
+    uint8_t idac1=0;
     uint8_t capcode0;
-    uint8_t capcode1;
+    uint8_t capcode1=0;
     uint32_t     error0    = 0xffffffff;
     uint32_t     error1    = 0xffffffff;
     uint32_t     err_tx    = 0xffffffff;
@@ -2997,9 +2997,9 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     uint8_t fcal_cnt_fs;
 
     uint8_t idac0;
-    uint8_t idac1;
+    uint8_t idac1=0;
     uint8_t capcode0;
-    uint8_t capcode1;
+    uint8_t capcode1=0;
     uint32_t     error0    = 0xffffffff;
     uint32_t     error1    = 0xffffffff;
     uint32_t     err_tx_3g = 0xffffffff;
@@ -3018,7 +3018,7 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     uint32_t residual_cnt;
 
     uint32_t p0;
-    uint32_t p1;
+    uint32_t p1=0;
 
 
     uint32_t pre_acal_up;
@@ -3574,9 +3574,11 @@ uint32_t bt_rfc_edrlo_3g_cal(uint32_t rslt_start_addr)
     hwp_gpadc->ADC_CTRL_REG2 = gpadc_ctrl2 ;
     //hwp_hpsys_cfg->ANAU_CR &= ~HPSYS_CFG_ANAU_CR_EN_BG;
 
-    //hwp_gpadc->ADC_CFG_REG1 &= ~GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN   & \
-    //                           ~GPADC_ADC_CFG_REG1_ANAU_GPADC_SE         & \
-    //                           ~GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN ;
+    /*
+      hwp_gpadc->ADC_CFG_REG1 &= ~GPADC_ADC_CFG_REG1_ANAU_GPADC_P_INT_EN   & \
+                               ~GPADC_ADC_CFG_REG1_ANAU_GPADC_SE         & \
+                               ~GPADC_ADC_CFG_REG1_ANAU_GPADC_LDOREF_EN ;
+    */
     //write to rf_mem
     reg_addr = rslt_start_addr  ;
     reg_data = 0;
@@ -5126,7 +5128,7 @@ void bt_rf_cal_index(void)
 {
     int8_t min_pwr, max_pwr, i;
     int8_t pwr_tab[] = {0, 3, 6, 10, 13, 16, 19};
-    uint8_t s_min_level, s_max_level;
+    uint8_t s_min_level=0, s_max_level=0;
 
     min_pwr = bt_rf_get_min_tx_pwr();
     if (bt_rf_get_max_tx_pwr() >= bt_rf_get_init_tx_pwr())
@@ -5311,8 +5313,8 @@ void bt_rf_opt_cal(void)
 
     hwp_bt_phy->TX_GAUSSFLT_CFG2 &= ~(BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_BR_Msk | BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_1_Msk | BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_2_Msk);
     hwp_bt_phy->TX_GAUSSFLT_CFG2 |= (0xAE  << BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_BR_Pos) |
-                                    (0x106 << BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_1_Pos) |
-                                    (0x105 << BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_2_Pos) ;
+                                    (0xFF << BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_1_Pos) |
+                                    (0xFF << BT_PHY_TX_GAUSSFLT_CFG2_IQ_GAUSS_GAIN_2_Pos) ;
 
     //NOTCH
     hwp_bt_phy->NOTCH_CFG1 &= ~BT_PHY_NOTCH_CFG1_NOTCH_B1_1_Msk;
@@ -5394,6 +5396,7 @@ void bt_rf_opt_cal(void)
 #endif
 
 #define BR_BQB_COCHANNEL_CASE  0
+#define RF_POWER_IS_1P8V       0
 void bt_rf_cal(void)
 {
     if (bt_is_in_BQB_mode())
@@ -5410,7 +5413,10 @@ void bt_rf_cal(void)
 
     HAL_RCC_ResetBluetoothRF();
 #if 1
-#if 1 //def BPS_V33_HAL
+#if RF_POWER_IS_1P8V
+    hwp_bt_rfc->TRF_EDR_REG1 |= BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXCAS_SEL_LV;
+    hwp_bt_rfc->TRF_REG2 |= (1 << BT_RFC_TRF_REG2_BRF_PA_MATCH2_LV_Pos);
+#else
     hwp_bt_rfc->TRF_EDR_REG1 &= ~BT_RFC_TRF_EDR_REG1_BRF_TRF_EDR_TMXCAS_SEL_LV;
 #endif //BPS_V33_HAL
     uint32_t addr = bt_rfc_init();
@@ -5419,7 +5425,7 @@ void bt_rf_cal(void)
     bt_rf_opt_cal();
 
     //store driver version in register
-    hwp_bt_rfc->RSVD_REG2 = 0x00050000 ;
+    hwp_bt_rfc->RSVD_REG2 = 0x00060000 ;
 #if BR_BQB_COCHANNEL_CASE
     hwp_bt_phy->DEMOD_CFG8 &= ~(BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Msk | BT_PHY_DEMOD_CFG8_BR_MU_DC_Msk | BT_PHY_DEMOD_CFG8_BR_MU_ERR_Msk);
     hwp_bt_phy->DEMOD_CFG8 |= (0x10 << BT_PHY_DEMOD_CFG8_BR_DEMOD_G_Pos) | (0x02 << BT_PHY_DEMOD_CFG8_BR_MU_DC_Pos) | (0x60 << BT_PHY_DEMOD_CFG8_BR_MU_ERR_Pos);
@@ -5443,7 +5449,7 @@ void bt_rf_bqb_config(void)
     }
 }
 #endif
-char *g_rf_ful_ver = "1.1.13_2859";
+char *g_rf_ful_ver = "1.2.0_3082";
 char *rf_ful_ver(uint8_t *cal_en)
 {
     *cal_en = s_cal_enable;

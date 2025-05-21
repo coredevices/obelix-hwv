@@ -482,13 +482,32 @@ static void bt_call_start_get_clcc(rt_bt_device_t *dev)
 }
 
 
+uint8_t bt_call_get_state_change(bt_cind_ind_t *cind_data)
+{
+    uint8_t call_state_change = 0;
+    switch (cind_data->type)
+    {
+    case BT_CIND_CALL_TYPE:              //(0,1)
+    case BT_CIND_CALLSETUP_TYPE:         //(0,3)
+    case BT_CIND_CALLHELD_TYPE:          //(0,2)
+        call_state_change = 1;
+        break;
+    default:
+        break;
+    }
+    return call_state_change;
+}
 uint8_t bt_call_event_hdl(rt_bt_device_t *dev, uint32_t event, void *args)
 {
     switch (event)
     {
     case BT_EVENT_CIND_IND:
     {
-        bt_call_start_get_clcc(dev);
+        if (bt_call_get_state_change(args))
+        {
+            //dev->ops->control(dev, BT_CONTROL_EXIT_SNIFF, RT_NULL);
+            bt_call_start_get_clcc(dev);
+        }
         break;
     }
 

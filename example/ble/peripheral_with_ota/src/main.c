@@ -57,6 +57,7 @@
 #ifdef BSP_BLE_SERIAL_TRANSMISSION
     #include "bf0_sibles_serial_trans_service.h"
 #endif
+#include "dfu_service.h"
 #define LOG_TAG "ble_app"
 #include "log.h"
 
@@ -748,8 +749,7 @@ int cmd_diss(int argc, char *argv[])
         }
         else if (strcmp(argv[1], "ota_set") == 0)
         {
-            extern void dfu_offline_install_set_v2();
-            dfu_offline_install_set_v2();
+            dfu_package_install_set();
         }
         else if (strcmp(argv[1], "ota_info") == 0)
         {

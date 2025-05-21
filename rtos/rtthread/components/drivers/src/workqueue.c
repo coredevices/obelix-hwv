@@ -58,12 +58,17 @@ static void _workqueue_thread_entry(void *parameter)
 
     while (1)
     {
+
+        level = rt_hw_interrupt_disable();
         if (rt_list_isempty(&(queue->work_list)))
         {
             /* no software timer exist, suspend self. */
             rt_thread_suspend(rt_thread_self());
+            rt_hw_interrupt_enable(level);
             rt_schedule();
         }
+        else
+            rt_hw_interrupt_enable(level);
 
         /* we have work to do with. */
         level = rt_hw_interrupt_disable();

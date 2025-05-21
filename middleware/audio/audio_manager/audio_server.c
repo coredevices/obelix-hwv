@@ -1502,7 +1502,6 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
     client->is_suspended = 0;
 
     my->is_need_3a = client->parameter.is_need_3a;
-    my->tx_dma_size = TX_DMA_SIZE;
 
     if (client->audio_type == AUDIO_TYPE_BT_MUSIC)
     {
@@ -1512,6 +1511,7 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
     // 2. prepare hardware memory
     if (need_tx_init)
     {
+        my->tx_dma_size = TX_DMA_SIZE;
         my->tx_channels    = client->parameter.write_channnel_num;
         my->tx_samplerate  = client->parameter.write_samplerate;
         my->tx_empty_occur = 1;
@@ -1522,9 +1522,9 @@ static int audio_device_speaker_open(void *user_data, audio_device_input_callbac
         {
             my->is_need_3a = 1; //audio_open(AUDIO_TYPE_BT_VOICE, ) not set is_need_3a now
             my->tx_dma_size = CODEC_DATA_UNIT_LEN;
-            RT_ASSERT(need_rx_init);
             if (client->audio_type == AUDIO_TYPE_BT_VOICE)
             {
+                RT_ASSERT(need_rx_init);
                 my->tx_enable = 0;
             }
             if (my->tx_samplerate == 0)

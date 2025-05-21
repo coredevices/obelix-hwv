@@ -151,6 +151,7 @@ void lv_example_tileview_1(void);
 
 void lv_example_win_1(void);
 
+void lv_example_blur_1(void);
 /**********************
  *      MACROS
  **********************/

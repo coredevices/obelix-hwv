@@ -262,7 +262,9 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_I2C_Init(I2C_HandleTypeDef *hi2c)
         HAL_RCC_ResetModule(RCC_MOD_I2C6);
 #endif
     else
+    {
         ;
+    }
 
 
 

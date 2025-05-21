@@ -1641,17 +1641,18 @@ __ROM_USED void rt_kputs(const char *str)
     if (!str) return;
 
 #ifdef RT_USING_DEVICE
-    if (_console_device == RT_NULL)
+    rt_device_t console_dev = rt_console_get_device();
+    if (console_dev == RT_NULL)
     {
         rt_hw_console_output(str);
     }
     else
     {
-        rt_uint16_t old_flag = _console_device->open_flag;
+        rt_uint16_t old_flag = console_dev->open_flag;
 
-        _console_device->open_flag |= RT_DEVICE_FLAG_STREAM;
-        rt_device_write(_console_device, 0, str, rt_strlen(str));
-        _console_device->open_flag = old_flag;
+        console_dev->open_flag |= RT_DEVICE_FLAG_STREAM;
+        rt_device_write(console_dev, 0, str, rt_strlen(str));
+        console_dev->open_flag = old_flag;
     }
 #else
     rt_hw_console_output(str);
@@ -1676,20 +1677,25 @@ __ROM_USED void rt_kprintf(const char *fmt, ...)
 
     va_start(args, fmt);
 
+#if defined(RT_USING_DEVICE)
+    rt_device_t console_dev = rt_console_get_device();
+#endif
+
 #if defined(RT_USING_DEVICE)&&defined(RT_USING_ULOG)
-    if (_console_device)
+
+    if (console_dev)
     {
-        rt_uint16_t old_flag = _console_device->open_flag;
+        rt_uint16_t old_flag = console_dev->open_flag;
         if (!ulog_init_ok() || rt_critical_level())
         {
             length = rt_vsnprintf(rt_log_buf, sizeof(rt_log_buf) - 1, fmt, args);
             if (length > RT_CONSOLEBUF_SIZE - 1)
                 length = RT_CONSOLEBUF_SIZE - 1;
-            _console_device->open_flag |= RT_DEVICE_FLAG_STREAM;
+            console_dev->open_flag |= RT_DEVICE_FLAG_STREAM;
             /* avoid using DMA TX mode even though uart device is configured in DMA mode */
-            _console_device->open_flag &= ~RT_DEVICE_FLAG_DMA_TX;
-            rt_device_write(_console_device, 0, rt_log_buf, length);
-            _console_device->open_flag = old_flag;
+            console_dev->open_flag &= ~RT_DEVICE_FLAG_DMA_TX;
+            rt_device_write(console_dev, 0, rt_log_buf, length);
+            console_dev->open_flag = old_flag;
         }
         else
         {
@@ -1708,16 +1714,16 @@ __ROM_USED void rt_kprintf(const char *fmt, ...)
     if (length > RT_CONSOLEBUF_SIZE - 1)
         length = RT_CONSOLEBUF_SIZE - 1;
 #ifdef RT_USING_DEVICE
-    if (_console_device == RT_NULL)
+    if (console_dev == RT_NULL)
     {
         rt_hw_console_output(rt_log_buf);
     }
     else
     {
-        rt_uint16_t old_flag = _console_device->open_flag;
-        _console_device->open_flag |= RT_DEVICE_FLAG_STREAM;
-        rt_device_write(_console_device, 0, rt_log_buf, length);
-        _console_device->open_flag = old_flag;
+        rt_uint16_t old_flag = console_dev->open_flag;
+        console_dev->open_flag |= RT_DEVICE_FLAG_STREAM;
+        rt_device_write(console_dev, 0, rt_log_buf, length);
+        console_dev->open_flag = old_flag;
     }
 #else
     rt_hw_console_output(rt_log_buf);

@@ -24,7 +24,7 @@
 #                             group definition.
 #
 
-import imp
+import importlib
 import os
 import re
 import shutil
@@ -168,11 +168,11 @@ def GenCconfigFile(env, BuildOptions):
 
 def ImgFileBuilder(target, source, env):
     SIFLI_SDK = os.getenv('SIFLI_SDK')
-    EZIP_PATH = os.path.join(SIFLI_SDK, "tools/png2ezip/ezip.exe")
+    EZIP_PATH = os.path.join(SIFLI_SDK, f"tools/png2ezip/ezip{env['tool_suffix']}")
     filename = os.path.basename("{}".format(target[0]))
+    logging.info('ImgFileBuilder= '+env['FLAGS'])
     if ".gif" in str(source[0]):
-        conv_option = '-gif'
-        subprocess.call([EZIP_PATH, '-gif', str(source[0]), '-section', env['SECTION_NAME']])
+        subprocess.run(EZIP_PATH+' -gif '+str(source[0])+ ' ' + env['FLAGS'], shell=True, check=True)
         logging.info("gif")
         target_filename = os.path.basename("{}".format(target[0]))
         source_path = os.path.dirname("{}".format(source[0]))
@@ -180,19 +180,14 @@ def ImgFileBuilder(target, source, env):
         logging.info(source_path)
         shutil.move(os.path.join(source_path, target_filename), '{}'.format(target[0]))
     else:
-        conv_option = '-convert'
-        if env['IS_SIMU']:
-            subprocess.call([EZIP_PATH, '-convert', str(source[0]), env['COLOR_FMT'], '-cfile', env['FILE_FMT'], '-section', env['SECTION_NAME'], '-simu'])
-            shutil.move('output/t4_{}_r4_f0/{}'.format(env['COLOR_FMT'][1:], filename), '{}'.format(target[0]))
-        else:
-            subprocess.call([EZIP_PATH, '-convert', str(source[0]), env['COLOR_FMT'], '-cfile', env['FILE_FMT'], '-dpt', '1', '-section', env['SECTION_NAME']])
-            shutil.move('output/t1_{}_f0/{}'.format(env['COLOR_FMT'][1:], filename), '{}'.format(target[0]))
+        subprocess.run(EZIP_PATH + ' -convert ' + str(source[0]) + ' ' + env['FLAGS'] + ' -outdir img_tmp', shell=True, check=True)
+        shutil.move('img_tmp/{}'.format(filename), '{}'.format(target[0]))
 
 def FontFileBuild(target, source, env):
     SIFLI_SDK = os.getenv('SIFLI_SDK')
-    FONT2C_PATH = os.path.join(SIFLI_SDK, "tools/font2c/font2c.exe")
+    FONT2C_PATH = os.path.join(SIFLI_SDK, f"tools/font2c/font2c{env['tool_suffix']}")
     filename = os.path.basename("{}".format(target[0]))
-    subprocess.call([FONT2C_PATH, str(source[0])])
+    subprocess.run([FONT2C_PATH, str(source[0])], check=True)
     shutil.move(filename, '{}'.format(target[0]))
 
 def ModifyFontTargets(target, source, env):
@@ -204,10 +199,10 @@ def ModifyFontTargets(target, source, env):
             
     return target, source
 
-def ImgResource(env, source, color_fmt, file_fmt, section_name, is_simu=False):
+def ImgResource(env, source, flags):
     target = []
     for s in source:
-        t = env.ImgFile(s, COLOR_FMT = color_fmt, FILE_FMT = file_fmt, SECTION_NAME = section_name, IS_SIMU=is_simu)
+        t = env.ImgFile(s, FLAGS = flags)
         target.extend(t)
     
     return target
@@ -297,42 +292,42 @@ def ProgramBinaryBuild(target, source, env):
         shutil.rmtree(bin_path)
     # TODO: only support keil and gcc
     if rtconfig.PLATFORM == 'armcc':
-        subprocess.call(['fromelf', '--bin', str(source[0]), '--output', bin_path])
+        subprocess.run(['fromelf', '--bin', str(source[0]), '--output', bin_path], check=True)
         if os.path.isdir(bin_path):
             # delete the folder to clean old files
             shutil.rmtree(bin_path)
-            subprocess.call(['fromelf', '--bin', str(source[0]), '--output', bin_path])        
+            subprocess.run(['fromelf', '--bin', str(source[0]), '--output', bin_path], check=True)        
             dir_list = os.listdir(bin_path)
             for d in dir_list:
                 if '.bin' not in d:
                     shutil.move(os.path.join(bin_path, d), os.path.join(bin_path, d + '.bin'))
         # print Object/Image Component Sizes
-        subprocess.call(['fromelf', '-z', str(source[0])])
+        subprocess.run(['fromelf', '-z', str(source[0])], check=True)
     elif rtconfig.PLATFORM == 'gcc':
         shutil.copy(str(source[0]),str(source[0])+'.strip.elf')
-        subprocess.call([rtconfig.STRIP, str(source[0])+'.strip.elf'])
+        subprocess.run([rtconfig.STRIP, str(source[0])+'.strip.elf'], check=True)
         # check whether there're multiple binary
         ex_imgs = []
         tempfile_path = os.path.join(target_path, 'rom_temp.bin')
         for i in range(2, 2 + MAX_EX_IMG_NUM):
-            subprocess.call([rtconfig.OBJCPY, '-Obinary', '-j.rom{}'.format(i), str(source[0]), tempfile_path])
+            subprocess.run([rtconfig.OBJCPY, '-Obinary', '-j.rom{}'.format(i), str(source[0]), tempfile_path], check=True)
             size = os.path.getsize(tempfile_path)
             os.remove(tempfile_path)
             if size > 0:
                 ex_imgs.append(i)
 
         if len(ex_imgs) == 0:
-            subprocess.call([rtconfig.OBJCPY, '-Obinary', str(source[0]), bin_path])
+            subprocess.run([rtconfig.OBJCPY, '-Obinary', str(source[0]), bin_path], check=True)
         else:
             os.mkdir(bin_path)
             exclude_ex_imgs = []
             for i in ex_imgs:
                 ex_img_path = os.path.join(bin_path, 'ER_IROM{}.bin'.format(i))
-                subprocess.call([rtconfig.OBJCPY, '-Obinary', '-j.rom{}'.format(i), str(source[0]), ex_img_path])
+                subprocess.run([rtconfig.OBJCPY, '-Obinary', '-j.rom{}'.format(i), str(source[0]), ex_img_path], check=True)
                 exclude_ex_imgs += ['-R.rom{}'.format(i)]
 
             rom1_path = ex_img_path = os.path.join(bin_path, 'ER_IROM1.bin')
-            subprocess.call([rtconfig.OBJCPY, '-Obinary'] + exclude_ex_imgs + [str(source[0]), rom1_path])
+            subprocess.run([rtconfig.OBJCPY, '-Obinary'] + exclude_ex_imgs + [str(source[0]), rom1_path], check=True)
 
 
 def ProgramHexBuild(target, source, env):
@@ -351,32 +346,32 @@ def ProgramHexBuild(target, source, env):
         ex_imgs = []
         tempfile_path = os.path.join(target_path, 'rom_temp.hex')
         for i in range(2, 2 + MAX_EX_IMG_NUM):
-            subprocess.call([rtconfig.OBJCPY, '-Obinary', '-j.rom{}'.format(i), str(source[0]), tempfile_path])
+            subprocess.run([rtconfig.OBJCPY, '-Obinary', '-j.rom{}'.format(i), str(source[0]), tempfile_path], check=True)
             size = os.path.getsize(tempfile_path)
             os.remove(tempfile_path)
             if size > 0:
                 ex_imgs.append(i)
 
         if len(ex_imgs) == 0:
-            subprocess.call([rtconfig.OBJCPY, '-O', 'ihex', str(source[0]), hex_path])
+            subprocess.run([rtconfig.OBJCPY, '-O', 'ihex', str(source[0]), hex_path], check=True)
         else:
             os.mkdir(hex_path)
             exclude_ex_imgs = []
             for i in ex_imgs:
                 ex_img_path = os.path.join(hex_path, 'ER_IROM{}.hex'.format(i))
-                subprocess.call([rtconfig.OBJCPY, '-O', 'ihex', '-j.rom{}'.format(i), str(source[0]), ex_img_path])
+                subprocess.run([rtconfig.OBJCPY, '-O', 'ihex', '-j.rom{}'.format(i), str(source[0]), ex_img_path], check=True)
                 exclude_ex_imgs += ['-R.rom{}'.format(i)]
 
             rom1_path = ex_img_path = os.path.join(hex_path, 'ER_IROM1.hex')
-            subprocess.call([rtconfig.OBJCPY, '-O', 'ihex'] + exclude_ex_imgs + [str(source[0]), rom1_path])
+            subprocess.run([rtconfig.OBJCPY, '-O', 'ihex'] + exclude_ex_imgs + [str(source[0]), rom1_path], check=True)
 
 
     else:    
-        subprocess.call(['fromelf', '--i32', str(source[0]), '--output', hex_path])    
+        subprocess.run(['fromelf', '--i32', str(source[0]), '--output', hex_path], check=True)    
         if os.path.isdir(hex_path):
             # delete the folder to clean old files
             shutil.rmtree(hex_path)
-            subprocess.call(['fromelf', '--i32', str(source[0]), '--output', hex_path])    
+            subprocess.run(['fromelf', '--i32', str(source[0]), '--output', hex_path], check=True)    
             dir_list = os.listdir(hex_path)
             for d in dir_list:
                 if '.hex' not in d:
@@ -394,11 +389,11 @@ def ProgramAsmBuild(target, source, env):
     import rtconfig
     if rtconfig.PLATFORM == 'armcc':
         if GetDepend("SOC_SF32LB58X") or GetDepend("SOC_SF32LB56X"):
-            subprocess.call(['fromelf', '--cpu=8-M.Main', '--coproc1=cde', '--text', '-c', str(source[0]), '--output', asm_path])
+            subprocess.run(['fromelf', '--cpu=8-M.Main', '--coproc1=cde', '--text', '-c', str(source[0]), '--output', asm_path], check=True)
         else:
-            subprocess.call(['fromelf', '--text', '-c', str(source[0]), '--output', asm_path])
+            subprocess.run(['fromelf', '--text', '-c', str(source[0]), '--output', asm_path], check=True)
     elif rtconfig.PLATFORM == 'gcc':
-        subprocess.call([rtconfig.OBJDUMP, '-d', str(source[0])], stdout=open(asm_path,"wb+"))
+        subprocess.run([rtconfig.OBJDUMP, '-d', str(source[0])], stdout=open(asm_path,"wb+"), check=True)
     
 def LdsBuild(target, source, env):
     import rtconfig
@@ -407,9 +402,9 @@ def LdsBuild(target, source, env):
     target_path = os.path.join(os.path.dirname(str(target[0])), 'link_copy.lds')
 
     p = subprocess.Popen([rtconfig.CC, '-E', '-P'] + include_paths + ['-x', 'c', str(source[0])], stdout=subprocess.PIPE)
-    (result, error) = p.communicate()    
+    (result, error) = p.communicate()
     f = open(target_path, "wb")
-    f.write(str(result))
+    f.write(result)
     f.close()   
 
 def FsBuild(target, source, env):
@@ -438,7 +433,7 @@ def FsBuild(target, source, env):
         target=os.path.join(env['build_dir'],'fs_root.bin') 
         page_size=env['page_size']
         page_number=max_size/page_size
-        subprocess.call([env['fs_mkimg'],env['fs_root'],target,str(page_number),str(page_size)])
+        subprocess.run([env['fs_mkimg'],env['fs_root'],target,str(page_number),str(page_size)], check=True)
 
 def ModifyLdsTargets(target, source, env):
     target = [os.path.join(env['build_dir'], 'link_copy.lds')]
@@ -452,8 +447,14 @@ def EmbeddedImgCFileBuild(target, source, env):
     s = str(source[0])
     if os.path.isdir(s):
         s = os.path.join(s, 'ER_IROM1.bin')
-    subprocess.call(['python', GEN_SRC_PATH, 'lcpu', s, target_path])
-    shutil.move(os.path.join(target_path, 'lcpu_img.c'), str(target[0]))
+    if "acpu" in s:
+        subprocess.run(['python', GEN_SRC_PATH, 'general', s, target_path, "acpu"], check=True)
+        shutil.move(os.path.join(target_path, 'acpu_img.c'), str(target[0]))
+    else:
+        subprocess.run(['python', GEN_SRC_PATH, 'lcpu', s, target_path], check=True)
+        shutil.move(os.path.join(target_path, 'lcpu_img.c'), str(target[0]))
+
+
 
 def FtabCFileBuild(target, source, env):
     import resource
@@ -489,7 +490,11 @@ def GetCustomImgList():
 
 def GenDownloadScript(main_env):
     import resource
+    import rtconfig
     
+    if rtconfig.ARCH=='sim':
+        return
+
     PrintEnvList()
 
     dependent_files = []
@@ -528,13 +533,13 @@ def FileSystemBuild(source, env):
         Depends(target,source_list)
         SIFLI_SDK = os.getenv('SIFLI_SDK')
         if GetDepend('RT_USING_MTD_NAND'):
-            MKIMG_PATH = os.path.join(SIFLI_SDK, "tools/mkfatimg/mkfatimg_nand/release/mkfatimg.exe")
+            MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg_nand/Release/mkfatimg{env['tool_suffix']}")
             page_size=2048
         elif GetDepend('RT_USING_MTD_NOR'):
-            MKIMG_PATH = os.path.join(SIFLI_SDK, "tools/mkfatimg/mkfatimg.exe")
+            MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg{env['tool_suffix']}")
             page_size=4096
         else:
-            MKIMG_PATH = os.path.join(SIFLI_SDK, "tools/mkfatimg/mkfatimg.exe")
+            MKIMG_PATH = os.path.join(SIFLI_SDK, f"tools/mkfatimg/mkfatimg{env['tool_suffix']}")
             page_size=4096
 
         env['fs_root']=source
@@ -562,6 +567,8 @@ def GetLinkScript(proj_path,board,chip,core):
     CC_TOOLS = os.getenv('RTT_CC')
     link_script=None
     link_script_template=None
+    chip = chip.lower()
+    core = core.lower()
     if CC_TOOLS=='keil' or CC_TOOLS=='gcc':
         if CC_TOOLS=='keil':
             ext='.sct'
@@ -585,9 +592,9 @@ def GetLinkScript(proj_path,board,chip,core):
         else:
             SIFLI_SDK = os.getenv('SIFLI_SDK')
             if CC_TOOLS=='keil':
-                link_script = os.path.join(SIFLI_SDK, "drivers/cmsis/{}/Templates/arm/{}/link".format(chip.lower(), core))
+                link_script = os.path.join(SIFLI_SDK, "drivers/cmsis/{}/Templates/arm/{}/link".format(chip.lower(), core.lower()))
             else:
-                link_script_template = os.path.join(SIFLI_SDK, "drivers/cmsis/{}/Templates/gcc/{}/link".format(chip.lower(), core))
+                link_script_template = os.path.join(SIFLI_SDK, "drivers/cmsis/{}/Templates/gcc/{}/link".format(chip.lower(), core.lower()))
                 link_script = link_script_template
             logging.debug('Use chip link file: {}'.format(link_script))
     return link_script,link_script_template
@@ -616,11 +623,12 @@ def AddChildProj(proj_name, proj_path, img_embedded=False, shared_option=None, c
     if board:
         board_path1, board_path2 = GetBoardPath(board)
         logging.debug("Load {}".format(os.path.join(board_path2, 'rtconfig.py')))
-        proj_rtconfig = imp.load_source(proj_name, os.path.join(board_path2, 'rtconfig.py'))
-        proj_rtconfig2 = imp.load_source(proj_name, os.path.join(proj_path, 'rtconfig.py'))
+
+        proj_rtconfig = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(board_path2, 'rtconfig.py')))
+        proj_rtconfig2 = ( lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(proj_path, 'rtconfig.py')))
         MergeRtconfig(proj_rtconfig, proj_rtconfig2)
     else:    
-        proj_rtconfig = imp.load_source(proj_name, os.path.join(proj_path, 'rtconfig.py'))
+        proj_rtconfig = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(proj_path, 'rtconfig.py')))
 
     parent_name = ParentProjStack[-1]['name']
     if (len(ParentProjStack) == 1):
@@ -663,7 +671,7 @@ def AddChildProj(proj_name, proj_path, img_embedded=False, shared_option=None, c
 
     child_builder = None
     if os.path.isfile(os.path.join(proj_path, 'SConstruct.py')):
-        child_builder = imp.load_source(proj_name, os.path.join(proj_path, 'SConstruct.py'))
+        child_builder = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location(proj_name, os.path.join(proj_path, 'SConstruct.py')))
         proj_env = child_builder.create_env(proj_path)
         
     else:
@@ -800,13 +808,32 @@ def IsEmbeddedProjEnv(env=None):
     else:
         return False
 
-def PrepareBuilding(env, has_libcpu=False, remove_components = []):
+def PrepareBuilding(env, has_libcpu=False, remove_components=[], buildlib=None):
     import rtconfig
+    import platform
 
     global BuildOptions
     global Projects
     global Env
     global Rtt_Root
+
+    if env is None:
+        if rtconfig.ARCH != "sim":
+            env = Environment(tools = ['mingw'],
+                AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
+                CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
+                CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
+                AR = rtconfig.AR, ARFLAGS = '-rc',
+                LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
+            env.PrependENVPath('PATH', rtconfig.EXEC_PATH)
+        else:
+            env = Environment(TARGET_ARCH='x86',
+                AS = rtconfig.AS, ASFLAGS = rtconfig.AFLAGS,
+                CC = rtconfig.CC, CFLAGS = rtconfig.CFLAGS,
+                CXX = rtconfig.CXX, CXXFLAGS = rtconfig.CXXFLAGS,
+                AR = rtconfig.AR, ARFLAGS = '',
+                LINK = rtconfig.LINK, LINKFLAGS = rtconfig.LFLAGS)
+            env.PrependENVPath('PATH', 'X:/bin/Hostx64/x64/')
     
     if 'name' not in env:
         env['name'] = 'main'
@@ -817,6 +844,18 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         env['JLINK_DEVICE'] = rtconfig.JLINK_DEVICE
     if hasattr(rtconfig, 'LINK_SCRIPT_SRC'):
         env['LINK_SCRIPT_SRC'] = rtconfig.LINK_SCRIPT_SRC
+
+    platform_name = platform.system()
+    if platform_name == 'Windows':
+        tool_suffix = '.exe'
+    elif platform_name == 'Linux': 
+        tool_suffix = '_linux'
+    elif platform_name == 'Darwin':
+        tool_suffix = '_mac'
+    else:
+        raise ValueError('Unsupported platform: {}'.format(platform_name))
+
+    env['tool_suffix'] = tool_suffix
 
     # Clear projects for new project
     Projects = []
@@ -911,6 +950,7 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         AddOption('--buildlib',
                           dest = 'buildlib',
                           type = 'string',
+                          default=buildlib,
                           help = 'building library of a component')
         AddOption('--cleanlib',
                           dest = 'cleanlib',
@@ -967,12 +1007,12 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
     if (v_major >= 4):
         # compilation database is supported since SCons 4.x  
         env.Tool('compilation_db')
-        cdb = env.CompilationDatabase('compile_database.json')
+        cdb = env.CompilationDatabase(os.path.join(rtconfig.OUTPUT_DIR, 'compile_commands.json'))
         Alias('cdb', cdb)
 
     # make an absolute root directory
     SIFLI_SDK=os.getenv('SIFLI_SDK')
-    Rtt_Root = SIFLI_SDK + 'rtos/rtthread'
+    Rtt_Root = os.path.join(SIFLI_SDK, 'rtos/rtthread')
 
     # set RTT_ROOT in ENV
     Env['RTT_ROOT'] = Rtt_Root
@@ -1022,11 +1062,11 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
 
 
     # auto change the 'RTT_EXEC_PATH' when 'rtconfig.EXEC_PATH' get failed
-    if not os.path.exists(rtconfig.EXEC_PATH):
-        if 'RTT_EXEC_PATH' in os.environ:
-            # del the 'RTT_EXEC_PATH' and using the 'EXEC_PATH' setting on rtconfig.py
-            del os.environ['RTT_EXEC_PATH']
-            utils.ReloadModule(rtconfig)
+    # if not os.path.exists(rtconfig.EXEC_PATH):
+    #     if 'RTT_EXEC_PATH' in os.environ:
+    #         # del the 'RTT_EXEC_PATH' and using the 'EXEC_PATH' setting on rtconfig.py
+    #         del os.environ['RTT_EXEC_PATH']
+    #         utils.ReloadModule(rtconfig)
 
     # add compability with Keil MDK 4.6 which changes the directory of armcc.exe
     if rtconfig.PLATFORM == 'armcc':
@@ -1215,12 +1255,13 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         rtconfig.POST_ACTION = ''
 
     if GetOption('compiledb'):
-        env.Replace(
-        CC   = 'clang',
-        CXX  = 'clang++',
-        # skip as and link
-        LINK = 'true',
-        AS   = 'true',)    
+        pass
+        # env.Replace(
+        # CC   = 'clang',
+        # CXX  = 'clang++',
+        # # skip as and link
+        # LINK = 'true',
+        # AS   = 'true',)    
 
     # generate cconfig.h file
     GenCconfigFile(env, BuildOptions)
@@ -1234,17 +1275,16 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         genconfig()
         exit(0)
 
-    if env['PLATFORM'] != 'win32':
-        if not option_added:
-            AddOption('--menuconfig',
-                        dest = 'menuconfig',
-                        action = 'store_true',
-                        default = False,
-                        help = 'make menuconfig for RT-Thread BSP')
-        if GetOption('menuconfig'):
-            from menuconfig import menuconfig
-            menuconfig(Rtt_Root)
-            exit(0)
+    if not option_added:
+        AddOption('--menuconfig',
+                    dest = 'menuconfig',
+                    action = 'store_true',
+                    default = False,
+                    help = 'make menuconfig for RT-Thread BSP')
+    if GetOption('menuconfig'):
+        board = f"--board={GetOption('board')}"
+        subprocess.run([sys.executable, os.path.join(SIFLI_SDK, 'tools',"kconfig" , 'menuconfig.py'), board], check=True)
+        exit(0)
 
     if not option_added:
         AddOption('--pyconfig',
@@ -1322,6 +1362,7 @@ def PrepareBuilding(env, has_libcpu=False, remove_components = []):
         logging.debug("No rtthread included in build")
     else:
         # include kernel
+
         objs.extend(SConscript(Rtt_Root + '/src/SConscript', variant_dir=kernel_vdir + '/src', duplicate=0))
         # include libcpu
         if not has_libcpu:
@@ -1402,7 +1443,8 @@ def InitBuild(bsp_root, build_dir, board):
         f.close()
 
     SIFLI_SDK = os.getenv('SIFLI_SDK')
-    KCONFIG_PATH = os.path.join(SIFLI_SDK, "tools/menuconfig/dist/kconfig.exe")
+    KCONFIG_PATH = os.path.join(SIFLI_SDK, "tools/kconfig/kconfig.py")
+
 
     board_path = board_path.replace("$SIFLI_SDK", SIFLI_SDK)
     board_path = os.path.dirname(board_path)   
@@ -1426,7 +1468,7 @@ def InitBuild(bsp_root, build_dir, board):
                  os.path.join(bsp_root, 'proj.conf')]
 
     # Add chip specific config
-    proj_chip_conf = os.path.join(bsp_root, rtconfig.CHIP + '/' + 'proj.conf')
+    proj_chip_conf = os.path.join(bsp_root, rtconfig.CHIP.lower() + '/' + 'proj.conf')
     if os.path.exists(proj_chip_conf):
         conf_list += [proj_chip_conf]
 
@@ -1440,17 +1482,19 @@ def InitBuild(bsp_root, build_dir, board):
     #    os.remove(os.path.join(build_dir, "rtconfig.h"))
 
     if (is_verbose()):
-        retcode = subprocess.call([KCONFIG_PATH, '--handwritten-input-configs', '--verbose', os.path.join(build_dir, 'Kconfig'), 
+        retcode = subprocess.call(['python', KCONFIG_PATH, '--handwritten-input-configs', '--verbose', os.path.join(build_dir, 'Kconfig'),
                          os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"), 
                          os.path.join(build_dir, "kconfiglist")] + conf_list)
     else:
-        retcode = subprocess.call([KCONFIG_PATH, '--handwritten-input-configs', os.path.join(build_dir, 'Kconfig'), 
-                         os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"), 
+        retcode = subprocess.call(['python', KCONFIG_PATH, '--handwritten-input-configs', os.path.join(build_dir, 'Kconfig'),
+                         os.path.join(build_dir, '.config'), os.path.join(build_dir, "rtconfig.h"),
                          os.path.join(build_dir, "kconfiglist")] + conf_list)
-    
     assert retcode == 0, "Fail to generate .config and rtconfig.h"
 
-    src = GetCustomMemMapSrc(bsp_root, build_dir, rtconfig.CHIP, board)
+    if os.path.isfile('rtconfig_project.h'):
+        shutil.copy('rtconfig_project.h', os.path.join(build_dir, "rtconfig_project.h"))
+
+    src = GetCustomMemMapSrc(bsp_root, build_dir, rtconfig.CHIP.lower(), board)
     if src:
         logging.debug("Copy custom_mem_map.h")
         logging.debug(" from {}".format(src))
@@ -1743,7 +1787,7 @@ def PreBuilding():
     for a in PREBUILDING:
         a()
 
-def GroupLibName(name, env):
+def GroupLibName(name, env=None):
     import rtconfig
     if rtconfig.PLATFORM == 'armcc':
         return name + '_rvds'
@@ -1755,7 +1799,10 @@ def GroupLibName(name, env):
     return name
 
 def GroupLibFullName(name, env):
-    return env['LIBPREFIX'] + GroupLibName(name, env) + env['LIBSUFFIX']
+    s = GroupLibName(name, env)
+    if not s.startswith(env['LIBPREFIX']):
+        s = env['LIBPREFIX'] + s
+    return s + env['LIBSUFFIX']
 
 def BuildLibInstallAction(target, source, env):
     import rtconfig
@@ -1764,7 +1811,8 @@ def BuildLibInstallAction(target, source, env):
         if Group['name'] == lib_name:
             lib_name = GroupLibFullName(Group['name'], env)
             dst_name = os.path.join(Group['path'], lib_name)
-            logging.info ('Copy '+lib_name+' => ' +dst_name)
+            lib_name = os.path.join(os.path.dirname(str(source[0])), lib_name)
+            logging.info ('Copy '+lib_name+' => ' + dst_name)
             do_copy_file(lib_name, dst_name)
             try:
                 os.system(rtconfig.POST_ACTION)
@@ -1815,6 +1863,7 @@ def DoBuilding(target, objects):
                 if not local_group(Group, objects):
                     objects = Env.Object(Group['src'])
 
+                lib_name = os.path.join(os.path.dirname(target), lib_name)
                 program = Env.Library(lib_name, objects)
 
                 # add library copy action
@@ -1980,10 +2029,10 @@ def EndBuilding(target, program = None):
         from cscope import CscopeDatabase
         CscopeDatabase(Projects)
 
-    if not GetOption('help') and not GetOption('target'):
-        if not os.path.exists(rtconfig.EXEC_PATH) and not GetDepend('BSP_USING_PC_SIMULATOR'):
-            logging.error("Error: the toolchain path (" + rtconfig.EXEC_PATH + ") is not exist, please check 'EXEC_PATH' in path or rtconfig.py.")
-            exit(1)
+    # if not GetOption('help') and not GetOption('target'):
+    #     if not os.path.exists(rtconfig.EXEC_PATH) and not GetDepend('BSP_USING_PC_SIMULATOR'):
+    #         logging.error("Error: the toolchain path (" + rtconfig.EXEC_PATH + ") is not exist, please check 'EXEC_PATH' in path or rtconfig.py.")
+    #         exit(1)
 
     if need_exit:
         exit(0)
@@ -2106,6 +2155,7 @@ def SifliMsvcEnv(cpu):
     rtconfig.TARGET_EXT = 'exe'
     rtconfig.AS = rtconfig.PREFIX + 'cl'
     rtconfig.CC = rtconfig.PREFIX + 'cl'
+    rtconfig.CXX = rtconfig.PREFIX + 'cl'
     rtconfig.AR = rtconfig.PREFIX + 'lib'
     rtconfig.LINK = rtconfig.PREFIX + 'link'
        
@@ -2121,14 +2171,22 @@ def SifliMsvcEnv(cpu):
     #    LFLAGS += ''
     rtconfig.CFLAGS += ' /MT'
     
-    rtconfig.CFLAGS += ' /Zi /Od /W 3 /WL /D_Win32 /wd4828 /FS /utf-8 /nologo '        
+    rtconfig.CFLAGS += ' /Zi /Od /W3 /WL /D_Win32 /wd4828 /FS /utf-8 /nologo /we4013'        
     rtconfig.LFLAGS += ' /SUBSYSTEM:CONSOLE /MACHINE:X86 /INCREMENTAL:NO /nologo '
-    rtconfig.LFLAGS += '/PDB:"build\\rtthread.pdb" /DEBUG /ignore:4099 '
+    rtconfig.LFLAGS += '/PDB:"{}\\{}.pdb" /DEBUG /ignore:4099 '.format(rtconfig.OUTPUT_DIR, rtconfig.TARGET_NAME)
+
+    rtconfig.CXXFLAGS = rtconfig.CFLAGS
 
     rtconfig.CPATH = ''
     rtconfig.LPATH = ''
 
     rtconfig.POST_ACTION = ''   
+
+    rtconfig.CFLAGS += ' /IX:\\include /IY:\\ucrt /IY:\\um /IY:\\shared '
+    rtconfig.LFLAGS += ' /LIBPATH:L:\\ucrt\\x86  /LIBPATH:L:\\um\\x86 /LIBPATH:X:\\lib\\x86 user32.lib '    
+    rtconfig.EXEC_PATH = 'X:/bin/Hostx64/x86/'
+
+    os.system(os.path.join(os.getenv('SIFLI_SDK'), "msvc_setup.bat"))
 
 def SifliIarEnv(cpu):
     import rtconfig
@@ -2333,7 +2391,7 @@ def SifliKeilEnv(cpu, BSP_ROOT=''):
     DEVICE=''
     rtconfig.AFLAGS=''
     rtconfig.CFLAGS=''
-    if cpu=='Cortex-M33':
+    if cpu=='cortex-m33':
         if not no_dsp_fp:
             rtconfig.AFLAGS+= '  --fpu=FPv5-SP --cpreproc_opts=-mfpu=fpv5-sp-d16 --cpreproc_opts=-mfloat-abi=hard --cpreproc_opts=-DARMCM33_DSP_FP --cpreproc --cpreproc_opts=--target=arm-arm-none-eabi --cpreproc_opts=-mfloat-abi=hard '
             rtconfig.CFLAGS+= ' -DARMCM33_DSP_FP '        
@@ -2362,6 +2420,7 @@ def SifliKeilEnv(cpu, BSP_ROOT=''):
     rtconfig.AFLAGS += ' --diag_suppress=A1609 '
 
     rtconfig.CXXFLAGS = rtconfig.CFLAGS + ' -xc++ -std=c++14 -fno-exceptions ' 
+    rtconfig.CXXFLAGS += ' -I' + rtconfig.EXEC_PATH + '/ARM/ARMCLANG/include/libcxx'
     rtconfig.CCFLAGS =  rtconfig.CFLAGS
     rtconfig.CFLAGS = rtconfig.CFLAGS + ' -xc -std=c99 '
     rtconfig.LFLAGS = ' --cpu=' + asm_cpu 
@@ -2434,11 +2493,11 @@ def LoadRtconfig(board):
         logging.error('Board path "{}"" not found'.format(board_path2))
         exit(1)
 
-    proj_rtconfig = imp.load_source('main', os.path.join(board_path2, 'rtconfig.py'))
+    proj_rtconfig = (lambda spec: (spec.loader.exec_module(mod := importlib.util.module_from_spec(spec)) or mod))(importlib.util.spec_from_file_location('main', os.path.join(board_path2, 'rtconfig.py')))
     MergeRtconfig(proj_rtconfig, rtconfig)
         
     proj_rtconfig.OUTPUT_DIR = 'build_' + board + '/'
-    proj_rtconfig.LINK_SCRIPT, proj_rtconfig.LINK_SCRIPT_TEMPLATE=GetLinkScript('.',board,proj_rtconfig.CHIP,proj_rtconfig.CORE)
+    proj_rtconfig.LINK_SCRIPT, proj_rtconfig.LINK_SCRIPT_TEMPLATE=GetLinkScript('.',board,proj_rtconfig.CHIP,proj_rtconfig.CORE.lower())
     proj_rtconfig.TARGET_NAME = "main"
     
     # clear old rtconfig
@@ -2510,10 +2569,11 @@ def GetBoardName(core=None):
     if board is not None:
         if not '_lcpu' in board and not '_hcpu' in board and not '_acpu' in board:
             #default set to HCPU
-            board+='_hcpu'      
+            board += '_hcpu'
         board_core = GetCoreType(board)
         if core and board_core and board_core != core:
-            board = board.rstrip('_' + board_core.lower())
+            if board.endswith('_' + board_core.lower()):
+                board = board[:-len('_' + board_core.lower())]
             board += '_' + core.lower()
 
     return board 
@@ -2526,7 +2586,7 @@ def IsInitBuild():
         return False    
 
 
-def PrepareEnv():
+def PrepareEnv(board=None):
     import rtconfig
     global BuildOptions
 
@@ -2534,6 +2594,7 @@ def PrepareEnv():
         AddOption('--board',
                     dest = 'board',
                     type = 'string',
+                    default=board,
                     help = 'board name')            
         AddOption('--bconf',
                     dest = 'bconf',
@@ -2594,6 +2655,9 @@ def AddFTAB(SIFLI_SDK, chip):
         AddChildProj(proj_name, proj_path, False)
     elif "SF32LB58X" == chip:
         proj_path = os.path.join(SIFLI_SDK, 'example/flash_table/sf32lb58x_common_v2')
+        AddChildProj(proj_name, proj_path, False)
+    elif "SF32LB55X" == chip:
+        proj_path = os.path.join(SIFLI_SDK, 'example/flash_table/sf32lb55x_common_v2')
         AddChildProj(proj_name, proj_path, False)
 
 def AddDFU(SIFLI_SDK):
@@ -2688,7 +2752,7 @@ def SifliEnv(BSP_Root = None):
     logging.debug("Version %08x, Build %s" %(rtconfig.sifli_version,rtconfig.sifli_build)) 
 
     try:       
-        cpu=GetDepend('CPU').replace('"','')
+        cpu=GetDepend('CPU').replace('"','').lower()
         rtconfig.CPU=cpu
     except:
         #TODO: it's not appropriate to use SOC name 
@@ -2703,8 +2767,10 @@ def SifliEnv(BSP_Root = None):
         else:
             cpu='Cortex-M33'
             logging.error("Undefined core, please select BF0_HCPU/BF0_LCPU/BF0_ACPU")
+        
+        cpu = cpu.lower()
         rtconfig.CPU=cpu
-     
+
     if GetDepend('BSP_USING_PC_SIMULATOR'):
         rtconfig.ARCH='sim'
     else:
@@ -2716,8 +2782,7 @@ def SifliEnv(BSP_Root = None):
     # bsp lib config
     rtconfig.BSP_LIBRARY_TYPE = None        
 
-    if os.getenv('RTT_EXEC_PATH'):
-        rtconfig.EXEC_PATH = os.getenv('RTT_EXEC_PATH')
+    rtconfig.EXEC_PATH = os.getenv('RTT_EXEC_PATH')
 
     if not rtconfig.ARCH=='sim':
         rtconfig.LINK_SCRIPT_SRC = rtconfig.LINK_SCRIPT

@@ -127,7 +127,19 @@ if !BSP_USING_PC_SIMULATOR
     config BLE_TX_POWER_VAL
         int "Select BLE TX power. Range: -10dbm to 10dbm"
         depends on !(SOC_SF32LB52X || SOC_SF32LB56X || SOC_SF32LB58X)
-        default 0            
+        default 0
+
+    choice LCPU_CONFIG_VERSION
+        prompt "Select hal lcpu config version"
+        default LCPU_CONFIG_V2 if SOC_SF32LB58X
+        default LCPU_CONFIG_AUTO
+        config LCPU_CONFIG_AUTO
+            bool "Auto adapt lcpu config version via chip ID"
+        config LCPU_CONFIG_V1
+            bool "Select for 1st version for hal lcpu config"
+        config LCPU_CONFIG_V2
+            bool "Select for 2nd version for hal lcpu config"
+    endchoice        
 endif
 
 if BSP_USING_BOARD_EH_SS6500XXX

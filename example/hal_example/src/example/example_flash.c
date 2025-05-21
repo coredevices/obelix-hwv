@@ -147,6 +147,18 @@ static int utest_flash_init(void)
 #endif
     dma_handle = &fdma_data; //(DMA_HandleTypeDef *)malloc(sizeof(DMA_HandleTypeDef));
 
+#ifdef SF32LB58X
+    if (FLASH3 == TEST_FLASH)
+    {
+        HAL_PIN_Set(PAD_PA46, MPI3_CLK, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_PA44, MPI3_CS, PIN_NOPULL, 1);
+        HAL_PIN_Set(PAD_PA50, MPI3_DIO0, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_PA48, MPI3_DIO1, PIN_PULLDOWN, 1);
+        HAL_PIN_Set(PAD_PA47, MPI3_DIO2, PIN_PULLUP, 1);
+        HAL_PIN_Set(PAD_PA45, MPI3_DIO3, PIN_PULLUP, 1);
+    }
+#endif /* SF32LB58X */
+
     HAL_RCC_EnableModule(TEST_FLASH_RCC); // enable MPI3
 
     // initial flash configure

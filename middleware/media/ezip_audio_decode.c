@@ -207,7 +207,7 @@ void ezip_audio_decode(ffmpeg_handle thiz, audio_server_callback_func callback)
             cache->main_ptr += offset;
             cache->main_left -= offset;
             //LOG_I("offset=%d", offset);
-            int err = MP3Decode(hMP3Decoder, &cache->main_ptr, &cache->main_left, (short *)cache->decode_out, 0);
+            int err = MP3Decode(hMP3Decoder, &cache->main_ptr, &cache->main_left, (short *)cache->decode_out, 0, 0);
             if (err)
             {
                 LOG_I("mp3 decode err=%d", err);

@@ -104,6 +104,15 @@ static void init_clock_hands_img(void)
     }
 
 #endif
+
+    lv_obj_align(p_clk_simple->hour_hand,   LV_ALIGN_CENTER, 0, (clock_simple_hour_hand.header.h >> 1) - 157);
+    lv_obj_align(p_clk_simple->minute_hand, LV_ALIGN_CENTER, 0, (clock_simple_minute_hand.header.h >> 1) - 186);
+    lv_obj_align(p_clk_simple->second_hand, LV_ALIGN_CENTER, 0, (clock_simple_second_hand.header.h >> 1) - 230);
+
+    lv_img_set_pivot(p_clk_simple->hour_hand,   7, 157);
+    lv_img_set_pivot(p_clk_simple->minute_hand, 7, 186);
+    lv_img_set_pivot(p_clk_simple->second_hand, 6, 230);
+
 }
 
 static void deinit_clock_hands_img(void)
@@ -262,9 +271,7 @@ static rt_int32_t init(lv_obj_t *parent)
     lv_img_set_src(p_clk_simple->minute_hand, LV_EXT_IMG_GET(clock_simple_minute_hand));
     lv_img_set_src(p_clk_simple->second_hand, LV_EXT_IMG_GET(clock_simple_second_hand));
 
-    lv_obj_align(p_clk_simple->hour_hand, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_align(p_clk_simple->minute_hand, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_align(p_clk_simple->second_hand, LV_ALIGN_CENTER, 0, 0);
+
     p_clk_simple->redraw_task = NULL;
 
     return RT_EOK;

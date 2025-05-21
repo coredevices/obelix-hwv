@@ -386,7 +386,7 @@ static const struct audio_device g_bt_hfpag_audio_dev =
 
 static int hfp_ag_audio_client_callback(audio_server_callback_cmt_t cmd, void *userdata, uint32_t reserved)
 {
-    LOG_I("hfp_ag_audio_client_callback cmd=%d \r\n", cmd);
+    // LOG_I("hfp_ag_audio_client_callback cmd=%d \r\n", cmd);
 
     return 0;
 }

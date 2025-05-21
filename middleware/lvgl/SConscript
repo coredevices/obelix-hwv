@@ -38,6 +38,9 @@ if not GetDepend('DISABLE_LVGL_V8') or not GetDepend('DISABLE_LVGL_V9'):
                 objs = objs + SConscript(os.path.join('lv_drivers', 'SConscript'))
             else:
                 objs = objs + SConscript(os.path.join('lv_drivers_v9', 'SConscript'))
+        
+        objs = objs + SConscript(os.path.join('lvgl_extensions', 'SConscript'))
+        objs = objs + SConscript(os.path.join('gif_dec', 'SConscript'))
     Return('objs')
 
 else:

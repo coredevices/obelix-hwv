@@ -54,19 +54,11 @@
 #include "log.h"
 
 
-
-
-
-
-
-
-
 #ifdef ROW_OFFSET_PLUS
     #define ROW_OFFSET  (ROW_OFFSET_PLUS)
 #else
     #define ROW_OFFSET  (0)
 #endif
-
 
 
 /**
@@ -79,10 +71,6 @@
   */
 #define  THE_LCD_PIXEL_WIDTH    ((uint16_t)240)
 #define  THE_LCD_PIXEL_HEIGHT   ((uint16_t)240)
-
-
-
-
 
 
 /**
@@ -109,38 +97,8 @@
 #define REG_WBRIGHT            0x51
 
 
-
-
-
-
 #define REG_VDV_VRH_EN         0xC2
 #define REG_VDV_SET            0xC4
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 //#define DEBUG
 
@@ -149,14 +107,6 @@
 #else
     #define DEBUG_PRINTF(...)
 #endif
-
-
-
-
-
-
-
-
 
 
 static LCDC_InitTypeDef lcdc_int_cfg =
@@ -178,13 +128,6 @@ static LCDC_InitTypeDef lcdc_int_cfg =
     },
 
 };
-
-
-
-
-
-
-
 
 
 /**
@@ -239,6 +182,23 @@ static void LCD_DisplayOn(LCDC_HandleTypeDef *hlcdc)
     hwp_rtc->PBR4R |= 2 << RTC_PBR4R_SEL_Pos; //xfrp
     hwp_rtc->PBR5R |= 3 << RTC_PBR5R_SEL_Pos; //vcom
 #endif /* SF32LB58X */
+
+#ifdef SF32LB52X
+    hwp_lptim2->ARR = 32768 / lcdc_int_cfg.freq;    // 设置自动重装载值（周期）
+    hwp_lptim2->CMP = hwp_lptim2->ARR / 2;          // 设置比较值（占空比 50%）
+    hwp_lptim2->CR |= LPTIM_CR_ENABLE;              // 使能 LPTIM3
+    hwp_lptim2->CR |= LPTIM_CR_CNTSTRT;             // 启动计数器
+
+    MODIFY_REG(hwp_hpsys_aon->CR1, HPSYS_AON_CR1_PINOUT_SEL0_Msk, 3 << HPSYS_AON_CR1_PINOUT_SEL0_Pos);
+    MODIFY_REG(hwp_hpsys_aon->CR1, HPSYS_AON_CR1_PINOUT_SEL1_Msk, 3 << HPSYS_AON_CR1_PINOUT_SEL1_Pos);
+
+    MODIFY_REG(hwp_rtc->PBR0R, RTC_PBR0R_SEL_Msk, 3 << RTC_PBR0R_SEL_Pos);
+    MODIFY_REG(hwp_rtc->PBR1R, RTC_PBR1R_SEL_Msk, 2 << RTC_PBR1R_SEL_Pos);
+
+    MODIFY_REG(hwp_rtc->PBR0R, RTC_PBR0R_OE_Msk, 1 << RTC_PBR0R_OE_Pos);
+    MODIFY_REG(hwp_rtc->PBR1R, RTC_PBR1R_OE_Msk, 1 << RTC_PBR1R_OE_Pos);
+
+#endif
 }
 
 /**
@@ -250,6 +210,20 @@ static void LCD_DisplayOff(LCDC_HandleTypeDef *hlcdc)
 {
     /* Display Off */
     //LCD_WriteReg(hlcdc, REG_DISPLAY_OFF, (uint8_t *)NULL, 0);
+#ifdef SF32LB52X
+
+    hwp_lptim2->CR &= ~LPTIM_CR_ENABLE;
+    hwp_lptim2->CR &= ~LPTIM_CR_CNTSTRT;
+    MODIFY_REG(hwp_hpsys_aon->CR1, HPSYS_AON_CR1_PINOUT_SEL0_Msk, 0 << HPSYS_AON_CR1_PINOUT_SEL0_Pos);
+    MODIFY_REG(hwp_hpsys_aon->CR1, HPSYS_AON_CR1_PINOUT_SEL1_Msk, 0 << HPSYS_AON_CR1_PINOUT_SEL1_Pos);
+
+    MODIFY_REG(hwp_rtc->PBR0R, RTC_PBR0R_SEL_Msk | RTC_PBR0R_OE_Msk, 0);
+    MODIFY_REG(hwp_rtc->PBR1R, RTC_PBR1R_SEL_Msk | RTC_PBR1R_OE_Msk, 0);
+
+    MODIFY_REG(hwp_rtc->PBR0R, RTC_PBR0R_IE_Msk | RTC_PBR0R_PE_Msk | RTC_PBR0R_OE_Msk, 0); // IE=0, PE=0, OE=0
+    MODIFY_REG(hwp_rtc->PBR1R, RTC_PBR1R_IE_Msk | RTC_PBR1R_PE_Msk | RTC_PBR1R_OE_Msk, 0);
+
+#endif
 }
 
 static void LCD_SetRegion(LCDC_HandleTypeDef *hlcdc, uint16_t Xpos0, uint16_t Ypos0, uint16_t Xpos1, uint16_t Ypos1)
@@ -267,13 +241,6 @@ static void LCD_WriteMultiplePixels(LCDC_HandleTypeDef *hlcdc, const uint8_t *RG
     HAL_LCDC_LayerSetData(hlcdc, HAL_LCDC_LAYER_DEFAULT, (uint8_t *)RGBCode, Xpos0, Ypos0, Xpos1, Ypos1);
     HAL_LCDC_SendLayerData_IT(hlcdc);
 }
-
-
-
-
-
-
-
 
 
 

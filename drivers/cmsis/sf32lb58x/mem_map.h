@@ -75,7 +75,7 @@
 #define HPSYS_RAM6_SIZE     (0)
 #undef HPSYS_RAM7_SIZE
 #define HPSYS_RAM7_SIZE     (0)
-#ifdef FPGA_PRO
+#if 0 //def FPGA_PRO
     #define HPSYS_RAM_SIZE      (HPSYS_RAM0_SIZE+HPSYS_RAM1_SIZE+HPSYS_RAM2_SIZE+HPSYS_RAM3_SIZE)
 #else
     #define HPSYS_RAM_SIZE      (HPSYS_RAM0_SIZE+HPSYS_RAM1_SIZE+HPSYS_RAM2_SIZE)
@@ -442,6 +442,92 @@
 
 #if (LCPU2BCPU_MB_CH1_BUF_END_ADDR - LPSYS_RAM_BASE) >= LPSYS_RAM_SIZE
     #error "LCPU RAM overflow"
+#endif
+
+#ifdef LCPU_CONFIG_V2
+
+    /* lpsys_rom */
+    #undef  LPSYS_ROM_START_ADDR
+    #ifdef LCPU_RUN_SEPERATE_IMG
+        #define LPSYS_ROM_START_ADDR                               (0x003FC000)
+    #else
+        #define LPSYS_ROM_START_ADDR                               (0x00000000)
+    #endif
+    #undef  LPSYS_ROM_SIZE
+    #define LPSYS_ROM_SIZE                                     (0x00080000)
+    #undef  LPSYS_ROM_OFFSET
+    #define LPSYS_ROM_OFFSET                                   (0x00000000)
+
+    /* lpsys_rom_ram */
+    #undef  LCPU_ROM_RAM_START_ADDR
+    #define LCPU_ROM_RAM_START_ADDR                            (0x204E0000)
+    #undef  LCPU_ROM_RAM_SIZE
+    #define LCPU_ROM_RAM_SIZE                                  (0x00003E00)
+    #undef  LCPU_ROM_RAM_OFFSET
+    #define LCPU_ROM_RAM_OFFSET                                (0x000E0000)
+    #undef  LCPU_ROM_CONFIG_START_ADDR
+    #define LCPU_ROM_CONFIG_START_ADDR                         (0x204E3E00)
+    #undef  LCPU_ROM_CONFIG_SIZE
+    #define LCPU_ROM_CONFIG_SIZE                               (0x00000200)
+    #undef  LCPU_ROM_CONFIG_OFFSET
+    #define LCPU_ROM_CONFIG_OFFSET                             (0x000E3E00)
+    #undef  LCPU2HCPU_MB_CH1_BUF_START_ADDR
+    #define LCPU2HCPU_MB_CH1_BUF_START_ADDR                    (0x204E4000)
+    #undef  LCPU2HCPU_MB_CH1_BUF_SIZE
+    #define LCPU2HCPU_MB_CH1_BUF_SIZE                          (0x00000200)
+    #undef  LCPU2HCPU_MB_CH1_BUF_OFFSET
+    #define LCPU2HCPU_MB_CH1_BUF_OFFSET                        (0x000E4000)
+    #undef  NVDS_BUF_START_ADDR
+    #define NVDS_BUF_START_ADDR                                (0x204E4200)
+    #undef  NVDS_BUF_SIZE
+    #define NVDS_BUF_SIZE                                      (0x00000200)
+    #undef  NVDS_BUF_OFFSET
+    #define NVDS_BUF_OFFSET                                    (0x000E4200)
+    #undef  KE_LOG_BUF_START_ADDR
+    #define KE_LOG_BUF_START_ADDR                              (0x204E4400)
+    #undef  KE_LOG_BUF_SIZE
+    #define KE_LOG_BUF_SIZE                                    (0x00000C00)
+    #undef  KE_LOG_BUF_OFFSET
+    #define KE_LOG_BUF_OFFSET                                  (0x000E4400)
+    #undef  KE_ENV_BUF_START_ADDR
+    #define KE_ENV_BUF_START_ADDR                              (0x204E5000)
+    #undef  KE_ENV_BUF_SIZE
+    #define KE_ENV_BUF_SIZE                                    (0x00003800)
+    #undef  KE_ENV_BUF_OFFSET
+    #define KE_ENV_BUF_OFFSET                                  (0x000E5000)
+    #undef  KE_MSG_BUF_START_ADDR
+    #define KE_MSG_BUF_START_ADDR                              (0x204E8800)
+    #undef  KE_MSG_BUF_SIZE
+    #define KE_MSG_BUF_SIZE                                    (0x00003800)
+    #undef  KE_MSG_BUF_OFFSET
+    #define KE_MSG_BUF_OFFSET                                  (0x000E8800)
+    #undef  LCPU_PATCH_BUF_START_ADDR
+    #define LCPU_PATCH_BUF_START_ADDR                          (0x204EC000)
+    #undef  LCPU_PATCH_BUF_SIZE
+    #define LCPU_PATCH_BUF_SIZE                                (0x00004000)
+    #undef  LCPU_PATCH_BUF_OFFSET
+    #define LCPU_PATCH_BUF_OFFSET                              (0x000EC000)
+    #undef  EM_BUF_START_ADDR
+    #define EM_BUF_START_ADDR                                  (0x204F0000)
+    #undef  EM_BUF_SIZE
+    #define EM_BUF_SIZE                                        (0x0000F000)
+    #undef  EM_BUF_OFFSET
+    #define EM_BUF_OFFSET                                      (0x000F0000)
+    #undef  LCPU_AUDIO_MEM_START_ADDR
+    #define LCPU_AUDIO_MEM_START_ADDR                          (0x204FF000)
+    #undef  LCPU_AUDIO_MEM_SIZE
+    #define LCPU_AUDIO_MEM_SIZE                                (0x00000400)
+    #undef  LCPU_AUDIO_MEM_OFFSET
+    #define LCPU_AUDIO_MEM_OFFSET                              (0x000FF000)
+
+    /* lpsys_ram */
+    #undef  LPSYS_RAM_START_ADDR
+    #define LPSYS_RAM_START_ADDR                               (0x20400000)
+    #undef  LPSYS_RAM_SIZE
+    #define LPSYS_RAM_SIZE                                     (0x00080000)
+    #undef  LPSYS_RAM_OFFSET
+    #define LPSYS_RAM_OFFSET                                   (0x00000000)
+
 #endif
 
 //======================================= Customize =======================================

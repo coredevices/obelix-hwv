@@ -58,9 +58,9 @@ int mp3_decode_real()
 
 		/* decode one MP3 frame - if offset < 0 then bytesLeft was less than a full frame */
 
- 		err = MP3Decode(hMP3Decoder, &readPtr, &bytesLeft, outBuf, 0);
+ 		err = MP3Decode(hMP3Decoder, &readPtr, &bytesLeft, outBuf, 0, 0);
  		nFrames++;
- 		
+
 		if (err) {
 			/* error occurred */
 			switch (err) {
@@ -84,7 +84,7 @@ int mp3_decode_real()
                 memcpy(g_out, outBuf, mp3FrameInfo.bitsPerSample / 8 * mp3FrameInfo.outputSamps);
                 g_out += mp3FrameInfo.bitsPerSample / 8 * mp3FrameInfo.outputSamps;
             }
-            
+
 		}
 
 	} while (!outOfData);

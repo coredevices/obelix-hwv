@@ -296,12 +296,12 @@ static void sibles_send_value_writecfm(uint8_t conn_idx, uint8_t hdl, uint8_t st
 
 }
 
-static void sibles_send_event_req_ind_cfm(sibles_event_ind_t *data)
+static void sibles_send_event_req_ind_cfm(sibles_event_ind_t *data, uint8_t conn_idx)
 {
     if (data->type == GATTC_INDICATE)
     {
         struct gattc_event_cfm *cfm = sifli_msg_alloc(GATTC_EVENT_CFM,
-                                      TASK_BUILD_ID(TASK_ID_GATTC, 0),
+                                      TASK_BUILD_ID(TASK_ID_GATTC, conn_idx),
                                       sifli_get_stack_id(),
                                       sizeof(struct gattc_event_cfm));
 
@@ -1003,7 +1003,7 @@ void sifli_mbox_process(sibles_msg_para_t *header, uint8_t *data_ptr, uint16_t p
         event_ind.length = ind->length;
         event_ind.handle = ind->handle;
         event_ind.value = ind->value;
-        sibles_send_event_req_ind_cfm(&event_ind);
+        sibles_send_event_req_ind_cfm(&event_ind, conn_idx);
         ble_event_publish(SIBLES_EVENT_REQ_IND, &event_ind, sizeof(sibles_event_ind_t));
         break;
     }
@@ -1055,6 +1055,16 @@ void sifli_mbox_process(sibles_msg_para_t *header, uint8_t *data_ptr, uint16_t p
         ind.handle = rsp->handle;
         ind.status = rsp->status;
         ble_event_publish(SIBLES_ATT_UPDATE_PERM_IND, &ind, sizeof(sibles_att_update_perm_ind_t));
+        break;
+    }
+    case SIBLES_SET_ATT_VISIBILITY_RSP:
+    {
+        struct sibles_set_att_visibility_rsp *rsp = (struct sibles_set_att_visibility_rsp *)data_ptr;
+
+        sibles_att_set_visibility_ind_t ind;
+        ind.handle = rsp->handle;
+        ind.status = rsp->status;
+        ble_event_publish(SIBLES_ATT_SET_VISIBILITY_IND, &ind, sizeof(sibles_att_set_visibility_ind_t));
         break;
     }
     case DISS_APP_SET_VALUE_RSP:
@@ -1191,6 +1201,19 @@ void sibles_update_att_permission(uint16_t handle, uint16_t access_mask, uint16_
     req->handle = handle;
     req->access_mask = access_mask;
     req->perm = perm;
+
+    sifli_msg_send((void const *)req);
+}
+
+void sibles_set_att_visibility(uint16_t handle, uint8_t hide)
+{
+    struct sibles_set_att_visibility_req *req;
+    uint16_t len = sizeof(struct sibles_set_att_visibility_req);
+    sifli_task_id_t task_id = g_sibles.app_task_id;
+    req = (struct sibles_set_att_visibility_req *)sifli_msg_alloc(SIBLES_SET_ATT_VISIBILITY_REQ,
+            task_id, sifli_get_stack_id(), len);
+    req->handle = handle;
+    req->hide = hide;
 
     sifli_msg_send((void const *)req);
 }
@@ -1525,7 +1548,29 @@ int8_t sibles_search_service(uint8_t conn_idx, uint8_t uuid_len, uint8_t *uuid)
     return 0;
 }
 
+uint16_t sibles_descriptor_handle_find(sibles_svc_search_char_t *chara, uint16_t descriptor)
+{
+    uint16_t handle = 0;
+    for (int i = 0; i < chara->desc_count; i++)
+    {
+        if ((chara->desc[i].uuid_len == ATT_UUID_16_LEN) &&
+                (memcmp(&descriptor, chara->desc[i].uuid, ATT_UUID_16_LEN) == 0))
+        {
+            handle = chara->desc[i].attr_hdl;
+            break;
+        }
+    }
 
+    if (handle == 0)
+    {
+        LOG_I("fail to find descriptor 0x%x", descriptor);
+        for (int i = 0; i < chara->desc_count; i++)
+        {
+            LOG_HEX("desc uuid", 16, chara->desc[i].uuid, chara->desc[i].uuid_len);
+        }
+    }
+    return handle;
+}
 
 uint16_t sibles_register_remote_svc(uint8_t conn_idx, uint16_t start_hdl, uint16_t end_hdl, sibles_remote_svc_cbk callback)
 {

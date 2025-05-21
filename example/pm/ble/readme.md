@@ -24,11 +24,11 @@ PC与HDk使用USB Type-C线连接后会枚举出两个串口，HCPU使用第二�
 1. iPhone手机推荐用第三方软件LightBlue，Android端用nRF Connect进行BLE测试。
 
 ## 工程说明
-- common工程支持的开发板有
+- 工程支持的开发板有
     - eh-lb551
     - eh-lb555
 - 编译方法: 进入hcpu目录执行命令`scons --board=<board_name> -j8`， 其中board_name为板子名称，例如编译eh-lb551板子，完整命令为`scons --board=eh-lb551 -j8`
-  编译生成的image文件存放在HCPU的build_<board_name>目录下，common工程的用法参考通<<用工程构建方法>>
+  编译生成的image文件存放在HCPU的build_<board_name>目录下，工程的用法参考<<通用工程构建方法>>
 
 - LCPU的主频为24MHz，可以修改LCPU工程目录下的'board/bf0_ap_hal_msp.c'文件，将函数HAL_MspInit中的语句'HAL_RCC_LCPU_SetDiv(2, 0, 3)'去掉，
   这样就会保持HAL_PreInit设置的48MHz频率。

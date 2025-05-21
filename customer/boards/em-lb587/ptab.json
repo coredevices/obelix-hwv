@@ -46,6 +46,17 @@
                }
             },
             {
+                "offset": "0x00000000",
+                "max_size": "0x00080000",
+                "tags": [""],
+                "ftab": {
+                    "name": "dfu",
+                    "address": [
+                        "xip"
+                    ]
+               }
+            },
+            {
                 "offset": "0x00400000", 
                 "max_size": "0x01C00000", 
                 "tags": [
@@ -62,9 +73,17 @@
                 "offset": "0x00000000", 
                 "max_size": "0x00400000", 
                 "tags": [
-                    "HCPU_FLASH_CODE"
+                    "HCPU_PSRAM_CODE"
                 ],
                 "exec": "main"
+            },
+            {
+                "offset": "0x00000000",
+                "max_size": "0x00080000",
+                "tags": [
+                    "DFU_PSRAM_CODE"
+                ],
+                "exec": "dfu"
             },
             {
                 "offset": "0x00400000",
@@ -90,7 +109,7 @@
                 "offset": "0x00000000", 
                 "max_size": "0x00400000", 
                 "tags": [
-                    "HCPU_FLASH_CODE_LOAD_REGION"
+                    "HCPU_FLASH_CODE"
                 ], 
                 "img": "main",
                 "ftab": {
@@ -114,7 +133,35 @@
                     "KVDB_BLE_REGION"
                 ]
             },
-            {"offset": "0x00500000", "max_size": "0x00600000", "img": "fs_root", "tags": ["FLASH_PART2", "FS_REGION"]},
+            {
+                "offset": "0x00500000",
+                "max_size": "0x00020000",
+                "tags": [
+                    "DFU_INFO_REGION"
+                ]
+            },
+            {
+                "offset": "0x00600000",
+                "max_size": "0x00080000",
+                "tags": [
+                    "DFU_FLASH_CODE"
+                ],
+                "img": "dfu",
+                "ftab": {
+                    "name": "dfu",
+                    "address": [
+                        "base"
+                    ]
+                }
+            },
+            {
+                "offset": "0x00800000",
+                "max_size": "0x00200000",
+                "tags": [
+                    "DFU_DOWNLOAD_REGION"
+                ]
+            },
+            {"offset": "0x00A00000", "max_size": "0x00100000", "img": "fs_root", "tags": ["FLASH_PART2", "FS_REGION"]},
             {"offset": "0x00B00000", "max_size": "0x00100000", "tags": ["FLASH_PART12", "FS_EX"]},
             {
                 "offset": "0x00E00000", "max_size": "0x0007C000", "tags": ["ACPU_CODE_LOAD_REGION1"], 

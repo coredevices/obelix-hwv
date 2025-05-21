@@ -90,6 +90,7 @@ enum
     BTS2MU_AG_ENB_CFM = BTS2MU_START,
     BTS2MU_AG_DISB_CFM,
     BTS2MU_AG_CONN_RES,
+    BTS2MU_AG_CONN_IND,
     BTS2MU_AG_DISC_RES,
     BTS2MU_AG_CONN_STATE,
     BTS2MU_AG_AUDIO_CFM,
@@ -153,6 +154,15 @@ typedef struct
     U8 audio_on;
     U8 res;
 } BTS2S_AG_AUDIO_CONN_CFM;
+
+typedef struct
+{
+    U16 type;
+    BTS2S_BD_ADDR bd;
+    U16 rfcomm_chnl; //for reconnect not need sdp search
+    U8 res;
+} BTS2S_AG_CONN_IND_RES;
+
 /****************************************func define*************************************************/
 /*******************************************************************************
  *
@@ -190,6 +200,21 @@ void hfp_ag_deregister(void);
  *
  ******************************************************************************/
 void hfp_ag_connect(BTS2S_BD_ADDR *bd, U16 rfcomm_chnl);
+
+/*******************************************************************************
+ *
+ * Function         hfp_ag_connect_ind_res
+ *
+ * Description      Opens a connection to a headset or hands-free device.
+ *                  When connection is open callback function is called
+ *                  with a HFP_AG_OPEN_EVT. Only the data connection is
+ *                  opened. The audio connection is not opened.
+ *
+ *
+ * Returns          void
+ *
+ ******************************************************************************/
+void hfp_ag_connect_ind_res(BTS2S_BD_ADDR *bd, U16 rfcomm_chnl, U8 res);
 
 /*******************************************************************************
  *

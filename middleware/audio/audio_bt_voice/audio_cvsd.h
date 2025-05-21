@@ -28,8 +28,8 @@ typedef struct cvsd_s
 } cvsd_t;
 
 short cvsdInit(cvsd_t *cvsd);
-void cvsdEncode(cvsd_t *cvsd,  const short *in, unsigned int input_len,  unsigned int *out);
-void cvsdDecode(cvsd_t *cvsd,  const unsigned char *in, unsigned int input_len,  short *out);
+void cvsdEncode(cvsd_t *cvsd,  const short *in,  uint32_t input_frame_len,  uint32_t *out);
+void cvsdDecode(cvsd_t *cvsd,  const unsigned char *in,  uint32_t input_frame_len,  short *out);
 
 #ifndef min  //mod by prife
 #define min(x,y) (x<y?x:y)

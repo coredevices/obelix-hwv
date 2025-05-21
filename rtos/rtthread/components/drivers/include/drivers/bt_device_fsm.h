@@ -20,6 +20,8 @@ int bt_media_fsm_handle(rt_bt_device_t *dev, int event_type, void *args);
 int bt_call_fsm_handle(rt_bt_device_t *dev, uint8_t index, int event_type, void *args);
 uint8_t bt_call_event_hdl(rt_bt_device_t *dev, uint32_t event, void *args);
 char *bt_call_state_to_name(bt_call_state_t state);
+void bt_call_init(rt_bt_device_t *dev);
+uint8_t bt_call_get_state_change(bt_cind_ind_t *cind_data);
 
 #ifdef __cplusplus
 }

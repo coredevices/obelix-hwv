@@ -247,10 +247,9 @@ typedef struct
 {
     uint8_t  track_id;
     uint8_t  attri_req;
-    bt_avrcp_music_detail_info_t detail_info;
+    bt_avrcp_music_detail_info_t  detail_info;
 } bt_notify_avrcp_music_detail_t;
 #endif
-
 
 ///  these type are BT_NOTIFY_HID event id
 typedef enum
@@ -458,6 +457,10 @@ typedef struct
     uint8_t  callsetup_status;
     /// call held status
     uint8_t  callheld_status;
+    uint8_t  service;
+    uint8_t  signal;
+    uint8_t  batt_level;
+    uint8_t  roam;
 } bt_notify_all_call_status;
 
 ///  HFP HF remote call detail information
@@ -528,6 +531,11 @@ typedef struct
     SPP_UUID uuid;
     ///  the uuid length of spp connection that sent the data
     uint8_t uuid_len;
+    ///  judge whether flow control is needed
+    //   is_flow_ctrl equal to 0 means that flow control is not enabled
+    //   Is_flow_ctrl is not equal to 0, which means that flow control is enabled,
+    //   but the customer needs to call bt_interface_spp_srv_data_rsp_ext() himself to reply the received data
+    uint8_t *is_flow_ctrl;
     ///  payload length
     uint16_t  payload_len;
     ///  payload pointer

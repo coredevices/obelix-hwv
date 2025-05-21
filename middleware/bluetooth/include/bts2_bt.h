@@ -159,6 +159,7 @@ typedef U8 BTS2S_DB_FILE_PATH[DB_FILE_PATH];
 #define BT_DEVCLS_WEARABLE                  0x000700
 #define BT_DEVCLS_TOY                       0x000800
 #define BT_DEVCLS_HEALTH                    0x000900
+// Sifli Audio Box also uses this COD
 #define BT_DEVCLS_UNCLASSIFIED              0x001F00
 #define BT_DEVCLS_UTEST                     0x009F00
 #define BT_DEVCLS_MASK(a)                   (((U32)(a) >> 8) & 0x1F)
@@ -678,7 +679,12 @@ typedef enum
     BTS2_INQURI_REPEAT_ERR,
     BTS2_INQURI_DEV_BUSY,
     BTS2_DEV_BUSY,
-    BTS2_NO_PROFILE_LINK, //ADD for
+    BTS2_NO_PROFILE_LINK,
+    //Only spp will use it
+    BTS2_SDP_CLT_DUPLICATE,
+    BTS2_SDP_CLT_SEARCHED,
+    BTS2_ALREADY_CONNECTED,
+    BTS2_ALREADY_CONNECTING, //ADD for
 } BTS2E_RESULT_CODE;
 
 typedef struct
@@ -693,6 +699,10 @@ typedef struct
     U8  callStatus;//:BT_NO_CALL/BT_CALL_ACTIVE
     U8  callSetupStatus;//:BT_NO_CALL/BT_CALL_SETUP_INCOME_CALL/BT_CALL_SETUP_OUT_ALERT_CALL
     U8  callHeldStatus;//:BT_NO_CALL/BT_CALL_BOTH_ACTIVE_HOLD_CALL/BT_CALL_HOLD_ONLY/BT_CALL_NO_HOLD
+    U8  service;
+    U8  signal;
+    U8  batt_level;
+    U8  roam;
 } bts2_hfp_hf_cind;
 
 

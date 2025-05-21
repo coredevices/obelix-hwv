@@ -11,10 +11,8 @@
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
-#include <rtthread.h>
+#include <rtconfig.h>
 #include <register.h>
-#include "drv_common.h"
-#include "drv_gpio.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +21,10 @@ extern "C" {
 //#define SF32_FLASH_START_ADRESS     ((uint32_t)0x08000000)
 //#define SF32_FLASH_SIZE             (256 * 1024)
 //#define SF32_FLASH_END_ADDRESS      ((uint32_t)(SF32_FLASH_START_ADRESS + SF32_FLASH_SIZE))
+
+#ifndef ALIGN
+#define ALIGN(n)                    __attribute__((aligned(n)))
+#endif /* ALIGN */
 
 /* Internal SRAM memory size[Kbytes] <16-256>, Default: 64*/
 #define SF32_SRAM_SIZE      BOOTLOADER_RAM_DATA_SIZE

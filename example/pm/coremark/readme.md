@@ -32,7 +32,7 @@ PC与底板使用USB Type-C线连接后会枚举出两个串口。HCPU使用UART
                                         在58X平台上，PIN对应KEY_HOME_RST按键，按下即开机，
 
 ## 工程说明
-- common工程支持的开发板有
+- 工程支持的开发板有
     - eh-lb551
     - eh-lb555
     - ec-lb583
@@ -41,4 +41,4 @@ PC与底板使用USB Type-C线连接后会枚举出两个串口。HCPU使用UART
     - eh-lb563
     - eh-lb523
 - 编译方法: 进入hcpu目录执行命令`scons --board=<board_name> -j8`， 其中board_name为板子名称，例如编译eh-lb561板子，完整命令为`scons --board=eh-lb561 -j8`，
-编译生成的image文件存放在HCPU的build_<board_name>目录下，common工程的用法参考<<通用工程构建方法>>
+编译生成的image文件存放在HCPU的build_<board_name>目录下，工程的用法参考<<通用工程构建方法>>

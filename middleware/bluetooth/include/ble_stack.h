@@ -53,9 +53,8 @@
     #include "bf0_sibles_util.h"
 #endif
 
-#include <rtthread.h>
-#include <rtdevice.h>
-//#include "ipc_queue.h"
+#include <rtconfig.h>
+#include <stdint.h>
 
 #ifdef SOC_SF32LB55X
 typedef struct
@@ -81,12 +80,19 @@ typedef struct
     uint8_t *nt_buf;
     uint8_t *log_buf;
     uint8_t *nvds_buf;
+// only defined in rom,and ROM_CONFIG_V2 is not config by mem_config API. Avoid influence on previous chips
+#ifdef ROM_CONFIG_V2
+    uint8_t *aud_buf;
+#endif
     uint16_t env_buf_size;
     uint16_t msg_buf_size;
     uint16_t att_buf_size;
     uint16_t nt_buf_size;
     uint16_t log_buf_size;
     uint16_t nvds_buf_size;
+#ifdef ROM_CONFIG_V2
+    uint16_t aud_buf_size;
+#endif
     int8_t max_nb_of_hci_completed;
 } ble_mem_config_t;
 #endif
@@ -138,8 +144,8 @@ typedef struct
 } rom_em_default_attr_t;
 
 
-typedef int (*sifli_msg_func_t)(uint16_t const msgid, void const *param,
-                                uint16_t const dest_id, uint16_t const src_id);
+typedef int32_t (*sifli_msg_func_t)(uint16_t const msgid, void const *param,
+                                    uint16_t const dest_id, uint16_t const src_id);
 
 typedef int (*tl_data_callback_t)(uint8_t *bufptr, uint32_t size);
 

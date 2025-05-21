@@ -48,6 +48,7 @@
 #include "board.h"
 #include "pmic_controller.h"
 #include <stdlib.h>
+#include "drv_gpio.h"
 
 #define DBG_TAG           "aw87390"
 #define DBG_LVL           AUDIO_DBG_LVL
@@ -58,18 +59,14 @@ static struct rt_i2c_bus_device *aw_i2c_bus = NULL;
 #define AW87390_I2C_NAME  "i2c3"
 #define AW87390_I2C_ADDR  0x58
 
-#if defined(BSP_USING_BOARD_EC_LB567XXX)
-    #define  AW87390_GPIO_PIN    78
-    #define  AW87390_GPIO_HWP    hwp_gpio1
-#else
-    #define  AW87390_GPIO_PIN    88
-    #define  AW87390_GPIO_HWP    hwp_gpio1
-#endif
+
+static GPIO_TypeDef *gpio_inst = GET_GPIO_INSTANCE(AW87390_GPIO_PIN);
+static uint16_t gpio_pin = GET_GPIOx_PIN(AW87390_GPIO_PIN);
 
 void aw87390_gpio_write(bool State)
 {
     GPIO_PinState PinState = (GPIO_PinState)State;
-    HAL_GPIO_WritePin(AW87390_GPIO_HWP, AW87390_GPIO_PIN, PinState);
+    HAL_GPIO_WritePin(gpio_inst, gpio_pin, PinState);
     HAL_Delay_us(5);
 }
 void aw87390_gpio_init()
@@ -78,9 +75,9 @@ void aw87390_gpio_init()
 
     // set sensor pin to output mode
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT;
-    GPIO_InitStruct.Pin = AW87390_GPIO_PIN;
+    GPIO_InitStruct.Pin = gpio_pin;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(AW87390_GPIO_HWP, &GPIO_InitStruct);
+    HAL_GPIO_Init(gpio_inst, &GPIO_InitStruct);
 }
 
 

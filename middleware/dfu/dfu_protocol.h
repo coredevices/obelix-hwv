@@ -121,12 +121,12 @@ typedef enum
     DFU_LINK_LOSE_CHECK_REQ,
     DFU_LINK_LOSE_CHECK_RSP,
     DFU_ABORT_COMMAND = 37,
-    DFU_IMAGE_OFFLINE_START_REQ = 38,
-    DFU_IMAGE_OFFLINE_START_RSP = 39,
-    DFU_IMAGE_OFFLINE_PACKET_REQ = 40,
-    DFU_IMAGE_OFFLINE_PACKET_RSP = 41,
-    DFU_IMAGE_OFFLINE_END_REQ = 42,
-    DFU_IMAGE_OFFLINE_END_RSP = 43,
+    DFU_IMAGE_PACKAGE_START_REQ = 38,
+    DFU_IMAGE_PACKAGE_START_RSP = 39,
+    DFU_IMAGE_PACKAGE_PACKET_REQ = 40,
+    DFU_IMAGE_PACKAGE_PACKET_RSP = 41,
+    DFU_IMAGE_PACKAGE_END_REQ = 42,
+    DFU_IMAGE_PACKAGE_END_RSP = 43,
 } dfu_protocol_msg_id_t;
 
 
@@ -190,7 +190,6 @@ typedef enum
     DFU_IMG_ID_MAX = DFU_IMG_ID_LANG,
 } dfu_img_id_t;
 #endif
-
 
 typedef struct
 {
@@ -442,14 +441,14 @@ typedef struct
     uint32_t file_len;
     uint32_t packet_count;
     uint32_t crc_value;
-} dfu_image_offline_start_req_t;
+} dfu_image_package_start_req_t;
 
 typedef struct
 {
     uint16_t result;
     uint16_t reserved;
     uint32_t completed_count;
-} dfu_image_offline_start_rsp_t;
+} dfu_image_package_start_rsp_t;
 
 typedef struct
 {
@@ -457,7 +456,7 @@ typedef struct
     uint32_t data_len;
     uint32_t crc;
     uint8_t data[0];
-} dfu_image_offline_packet_t;
+} dfu_image_package_packet_t;
 
 typedef struct
 {
@@ -465,17 +464,17 @@ typedef struct
     uint8_t retransmission;
     uint8_t reserved;
     uint32_t completed_count;
-} dfu_image_offline_packet_rsp_t;
+} dfu_image_package_packet_rsp_t;
 
 typedef struct
 {
     uint16_t reserved;
-} dfu_image_offline_end_req_t;
+} dfu_image_package_end_req_t;
 
 typedef struct
 {
     uint16_t result;
-} dfu_image_offline_end_rsp_t;
+} dfu_image_package_end_rsp_t;
 
 typedef struct
 {

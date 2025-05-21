@@ -296,6 +296,10 @@ void HAL_PCD_MspDeInit(PCD_HandleTypeDef *hpcd)
 #elif defined(SOC_SF32LB55X)
     hwp_hpsys_cfg->USBCR &= ~(HPSYS_CFG_USBCR_DM_PD | HPSYS_CFG_USBCR_USB_EN);
 #endif
+    /* reset USB to make DP change to PULLDOWN state */
+    hwp_hpsys_rcc->RSTR2 |= HPSYS_RCC_RSTR2_USBC;
+    HAL_Delay_us(100);
+    hwp_hpsys_rcc->RSTR2 &= ~HPSYS_RCC_RSTR2_USBC;
     HAL_RCC_DisableModule(RCC_MOD_USBC);
 }
 

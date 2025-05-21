@@ -68,14 +68,14 @@ HCPU使用UART1作为Console端口，LCPU使用UART4作为Console端口。
 1. iPhone手机推荐用第三方软件LightBlue，Android端用nRF Connect进行BLE测试。
 
 ##工程说明
-- common工程支持的开发板有
+- 工程支持的开发板有
     - ec-lb583
     - ec-lb587
     - eh-lb561
     - eh-lb563
     - eh-lb523
 - 编译方法: 进入hcpu目录执行命令`scons --board=<board_name> -j8`， 其中board_name为板子名称，例如编译eh-lb561板子，完整命令为`scons --board=eh-lb561 -j8`
-    编译生成的image文件存放在HCPU的build_<board_name>目录下，common工程的用法参考通<<用工程构建方法>>
+    编译生成的image文件存放在HCPU的build_<board_name>目录下，工程的用法参考<<通用工程构建方法>>
 对于使用NAND的开发板，如ec-lb583、ec-lb587和eh-lb563，第一次使用开发板还需执行HCPU工程开发板目录下的download_fs.bat烧写文件系统镜像到Flash中，否则启动后会提示文件系统mount失败，
 文件系统镜像只需要烧写一次，若重烧了文件系统，蓝牙地址也会丢失，需要重新配置。
     

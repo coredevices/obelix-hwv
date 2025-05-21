@@ -53,6 +53,7 @@
 
 
 extern    void urc_func_spp_conn_ind_sifli(uint8_t *addr, U8 srv_chl, U8 *uuid, U8 uuid_len, U16 mfs);
+extern    void urc_func_spp_sdp_cfm_sifli(uint8_t *addr, uint8_t reason, U8 *uuid, U8 uuid_len);
 extern    void urc_func_spp_data_ind_sifli(U8 *payload, U16 payload_len, uint8_t *addr, U8 srv_chl, U8 *uuid, U8 uuid_len);
 extern    void urc_func_spp_data_cfm_sifli(uint8_t *addr, U8 srv_chl, U8 *uuid, U8 uuid_len);
 extern    void urc_func_spp_disconn_ind_sifli(uint8_t *addr, U8 srv_chl, U8 *uuid, U8 uuid_len);

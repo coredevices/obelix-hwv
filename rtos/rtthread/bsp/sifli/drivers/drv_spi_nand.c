@@ -747,9 +747,7 @@ static rt_err_t _nand_readpage(struct rt_mtd_nand_device *device,
     uint32_t base = (uint32_t)device->parent.user_data;
     int res;
 
-#if defined(RT_DFS_ELM_DHARA_ENABLED)
     page += device->block_start * device->pages_per_block;
-#endif
 
     //LOG_I("readpage:%d", page);
 
@@ -801,9 +799,7 @@ static rt_err_t _nand_readpage_with_offset(struct rt_mtd_nand_device *device,
     uint32_t base = (uint32_t)device->parent.user_data;
     int res;
 
-#if defined(RT_DFS_ELM_DHARA_ENABLED)
     page += device->block_start * device->pages_per_block;
-#endif
 
     if (offset + data_len > nand_pagesize)
     {
@@ -829,9 +825,7 @@ static rt_err_t _nand_writepage(struct rt_mtd_nand_device *device,
     uint32_t base = (uint32_t)device->parent.user_data;
     int res;
 
-#if defined(RT_DFS_ELM_DHARA_ENABLED)
     page += device->block_start * device->pages_per_block;
-#endif
 
     //LOG_I("writepage:%d", page);
 
@@ -857,9 +851,7 @@ static rt_err_t _nand_eraseblk(struct rt_mtd_nand_device *device, rt_uint32_t bl
     uint32_t base = (uint32_t)device->parent.user_data;
     int res;
 
-#if defined(RT_DFS_ELM_DHARA_ENABLED)
     block += device->block_start;
-#endif
 
     //LOG_I("eraseblk:%d", block);
 
@@ -919,6 +911,42 @@ void register_nand_device(uint32_t flash_base, uint32_t offset, uint32_t size, c
 
     rt_kprintf("Register %s to mtd device with base addr 0x%08x\n", name, mtd->block_start * blk_size + flash_base);
 }
+
+#ifdef RT_USING_MTD_DHARA
+void register_mtd_dhara_device(uint32_t flash_base, uint32_t offset, uint32_t size, char *dhara_name, char *nand_name)
+{
+    bool free_needed = false;
+    size_t dhara_name_len;
+    size_t nand_name_len;
+    rt_mtd_nand_t mtd_nand;
+
+    RT_ASSERT(dhara_name);
+
+    if (!nand_name)
+    {
+        dhara_name_len = strlen(dhara_name);
+        nand_name_len = dhara_name_len + 2;
+        nand_name = rt_malloc(nand_name_len + 1); /* plus null terminator */
+        RT_ASSERT(nand_name);
+        strncpy(nand_name, dhara_name, dhara_name_len);
+        nand_name[dhara_name_len] = '_';
+        nand_name[dhara_name_len + 1] = 'n';
+        nand_name[nand_name_len] = 0;  /* null terminator */
+        free_needed = true;
+    }
+    register_nand_device(flash_base, offset, size, nand_name);
+
+    mtd_nand = (rt_mtd_nand_t)rt_device_find(nand_name);
+    RT_ASSERT(mtd_nand);
+    rt_mtd_dhara_register_device(dhara_name, 0, mtd_nand);
+
+    if (free_needed)
+    {
+        rt_free(nand_name);
+    }
+}
+
+#endif /* RT_USING_MTD_DHARA */
 
 #endif  //RT_USING_MTD_NAND
 

@@ -4,11 +4,11 @@
 ## 支持的平台
 例程可以运行在以下开发板.
 * em-lb525
-
+* em-lb587
 
 ## 示例概述
-* 配置GPIO输入，输出，输入中断操作，进行GPIO HAL函数演示
-* 按键触发翻转电平值
+* 配置GPIO输出，输入中断操作，进行GPIO HAL函数演示
+* 每一秒翻转GPIO_out电平值，输入GPIO在上升沿和下降沿触发中断，串口打印中断信息
 ## GPIO概述
 HAL GPIO 模块提供抽象的软件接口操作硬件GPIO模块. 
 HPSYS和LPSYS各有一个GPIO模块，支持的特性有:
@@ -27,12 +27,12 @@ HPSYS的硬件GPIO模块为 `hwp_gpio1` (或称为GPIO_A), LPSYS的硬件GPIO模
 ## 例程的使用
 
 ### 硬件连接
-* 注:将输入GPIO和输出GPIO通过跳线相连,这样就能把按键触发后修改的GPIO_out电平跳变赋值给GPIO_in以达到再次进入中断打印信息的效果
+* 注:将输入GPIO和输出GPIO通过跳线相连，这样就能把GPIO_out电平跳变赋值给GPIO_in以达到进入中断打印信息的效果
 
-|开发板    |OUT管脚 |OUT管脚名称|IN管脚 |IN管脚名称 |KEY       |KEY管脚名|
-|:---     |:---    |:---      |:---   |:---      |:---      |:---     |
-|em-lb525 |5       |PA41      |3      |PA42      |KEY2      |PA11     |
-|em-lb587 |5       |PB28      |3      |PB29      |KEY2      |PA56     |
+|开发板    |OUT管脚 |OUT管脚名称|IN管脚 |IN管脚名称 |
+|:---     |:---    |:---      |:---   |:---      |
+|em-lb525 |5       |PA41      |3      |PA42      |
+|em-lb587 |5       |PB28      |3      |PB29      |
 
 * 更详细的引脚定义请参考\
 `[em-lb525]()`\
@@ -98,17 +98,19 @@ build_em-lb587_hcpu\download.bat
    fc 9, xtal 2000, pll 2054
    call par CFG1(35bb)
    fc 9, xtal 2000, pll 2054
-   Start GPIO demo!
+   Start gpio demo!
 ```
-按键按下后:
+每秒GPIO_out电平反转时:
 ```
-Enter EXTI, toggle Pin_Out
-Enter EXTI, Pin_In read. Pin_Out value is 1
+Interrupt occurred!
+Pin_Out 41 has been toggle, value = 1
+Pin_In 42, value = 1
 ```
-再按下按键后:
+1秒后翻转:
 ```
-Enter EXTI, toggle Pin_Out
-Enter EXTI, Pin_In read. Pin_Out value is 0
+Interrupt occurred!
+Pin_Out 41 has been toggle, value = 0
+Pin_In 42, value = 0
 ```
 ## 例程说明
 
@@ -121,14 +123,12 @@ Enter EXTI, Pin_In read. Pin_Out value is 0
 
 ```C
 #ifdef SF32LB52X
-    #define Pin_Key 11
     #define Pin_Out 41
     #define Pin_In 42
     #define GPIO_IRQn GPIO1_IRQn
     #define hwp_gpio hwp_gpio1
     #define RCC_MOD_GPIO RCC_MOD_GPIO1
 #elif defined(SF32LB58X)
-    #define Pin_Key 56
     #define Pin_Out 28
     #define Pin_In 29
     #define GPIO_IRQn GPIO2_IRQn
@@ -150,16 +150,9 @@ HAL_GPIO_Init(hwp_gpio, &GPIO_InitStruct);
 ### 输入模式（有中断）
 
 #### GPIO初始化
-配置`GPIO1 pin11`（即GPIO_A11）为输入模式上升沿检测
 配置`GPIO1 pin42`（即GPIO_A42）为输入模式上升沿和下降沿检测
 
 ```C
-GPIO_InitStruct.Pin = Pin_Key;
-GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING; //Set interrupt to trigger on raising edge
-GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-HAL_GPIO_Init(hwp_gpio, &GPIO_InitStruct);
-HAL_NVIC_SetPriority(GPIO_IRQn, 3, 0); // Configure NVIC priority
-
 PIO_InitStruct.Pin = Pin_In;
 GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING; //Set interrupt to trigger on raising and falling edge
 GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -179,30 +172,15 @@ void GPIO1_IRQHandler(void) // Define the interrupt siervice routine (ISR) accor
 ```C
 // override the weak Callback to add user defined action, it's called by HAL_GPIO_EXTI_IRQHandler 
 void HAL_GPIO_EXTI_Callback(GPIO_TypeDef *hgpio, uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == Pin_In)
     {
-        delayms(20);
-
-        if(GPIO_Pin == Pin_Key)
-        {
-            if(HAL_GPIO_ReadPin(hwp_gpio, Pin_Key) == 1)
-            {
-                HAL_GPIO_TogglePin(hwp_gpio, Pin_Out); //Toggle Pin_out to triger an interrupt on Pin_In  
-                rt_kprintf("Enter EXTI, toggle Pin_Out\n"); 
-            }
-        }
-
-        if(GPIO_Pin == Pin_In)
-        {
-            if(HAL_GPIO_ReadPin(hwp_gpio, Pin_In) == 0) // Read Pin_In
-            {
-                rt_kprintf("Enter EXTI, Pin_In read. Pin_Out value is 0\n"); // Print Pin_Out value on UART
-            }
-            else if(HAL_GPIO_ReadPin(hwp_gpio, Pin_In) == 1) // Read Pin_In
-            {
-                rt_kprintf("Enter EXTI, Pin_In read. Pin_Out value is 1\n"); // Print Pin_Out value on UART
-            }
-        }
+        rt_kprintf("Interrupt occurred!\n");
+        rt_kprintf("Pin_Out %d has been toggle, value = %d\n", Pin_Out, HAL_GPIO_ReadPin(hwp_gpio, Pin_Out));
+        rt_kprintf("Pin_In %d, value = %d\n", Pin_In, HAL_GPIO_ReadPin(hwp_gpio, Pin_In));
+        rt_kprintf(" \n");
     }
+}
 ```
 ## API参考
 [](#hal-gpio)

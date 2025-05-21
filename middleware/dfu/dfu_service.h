@@ -299,6 +299,10 @@ void dfu_file_total_end_reponse(uint8_t result);
 
 void dfu_ctrl_set_mode(uint8_t mode);
 
+void bt_dfu_pan_download(const char *url);
+
+uint8_t dfu_package_install_set();
+
 #endif //__DFU_SERVICE_H
 
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

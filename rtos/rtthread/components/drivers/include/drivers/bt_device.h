@@ -189,6 +189,7 @@ typedef enum
     BT_EVENT_LOCAL_CALL_NUMBER = BT_HF_TYPE_ID << 8 | 0x0080,         /**< it means local call number notifycation event*/
     BT_EVENT_CALL_STATUS_IND,           /**< it means call status ,when dont support 3 way calls*/
     BT_EVENT_DIAL_COMPLETE,
+    BT_EVENT_CINDS_IND,
     BT_EVENT_CIND_IND,
     BT_EVENT_CLCC_IND,
     BT_EVENT_CLCC_COMPLETE,
@@ -409,6 +410,17 @@ typedef struct
     bt_cind_type_t type;
     uint8_t val;
 } bt_cind_ind_t;
+
+typedef struct
+{
+//    uint8_t call_status;        //:BT_NO_CALL/BT_CALL_ACTIVE
+//    uint8_t call_setup_status;  //:BT_NO_CALL/BT_CALL_SETUP_INCOME_CALL/BT_CALL_SETUP_OUT_ALERT_CALL
+//    uint8_t call_held_status;   //:BT_NO_CALL/BT_CALL_BOTH_ACTIVE_HOLD_CALL/BT_CALL_HOLD_ONLY/BT_CALL_NO_HOLD
+    uint8_t service;            //:roam network available/roam network available
+    uint8_t signal;             //:phone signal val
+    uint8_t batt_level;         //:phone battery val
+    uint8_t roam;               //:roaming is not active/roaming is not active
+} bt_cind_data_t;
 
 typedef struct
 {

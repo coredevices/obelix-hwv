@@ -27,17 +27,17 @@ static EZIP_HandleTypeDef g_ezip_handle = {0};
 ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
 const static uint8_t png_data_argb565[] =
 {
-#include "..\assets\clock_mickey_shoe01_565A_s_ezip.dat"
+#include "../assets/clock_mickey_shoe01_565A_s_ezip.dat"
 };
 ALIGN(4)
 const static uint8_t exp_data_argb565[] =
 {
-#include "..\assets\clock_mickey_shoe01_565A.dat"
+#include "../assets/clock_mickey_shoe01_565A.dat"
 };
 ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
 const static uint8_t gzip_data[] =
 {
-#include "..\assets\gzip_input.dat"
+#include "../assets/gzip_input.dat"
 };
 ALIGN(4)
 const static uint8_t exp_data_gzip[] =
@@ -47,12 +47,12 @@ const static uint8_t exp_data_gzip[] =
 ALIGN(4)  /* Source and destination address must be 4bytes aligned. */
 const static uint8_t lz4_data[] =
 {
-#include "..\assets\lz4_input.dat"
+#include "../assets/lz4_input.dat"
 };
 ALIGN(4)
 const static uint8_t exp_data_lz4[] =
 {
-#include "..\assets\lz4_gzip_output.dat"
+#include "../assets/lz4_gzip_output.dat"
 };
 // Test data.
 

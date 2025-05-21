@@ -1,3 +1,4 @@
+# TP driver of LCD module 
 config TSC_USING_ADS7846
     bool
     default n
@@ -78,7 +79,7 @@ config TSC_USING_GT911
     bool
     default n
 
-
+# LCD driver of LCD module
 config LCD_USING_ST7735
     bool 
     default n
@@ -225,7 +226,12 @@ config LCD_USING_JD9365DA
 config LCD_USING_NV3052C
     bool
     default n
-	
+
+config LCD_USING_OPM060E9_V10
+    bool
+    default n
+
+# LCD interfaces
 config BSP_LCDC_USING_SPI_NODCX_1DATA
     def_bool n 
 config BSP_LCDC_USING_SPI_NODCX_2DATA
@@ -252,19 +258,24 @@ config BSP_USING_RAMLESS_LCD
     def_bool n
 config BSP_LCDC_USING_JDI_PARALLEL
     def_bool n
+config BSP_LCDC_USING_EPD_8BIT
+    def_bool n
 
+# LCD backlight
 config LCD_USING_PWM_AS_BACKLIGHT
     def_bool n
 
 config BL_USING_AW9364
     def_bool n
 
+# Misc options
 config BSP_LCDC1_USE_LCDC2_TE
     def_bool n
 
 config BSP_USE_LCDC2_ON_HPSYS
     def_bool n
 
+# LCD shape
 config BSP_USING_ROUND_TYPE_LCD
     def_bool n
 

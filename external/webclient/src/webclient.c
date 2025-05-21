@@ -29,6 +29,9 @@
 #if defined(RT_USING_SAL)
 #include <socket/netdb.h>
 #include <sys/socket.h>
+#ifdef WEBCLIENT_USING_SAL_TLS
+#include <sal_tls.h>
+#endif
 #else
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
@@ -712,7 +715,7 @@ static int webclient_send_header(struct webclient_session *session, int method)
                 rc = -WEBCLIENT_NOBUFFER;
                 goto __exit;
             }
-
+            rt_kputs(session->header->buffer);
             webclient_write(session, (unsigned char *) session->header->buffer, session->header->length);
         }
         else
@@ -1224,6 +1227,8 @@ int webclient_post(struct webclient_session *session, const char *URI, const voi
 
     if (post_data && (data_len > 0))
     {
+        rt_kprintf("Post data len:%d", data_len);
+        rt_kputs(post_data);
         webclient_write(session, post_data, data_len);
 
         /* resolve response data, get http status code */

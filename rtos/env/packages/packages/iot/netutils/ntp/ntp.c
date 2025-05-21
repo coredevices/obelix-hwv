@@ -34,23 +34,24 @@
 #include <sys/types.h>
 #include <rtdevice.h>
 
+extern struct tm *localtime_r(const time_t *t, struct tm *r);
+
 #if defined(RT_USING_SAL)
     #include <arpa/inet.h>
     #include <sys/socket.h>
     #include <netdb.h>
     //add ylm temp
     extern struct hostent *gethostbyname(const char *name);
-    extern struct tm *localtime_r(const time_t *t, struct tm *r);
 
 #elif defined(RT_USING_LWIP)
     #include <lwip/inet.h>
     #include <lwip/sockets.h>
     #include <lwip/netdb.h>
-    extern struct hostent *gethostbyname(const char *name);
-    extern int recvfrom(int s, void *mem, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen);
-    extern int sendto(int s, const void *dataptr, size_t size, int flags, const struct sockaddr *to, socklen_t tolen);
-    extern int socket(int domain, int type, int protocol);
-    extern int closesocket(int s);
+    //extern struct hostent *gethostbyname(const char *name);
+    //extern int recvfrom(int s, void *mem, size_t len, int flags, struct sockaddr *from, socklen_t *fromlen);
+    //extern int sendto(int s, const void *dataptr, size_t size, int flags, const struct sockaddr *to, socklen_t tolen);
+    //extern int socket(int domain, int type, int protocol);
+    //extern int closesocket(int s);
 #endif /* RT_USING_SAL */
 
 #if defined(RT_USING_NETDEV)

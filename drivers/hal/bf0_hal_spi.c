@@ -239,19 +239,20 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Init(SPI_HandleTypeDef *hspi)
         }
     }
 #endif
-
-    if (1 == hspi->Init.BaudRatePrescaler)
-    {
-        WRITE_REG(hspi->Instance->CLK_CTRL, SPI_CLK_CTRL_CLK_SEL);
-    }
-    else
-    {
-        WRITE_REG(hspi->Instance->CLK_CTRL, hspi->Init.BaudRatePrescaler);
-    }
-
+    /*for 56x, need enable clock first, then set div.*/
 #ifdef SPI_CLK_CTRL_CLK_SSP_EN
     SET_BIT(hspi->Instance->CLK_CTRL, SPI_CLK_CTRL_CLK_SSP_EN);
 #endif /* SPI_CLK_CTRL_CLK_SSP_EN */
+
+    if (1 == hspi->Init.BaudRatePrescaler)
+    {
+        SET_BIT(hspi->Instance->CLK_CTRL, SPI_CLK_CTRL_CLK_SEL);
+    }
+    else
+    {
+        MODIFY_REG(hspi->Instance->CLK_CTRL, SPI_CLK_CTRL_CLK_DIV_Msk,
+                   MAKE_REG_VAL(hspi->Init.BaudRatePrescaler, SPI_CLK_CTRL_CLK_DIV_Msk, SPI_CLK_CTRL_CLK_DIV_Pos));
+    }
 
     if (SPI_MODE_MASTER == hspi->Init.Mode)
     {
@@ -627,7 +628,6 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive(SPI_HandleTypeDef *hspi, uint8_
         return HAL_SPI_TransmitReceive(hspi, pData, pData, Size, Timeout);
     }
 
-
     /* Process Locked */
     __HAL_LOCK(hspi);
 
@@ -672,8 +672,21 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive(SPI_HandleTypeDef *hspi, uint8_
 
     if (hspi->Init.Direction == SPI_DIRECTION_1LINE)
     {
+
+
         /*1line rx enable*/
         SPI_1LINE_RX(hspi);
+        if (hspi->Init.Mode == SPI_MODE_MASTER)
+        {
+            /* config receive-only mode, need stop spi*/
+            __HAL_SPI_DISABLE(hspi);
+
+            /*Set Reverve-Only mode, for drive spi clock*/
+            SPI_RWOT_CCM(hspi, GET_REG_VAL(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos) *Size);
+            SPI_SET_RWOT_RECEIVE_WITHOUT_TRANSMIT_MODE(hspi);
+            SPI_RWOT_CYCEL_ENABLE(hspi);
+            SPI_RWOT_SET_CYCEL(hspi);
+        }
     }
 
     /* Check if the SPI is already enabled */
@@ -716,6 +729,8 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive(SPI_HandleTypeDef *hspi, uint8_
             /* Check the RXNE flag */
             if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_RXNE))
             {
+
+
                 *((uint16_t *)pData) = hspi->Instance->DATA;
                 pData += sizeof(uint16_t);
                 hspi->RxXferCount--;
@@ -1063,6 +1078,7 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Transmit_IT(SPI_HandleTypeDef *hspi, ui
     {
         /*1line tx enable*/
         SPI_1LINE_TX(hspi);
+
     }
 
     /* Enable TXE and ERR interrupt */
@@ -1169,6 +1185,20 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive_IT(SPI_HandleTypeDef *hspi, uin
     {
         /*1line rx enable*/
         SPI_1LINE_RX(hspi);
+
+        if (hspi->Init.Mode == SPI_MODE_MASTER)
+        {
+            /* config receive-only mode, need stop spi*/
+            __HAL_SPI_DISABLE(hspi);
+
+            /*Set Reverve-Only mode, for drive spi clock*/
+            SPI_RWOT_CCM(hspi, GET_REG_VAL(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos) *Size);
+            SPI_SET_RWOT_RECEIVE_WITHOUT_TRANSMIT_MODE(hspi);
+            SPI_RWOT_CYCEL_ENABLE(hspi);
+            SPI_RWOT_SET_CYCEL(hspi);
+        }
+
+
     }
 
     /* Enable TXE and ERR interrupt */
@@ -1483,6 +1513,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_SPI_Receive_DMA(SPI_HandleTypeDef *hspi, ui
     {
         /*1line rx enable*/
         SPI_1LINE_RX(hspi);
+
+        if (hspi->Init.Mode == SPI_MODE_MASTER)
+        {
+            /* config receive-only mode, need stop spi*/
+            __HAL_SPI_DISABLE(hspi);
+
+            /*Set Reverve-Only mode, for drive spi clock*/
+            SPI_RWOT_CCM(hspi, GET_REG_VAL(hspi->Instance->TOP_CTRL, SPI_TOP_CTRL_DSS_Msk, SPI_TOP_CTRL_DSS_Pos) *Size);
+            SPI_SET_RWOT_RECEIVE_WITHOUT_TRANSMIT_MODE(hspi);
+            SPI_RWOT_CYCEL_ENABLE(hspi);
+            SPI_RWOT_SET_CYCEL(hspi);
+        }
+
     }
 
     if (hspi->Init.DataSize > SPI_DATASIZE_8BIT)
@@ -3241,6 +3284,7 @@ static void SPI_RxISR_16BIT(struct __SPI_HandleTypeDef *hspi)
             return;
         }
 #endif /* USE_SPI_CRC */
+
         SPI_CloseRx_ISR(hspi);
     }
 }
@@ -3415,6 +3459,16 @@ static HAL_StatusTypeDef SPI_EndRxTransaction(SPI_HandleTypeDef *hspi,  uint32_t
     {
         /* Disable SPI peripheral */
         __HAL_SPI_DISABLE(hspi);
+    }
+
+    if (hspi->Init.Direction == SPI_DIRECTION_1LINE)
+    {
+        if (hspi->Init.Mode == SPI_MODE_MASTER)
+        {
+            /*Disable Reverve-Only mode,Enable Transmit_Receive mode */
+            SPI_RWOT_CYCEL_DISABLE(hspi);
+            SPI_SET_RWOT_TRANSMIT_RECEIVE_MODE(hspi);
+        }
     }
 
     /* Control the BSY flag */

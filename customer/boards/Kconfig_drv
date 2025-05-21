@@ -443,24 +443,137 @@ menu "On-chip Peripheral RTOS Drivers"
             config BSP_USING_PWM2
                 bool "Using PWM 2(corresponds to HW GPTIM1)"
                 default n
+            config BSP_PWM2_CC1_USING_DMA
+                bool "PWM2 CC1 use DMA"
+                depends on BSP_USING_PWM2
+                default n
+            config BSP_PWM2_CC2_USING_DMA
+                bool "PWM2 CC2 use DMA"
+                depends on BSP_USING_PWM2
+                default n
+            config BSP_PWM2_CC3_USING_DMA
+                bool "PWM2 CC3 use DMA"
+                depends on BSP_USING_PWM2
+                default n
+            config BSP_PWM2_CC4_USING_DMA
+                bool "PWM2 CC4 use DMA"
+                depends on BSP_USING_PWM2
+                default n
             config BSP_USING_PWM3
-                depends on !BSP_USING_RGBLED_WITCH_PWM3
                 bool "Using PWM 3(corresponds to HW GPTIM2)"
+                default n
+            config BSP_PWM3_CC1_USING_DMA
+                bool "PWM3 CC1 use DMA"
+                depends on BSP_USING_PWM3
+                default n
+            config BSP_PWM3_CC2_USING_DMA
+                bool "PWM3 CC2 use DMA"
+                depends on BSP_USING_PWM3
+                default n
+            config BSP_PWM3_CC3_USING_DMA
+                bool "PWM3 CC3 use DMA"
+                depends on BSP_USING_PWM3
+                default n
+            config BSP_PWM3_CC4_USING_DMA
+                bool "PWM3 CC4 use DMA"
+                depends on BSP_USING_PWM3
                 default n
             config BSP_USING_PWM4
                 bool "Using PWM 4(corresponds to HW GPTIM3)"
                 default n
+            config BSP_PWM4_CC1_USING_DMA
+                bool "PWM4 CC1 use DMA"
+                depends on BSP_USING_PWM4
+                default n
+            config BSP_PWM4_CC2_USING_DMA
+                bool "PWM4 CC2 use DMA"
+                depends on BSP_USING_PWM4
+                default n
+            config BSP_PWM4_CC3_USING_DMA
+                bool "PWM4 CC3 use DMA"
+                depends on BSP_USING_PWM4
+                default n
+            config BSP_PWM4_CC4_USING_DMA
+                bool "PWM4 CC4 use DMA"
+                depends on BSP_USING_PWM4
+                default n
             config BSP_USING_PWM5
                 bool "Using PWM 5(corresponds to HW GPTIM4)"
+                default n
+            config BSP_PWM5_CC1_USING_DMA
+                bool "PWM5 CC1 use DMA"
+                depends on BSP_USING_PWM5
+                default n
+            config BSP_PWM5_CC2_USING_DMA
+                bool "PWM5 CC2 use DMA"
+                depends on BSP_USING_PWM5
+                default n
+            config BSP_PWM5_CC3_USING_DMA
+                bool "PWM5 CC3 use DMA"
+                depends on BSP_USING_PWM5
+                default n
+            config BSP_PWM5_CC4_USING_DMA
+                bool "PWM5 CC4 use DMA"
+                depends on BSP_USING_PWM5
                 default n
             config BSP_USING_PWM6
                 bool "Using PWM 6(corresponds to HW GPTIM5)"
                 default n
+            config BSP_PWM6_CC1_USING_DMA
+                bool "PWM6 CC1 use DMA"
+                depends on BSP_USING_PWM6
+                default n
+            config BSP_PWM6_CC2_USING_DMA
+                bool "PWM6 CC2 use DMA"
+                depends on BSP_USING_PWM6
+                default n
+            config BSP_PWM6_CC3_USING_DMA
+                bool "PWM6 CC3 use DMA"
+                depends on BSP_USING_PWM6
+                default n
+            config BSP_PWM6_CC4_USING_DMA
+                bool "PWM6 CC4 use DMA"
+                depends on BSP_USING_PWM6
+                default n
+                
             config BSP_USING_PWMA1
                 bool "Using PWM A1"
                 default n
+            config BSP_PWMA1_CC1_USING_DMA
+                bool "PWMA1 CC1 use DMA"
+                depends on BSP_USING_PWMA1
+                default n
+            config BSP_PWMA1_CC2_USING_DMA
+                bool "PWMA1 CC2 use DMA"
+                depends on BSP_USING_PWMA1
+                default n
+            config BSP_PWMA1_CC3_USING_DMA
+                bool "PWMA1 CC3 use DMA"
+                depends on BSP_USING_PWMA1
+                default n
+            config BSP_PWMA1_CC4_USING_DMA
+                bool "PWMA1 CC4 use DMA"
+                depends on BSP_USING_PWMA1
+                default n
+                
             config BSP_USING_PWMA2
                 bool "Using PWM A2"
+                default n
+            config BSP_PWMA2_CC1_USING_DMA
+                bool "PWMA2 CC1 use DMA"
+                depends on BSP_USING_PWMA2
+                default n
+            config BSP_PWMA2_CC2_USING_DMA
+                bool "PWMA2 CC2 use DMA"
+                depends on BSP_USING_PWMA2
+                default n
+            config BSP_PWMA2_CC3_USING_DMA
+                bool "PWMA2 CC3 use DMA"
+                depends on BSP_USING_PWMA2
+                default n
+            config BSP_PWMA2_CC4_USING_DMA
+                bool "PWMA2 CC4 use DMA"
+                depends on BSP_USING_PWMA2
                 default n
             config BSP_USING_PWM_LPTIM1
                 bool "Using PWM with LPTIM1"
@@ -472,18 +585,18 @@ menu "On-chip Peripheral RTOS Drivers"
                 bool "Using PWM with LPTIM3"
                 default n
         endif
-    menuconfig BSP_USING_RGBLED
-        bool "Enable rgbled"
+        
+    menuconfig BSP_USING_ENCODER
+        bool "Enable encoder"
         default n
-        if BSP_USING_RGBLED
-            config BSP_USING_RGBLED_WITCH_PWM3
-                bool "Using PWM3 drimver rgbled"
+        select RT_USING_ENCODER
+        if BSP_USING_ENCODER
+            config BSP_USING_ENCODER1
+                bool "Enable encoder1"
+                depends on BSP_USING_ENCODER
                 default n
-            config BSP_USING_RGBLED_WITCH_PWM3_DMA
-                bool "PWM3 channel1 use DMA"
-                depends on BSP_USING_RGBLED_WITCH_PWM3
-                default n
-        endif
+    endif
+
     menuconfig BSP_USING_ADC
         bool "Enable ADC"
         default n
@@ -1286,7 +1399,12 @@ menu "On-chip Peripheral RTOS Drivers"
     config BSP_USING_EPIC
         bool "Enable EPIC"
         select RT_USING_EPIC
-        default n 
+        default n
+        if BSP_USING_EPIC
+            config DRV_EPIC_NEW_API
+            bool "Using epic render list API"
+            default n
+        endif
 
     config BSP_USING_LCDC
         bool "Enable LCDC"
@@ -1431,21 +1549,7 @@ menu "On-chip Peripheral RTOS Drivers"
                 default n
                 depends on SOC_SF32LB56X || SOC_SF32LB52X
                 help
-                    Enable Linear SD interface                
-            config SDIO_PM_MODE
-                bool "Enable SDIO PM"
-                default n
-                depends on PM_STANDBY_ENABLE
-                if SDIO_PM_MODE
-                    choice
-                        prompt "Select SDIO PM Mode"
-                        default SDIO_POWER_PM_UP
-                        config SDIO_POWER_PM_UP
-                            bool "VCC and VCCQ Don't lose power"
-                        config SDIO_POWER_PM_ALL_DOWN
-                            bool "VCC and VCCQ All power off"
-                    endchoice
-                endif
+                    Enable Linear SD interface
 
         endif
 

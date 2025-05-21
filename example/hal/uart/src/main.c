@@ -4,13 +4,15 @@
 #include "stdio.h"
 #include "string.h"
 
+#include "bf0_hal_uart.h"
+#include "bf0_hal_dma.h"
 
 #include "uart_config.h"
 #include "dma_config.h"
 
 
 
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
+#if defined(BSP_USING_BOARD_SF32LB52_DEVKIT_LCD_525)
     #define UART2_DMA_RX_IRQHandler          DMAC1_CH6_IRQHandler
 #elif defined (BSP_USING_BOARD_EM_LB587XXX)
     #define UART2_DMA_RX_IRQHandler          DMAC1_CH5_IRQHandler
@@ -56,9 +58,39 @@ int _write(int fd, char *ptr, int len)
 }
 #endif
 
-#define BUFF_LEN 256
+#define BUFFER_SIZE 256
+#define HALF_BUFFER_SIZE (BUFFER_SIZE/2)
 static DMA_HandleTypeDef dma_rx_handle;
-static uint8_t buffer[BUFF_LEN];
+static uint8_t buffer[BUFFER_SIZE];
+
+
+
+
+static int last_index = 0;
+static int last_index2 = 0;
+
+// 定义接收状态枚举
+typedef enum
+{
+    STATE_UNFULL,
+    STATE_HALF_FULL,
+    STATE_FULL
+} ReceiveState;
+// 当前接收状态
+ReceiveState currentState = STATE_UNFULL;
+
+
+// 数据处理函数
+void processData(uint8_t *data, uint16_t start, uint16_t length)
+{
+    printf("rev:");
+    for (uint16_t i = start; i < length; i++)
+    {
+        uint8_t byte = data[i];
+        // 打印字符
+        printf("%c", byte);
+    }
+}
 
 void UART_IRQ_HANDLER(void)
 {
@@ -66,38 +98,107 @@ void UART_IRQ_HANDLER(void)
     if ((__HAL_UART_GET_FLAG(&UartHandle, UART_FLAG_IDLE) != RESET) &&
             (__HAL_UART_GET_IT_SOURCE(&UartHandle, UART_IT_IDLE) != RESET))
     {
-        static int last_index = 0;
-        int recv_total_index = BUFF_LEN - __HAL_DMA_GET_COUNTER(&dma_rx_handle);
-        int recv_len = recv_total_index - last_index;
 
+
+        // printf("UART_IRQ_HANDLER");
+
+        int recv_total_index = BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&dma_rx_handle);
+        int recv_len = recv_total_index - last_index;
         if (recv_len < 0)
-            recv_len += BUFF_LEN;
+            recv_len += BUFFER_SIZE;
         if (recv_len)
         {
-            int i;
-            printf("Receive %d\n", recv_len);
-            printf("rev:");
-            for (i = 0; i < recv_len; i++)
+
+            int count = __HAL_DMA_GET_COUNTER(&dma_rx_handle);
+
+
+
+            switch (currentState)
             {
-                printf("%c", buffer[(i + last_index) % BUFF_LEN]);
+            case STATE_UNFULL:
+                processData(buffer, last_index, recv_total_index);
+                last_index2 = recv_total_index;//由空闲态进入全满要及时更新这一次停留的索引
+                break;
+            case STATE_HALF_FULL:
+                if (last_index == 0)
+                {
+                    last_index2 = recv_total_index;
+                }
+                else if (count == HALF_BUFFER_SIZE) //刚好结束半满再进入全满则从中间开始打印
+                {
+                    last_index2 = HALF_BUFFER_SIZE;
+                }
+                else//超过半满后再进入全满就沿用上一次索引打印
+                {
+                    last_index2 = last_index;
+                }
+                processData(buffer, HALF_BUFFER_SIZE, recv_total_index);
+                break;
+            case STATE_FULL:
+                processData(buffer, 0, recv_total_index);
+                break;
             }
-            printf("\n");
         }
-        last_index = recv_total_index;
+        currentState = STATE_UNFULL;
+
         __HAL_UART_CLEAR_IDLEFLAG(&UartHandle);
+
+        // 重置缓冲区和DMA计数器以准备下一次接收
+        last_index = recv_total_index;
+
+
+
     }
 
 }
 
-#ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
+#if defined(BSP_USING_NO_OS) || !defined(DMA_SUPPORT_DYN_CHANNEL_ALLOC)
 void UART_RX_DMA_IRQ_HANDLER(void)
 {
 
     HAL_DMA_IRQHandler(&dma_rx_handle);
 
 }
-#endif /* !DMA_SUPPORT_DYN_CHANNEL_ALLOC */
+#endif
 
+//半满操作
+void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+
+    if (huart->Instance == hwp_usart2)
+    {
+        // 实现半满处理逻辑，例如将前半部分数据写入FIFO或进行初步处理
+        if (currentState == STATE_UNFULL)
+        {
+            uint16_t halfLength = HALF_BUFFER_SIZE;
+            processData(buffer, last_index, halfLength);//半满则处理从之前的索引开始到中间部分
+        }
+        else if (currentState == STATE_FULL)
+        {
+            uint16_t halfLength = HALF_BUFFER_SIZE;
+            processData(buffer, 0, halfLength);//半满则处理从之前的索引开始到中间部分
+        }
+        currentState = STATE_HALF_FULL;
+        last_index2 = HALF_BUFFER_SIZE;
+        __HAL_DMA_CLEAR_FLAG(&dma_rx_handle, DMA_FLAG_HT6);
+    }
+
+}
+//全满
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+
+    if (huart->Instance == hwp_usart2)
+    {
+
+        // 实现全满处理逻辑，例如将中间至最后的数据写入FIFO或进行初步处理
+        uint16_t fullLength = BUFFER_SIZE;
+
+        processData(buffer, last_index2, fullLength);
+        currentState = STATE_FULL;
+        __HAL_DMA_CLEAR_FLAG(&dma_rx_handle, DMA_FLAG_TC6);
+    }
+}
 /**
   * @brief  Retargets the C library printf function to the USART.
   * @param  None
@@ -149,7 +250,7 @@ int main(void)
 
     /* 1, pinmux set to uart mode */
 
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
+#if defined(BSP_USING_BOARD_SF32LB52_DEVKIT_LCD_525)
     HAL_PIN_Set(PAD_PA20, USART2_RXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA27, USART2_TXD, PIN_PULLUP, 1);
 #elif defined (BSP_USING_BOARD_EM_LB587XXX)
@@ -168,7 +269,7 @@ int main(void)
     __HAL_LINKDMA(&(UartHandle), hdmarx, dma_rx_handle);
     dma_rx_handle.Instance = UART_RX_DMA_INSTANCE;
     dma_rx_handle.Init.Request = UART_RX_DMA_REQUEST;
-    HAL_UART_DmaTransmit(&UartHandle, buffer, BUFF_LEN, DMA_PERIPH_TO_MEMORY); /* DMA_PERIPH_TO_MEMORY */
+    HAL_UART_DmaTransmit(&UartHandle, buffer, BUFFER_SIZE, DMA_PERIPH_TO_MEMORY); /* DMA_PERIPH_TO_MEMORY */
 
 #ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
     // Enable DMA IRQ

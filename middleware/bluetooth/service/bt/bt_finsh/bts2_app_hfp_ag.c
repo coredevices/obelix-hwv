@@ -68,7 +68,7 @@
 /*******************************************add for ag func test start**********************************/
 static hfp_phone_call_info_t g_remote_calls_info ;
 phone_call_dir_t call_dir =  0xff;
-
+hfp_cind_status_t g_cind_states;
 
 void bt_hfp_ag_app_call_status_change(char *phone_num, uint8_t phone_len, uint8_t active, uint8_t callsetup_state)
 {
@@ -79,30 +79,46 @@ void bt_hfp_ag_app_call_status_change(char *phone_num, uint8_t phone_len, uint8_
         call_status = 0xff;
         call_dir = 0xff;
     }
+
     if (1 == active && 0 == callsetup_state)
     {
         call_status = PHONE_CALL_ACTIVE;
+        g_cind_states.call = 1;
+        g_cind_states.callheld = 0;
+        g_cind_states.callsetup = callsetup_state;
     }
 
     if (1 == callsetup_state)
     {
         call_dir = PHONE_CALL_DIR_INCOMING;
         call_status = PHONE_CALL_INCOMING;
+        g_cind_states.call = 0;
+        g_cind_states.callheld = 0;
+        g_cind_states.callsetup = callsetup_state;
     }
     else if (2 == callsetup_state)
     {
         call_dir = PHONE_CALL_DIR_OUTGOING;
         call_status = PHONE_CALL_DAILING;
+        g_cind_states.call = 0;
+        g_cind_states.callheld = 0;
+        g_cind_states.callsetup = callsetup_state;
     }
     else if (3 == callsetup_state)
     {
         call_dir = PHONE_CALL_DIR_OUTGOING;
         call_status = PHONE_CALL_ALERTING;
+        g_cind_states.call = 0;
+        g_cind_states.callheld = 0;
+        g_cind_states.callsetup = callsetup_state;
     }
 
     if (0xff == call_status)
     {
         bmemset(&g_remote_calls_info, 0x00, sizeof(hfp_phone_call_info_t));
+        g_cind_states.call = 0;
+        g_cind_states.callheld = 0;
+        g_cind_states.callsetup = 0;
     }
     else
     {
@@ -120,7 +136,7 @@ void bt_hfp_ag_app_call_status_change(char *phone_num, uint8_t phone_len, uint8_
     }
 }
 
-hfp_phone_call_info_t * bt_hfp_ag_app_get_remote_call_info()
+hfp_phone_call_info_t *bt_hfp_ag_app_get_remote_call_info()
 {
     return &g_remote_calls_info;
 }
@@ -208,6 +224,21 @@ static void bt_hfp_ag_app_device_state_changed(bts2_app_stru *bts2_app_data, BTS
 
         if (con_msg->device_state == HFP_DEVICE_CONNECTED)
         {
+            HFP_CALL_INFO_T call_info;
+            call_info.num_active = 0;
+            call_info.num_held = 0;
+            call_info.callsetup_state = g_cind_states.callsetup;
+            if (g_cind_states.call)
+            {
+                call_info.num_active = 1;
+            }
+            call_info.phone_type = g_remote_calls_info.phone_info.type;
+            call_info.phone_len = strlen(g_remote_calls_info.phone_info.phone_number) + 1;
+            bmemcpy(&call_info.phone_number, g_remote_calls_info.phone_info.phone_number, call_info.phone_len);
+
+            //bt_hfp_ag_app_call_status_change((char *)&call_info.phone_number, call_info.phone_len, call_info.num_active, call_info.callsetup_state);
+            bt_hfp_ag_call_state_update_listener(&call_info);
+
             bt_notify_profile_state_info_t profile_state;
             bt_addr_convert(&con_msg->bd, profile_state.mac.addr);
             profile_state.profile_type = BT_NOTIFY_HFP_AG;
@@ -305,7 +336,7 @@ static void bt_hfp_ag_app_onDialCall(char *number)
         call_info.callsetup_state = 2;
         call_info.phone_type = 0x81;
         call_info.phone_len = strlen(number);
-        number[call_info.phone_len- 1] = '\0';
+        number[call_info.phone_len - 1] = '\0';
         bmemcpy(&call_info.phone_number, number, call_info.phone_len);
         bt_hfp_ag_app_call_status_change((char *)&call_info.phone_number, call_info.phone_len, call_info.num_active, call_info.callsetup_state);
         bt_hfp_ag_call_state_update_listener(&call_info);
@@ -360,12 +391,12 @@ static void bt_hfp_ag_app_onAtCind()
     {
         hfp_cind_status_t cind_status;
         cind_status.service_status = 1;
-        cind_status.call = 0;
-        cind_status.callsetup = 0;
+        cind_status.call = g_cind_states.call;
+        cind_status.callsetup =  g_cind_states.callsetup;
         cind_status.batt_level = 5;
         cind_status.signal = 3;
-        cind_status.roam_status = 0;
-        cind_status.callheld = 0;
+        cind_status.roam_status = 1;
+        cind_status.callheld = g_cind_states.callheld;
         bt_hfp_ag_cind_response(&cind_status);
     }
 #endif
@@ -383,7 +414,7 @@ static void bt_hfp_ag_app_onAtClcc()
 #ifndef BT_USING_AG
     if (g_flag_auto_answer_call)
     {
-        hfp_phone_call_info_t * remote_call_info = bt_hfp_ag_app_get_remote_call_info();
+        hfp_phone_call_info_t *remote_call_info = bt_hfp_ag_app_get_remote_call_info();
         if (remote_call_info->call_idx)
         {
             bt_hfp_ag_clcc_response(remote_call_info);
@@ -524,6 +555,14 @@ void bt_hfp_ag_msg_hdl(bts2_app_stru *bts2_app_data)
 
         bt_hfp_ag_app_device_state_changed(bts2_app_data, con_msg);
         //USER_TRACE("BTS2MU_AG_CONN_STATE state: %d res: %d type %d", con_msg->device_state, con_msg->res, con_msg->type);
+        break;
+    }
+    case BTS2MU_AG_CONN_IND:
+    {
+        BTS2S_AG_CONN_REQ *con_msg;
+        con_msg = (BTS2S_AG_CONN_REQ *)bts2_app_data->recv_msg;
+        hfp_ag_connect_ind_res(&con_msg->bd, con_msg->rfcomm_chnl, 1);//acpt connect from remote 
+        // hfp_ag_connect_ind_res(&con_msg->bd, con_msg->rfcomm_chnl, 0);//reject connect from remote 
         break;
     }
     case BTS2MU_AG_CONN_RES:

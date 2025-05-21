@@ -111,9 +111,6 @@ static void bt_disply_menu_main(void)
     printf("##                                                  ##\n");
     printf("##           BTS2 Demo Main Menu                    ##\n");
     printf("##   1. Generic Command                             ##\n");
-#ifdef CFG_SPP_CLT
-    printf("##   2. SPP Client                                  ##\n");
-#endif
 #ifdef CFG_SPP_SRV
     printf("##   3. SPP Server                                  ##\n");
 #endif
@@ -197,13 +194,6 @@ static void bt_hdl_menu_main(bts2_app_stru *bts2_app_data)
         bts2_app_data->menu_id = menu_gen;
         break;
     }
-#ifdef CFG_SPP_CLT
-    case '2':
-    {
-        bts2_app_data->menu_id = menu_spp_clt;
-        break;
-    }
-#endif
 #ifdef CFG_SPP_SRV
     case '3':
     {
@@ -1563,7 +1553,7 @@ static void  bt_disply_menu_gen_8_7(void)
  *----------------------------------------------------------------------------*/
 static void bt_hdl_menu_gen_8_7(bts2_app_stru *bts2_app_data)
 {
-    bt_wr_link_policy(&bts2_app_data->last_conn_bd, 0x0001);
+    bt_wr_link_policy(bts2_app_data);
 }
 
 static void  bt_disply_menu_gen_8_8(void)
@@ -1573,7 +1563,7 @@ static void  bt_disply_menu_gen_8_8(void)
 
 static void bt_hdl_menu_gen_8_8(bts2_app_stru *bts2_app_data)
 {
-    bt_etner_sniff_mode(&bts2_app_data->last_conn_bd, 400,5);
+    bt_etner_sniff_mode(bts2_app_data);
 }
 
 static void  bt_disply_menu_gen_8_9(void)
@@ -1583,7 +1573,7 @@ static void  bt_disply_menu_gen_8_9(void)
 
 static void bt_hdl_menu_gen_8_9(bts2_app_stru *bts2_app_data)
 {
-    bt_exit_sniff_mode(&bts2_app_data->last_conn_bd);
+    bt_exit_sniff_mode(bts2_app_data);
 }
 
 
@@ -3929,10 +3919,10 @@ static void bt_hdl_menu_hid(bts2_app_stru *bts2_app_data)
         bt_hid_mouse_test9(bts2_app_data);
         break;
     case 'e':
-        bt_exit_sniff_mode(&bts2_app_data->last_conn_bd);
+        bt_exit_sniff_mode(bts2_app_data);
         break;
     case 'b':
-        bt_etner_sniff_mode(&bts2_app_data->last_conn_bd, 400, 5);
+        bt_etner_sniff_mode(bts2_app_data);
         break;
     default:
         break;
@@ -4152,362 +4142,6 @@ static void bt_hdl_menu_av_src_bqb(bts2_app_stru *bts2_app_data)
  *      none.
  *
  *----------------------------------------------------------------------------*/
-#ifdef CFG_SPP_CLT
-static void bt_disply_menu_spp_clt(void)
-{
-    printf("\n");
-    printf("######################################################\n");
-    printf("##                                                  ##\n");
-    printf("##           SPP Client Menu                        ##\n");
-    printf("##   0. Set SPP instance index                      ##\n");
-    printf("##   1. SPP conn to the selected server             ##\n");
-    printf("##   2. SPP disc with server                        ##\n");
-    printf("##   3. Input send data                             ##\n");
-    printf("##   4. Transfer a file                             ##\n");
-    printf("##   5. Mode change                                 ##\n");
-    printf("##   s. Show Menu                                   ##\n");
-    printf("##   r. Return to last menu                         ##\n");
-    printf("##                                                  ##\n");
-    printf("######################################################\n");
-    printf("\n");
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_hdl_menu_spp_clt(bts2_app_stru *bts2_app_data)
-{
-    switch (bts2_app_data->input_str[0])
-    {
-    case '0':
-        bts2_app_data->menu_id = menu_spp_clt_0;
-        bt_disply_menu(bts2_app_data);
-        break;
-    case '1':
-    {
-        BTS2S_BD_ADDR bd;
-        int reuslt = 0;
-        uint32_t mac[6];
-        reuslt = sscanf((const char *)bts2_app_data->input_str + 1, "%02X%02X%02X%02X%02X%02X", \
-                        &mac[0], &mac[1], \
-                        &mac[2], &mac[3], \
-                        &mac[4], &mac[5]);
-        bd.lap = (mac[3] << 16) | (mac[4] << 8) | mac[5];
-        bd.uap = (U8)mac[2];
-        bd.nap = (U16)((mac[0] << 8) | mac[1]);
-        spp_clt_conn_req(&bd, 0xff, FALSE, NULL);
-        break;
-    }
-    case '2':
-        bt_spp_clt_disc_req(bts2_app_data);
-        break;
-    case '3':
-        bts2_app_data->menu_id = menu_spp_clt_3;
-        bt_disply_menu(bts2_app_data);
-        break;
-    case '4':
-        bts2_app_data->menu_id = menu_spp_clt_4;
-        bt_disply_menu(bts2_app_data);
-        break;
-    case '5':
-        bts2_app_data->menu_id = menu_spp_clt_5;
-        bt_disply_menu(bts2_app_data);
-        break;
-    case '6':
-        // smsInit(bts2_app_data);
-        break;
-    case '7':
-//          smsSendMessage(bts2_app_data);
-        break;
-    case 's':
-        bt_disply_menu(bts2_app_data);
-        break;
-    case 'r':
-        bts2_app_data->menu_id = menu_main;
-        bt_disply_menu(bts2_app_data);
-        break;
-    default:
-        break;
-    }
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_disply_menu_spp_clt_0(void)
-{
-    printf("\n");
-    printf("######################################################\n");
-    printf("##                                                  ##\n");
-    printf("##           Set SPP A index menu                   ##\n");
-    printf("##   input index id(0 ~ %d)                         ##\n", (U8)SPP_CLT_MAX_CONN_NUM);
-    printf("##   r. return to last menu                         ##\n");
-    printf("##                                                  ##\n");
-    printf("######################################################\n");
-    printf("\n");
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_hdl_menu_spp_clt_0(bts2_app_stru *bts2_app_data)
-{
-    bts2_spp_inst_data *ptr;
-    ptr = bts2_app_data->inst_ptr;
-
-    if (bts2_app_data->input_str[0] == 'r')
-    {
-        bts2_app_data->menu_id = menu_spp_clt;
-        bt_disply_menu(bts2_app_data);
-    }
-    else
-    {
-        bt_spp_clt_set_instance_index(bts2_app_data);
-    }
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_disply_menu_spp_clt_3(void)
-{
-    printf("\n");
-    printf("######################################################\n");
-    printf("##                                                  ##\n");
-    printf("##           SPP send data menu                     ##\n");
-    printf("##   input send data                                ##\n");
-    printf("##   r. return to last menu                         ##\n");
-    printf("##                                                  ##\n");
-    printf("######################################################\n");
-    printf("\n");
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_hdl_menu_spp_clt_3(bts2_app_stru *bts2_app_data)
-{
-    bts2_spp_inst_data *ptr;
-    ptr = bts2_app_data->inst_ptr;
-
-    if (bts2_app_data->input_str[0] == 'r')
-    {
-        bts2_app_data->menu_id = menu_spp_clt;
-        bt_disply_menu(bts2_app_data);
-    }
-    else
-    {
-        bt_spp_clt_sending_data_to_peer(bts2_app_data);
-    }
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_disply_menu_spp_clt_4(void)
-{
-    printf("\n");
-    printf("######################################################\n");
-    printf("##                                                  ##\n");
-    printf("##           SPP Send File Menu                     ##\n");
-    printf("##   Input a file name                              ##\n");
-    printf("##   r. Return to last menu                         ##\n");
-    printf("##                                                  ##\n");
-    printf("######################################################\n");
-    printf("\n");
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_hdl_menu_spp_clt_4(bts2_app_stru *bts2_app_data)
-{
-    if (bts2_app_data->input_str[0] == 'r')
-    {
-        bts2_app_data->menu_id = menu_spp_clt;
-        bt_disply_menu(bts2_app_data);
-    }
-    else
-    {
-        bt_spp_clt_select_file_to_send(bts2_app_data);
-    }
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_disply_menu_spp_clt_5(void)
-{
-    printf("\n");
-    printf("######################################################\n");
-    printf("##                                                  ##\n");
-    printf("##           SPP mode change                        ##\n");
-    printf("##   0. Exit PARK/SNIFF MODE                        ##\n");
-    printf("##   1. HOLD_MODE                                   ##\n");
-    printf("##   2. SNIFF_MODE                                  ##\n");
-    printf("##   3. PARK_MODE                                   ##\n");
-    printf("##   r. Return to last menu                         ##\n");
-    printf("##                                                  ##\n");
-    printf("######################################################\n");
-    printf("\n");
-}
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
-static void bt_hdl_menu_spp_clt_5(bts2_app_stru *bts2_app_data)
-{
-    if (bts2_app_data->input_str[0] == 'r')
-    {
-        bts2_app_data->menu_id = menu_spp_clt;
-        bt_disply_menu(bts2_app_data);
-    }
-    else
-    {
-        switch (bts2_app_data->input_str[0])
-        {
-        case '0':
-        // gap_exit_park_mode(&(bts2_app_data->pair_bd));
-        //gap_exit_sniff_mode(&(bts2_app_data->pair_bd));
-        case '1':
-        case '2':
-        case '3':
-        {
-            bt_spp_clt_mode_change_req(bts2_app_data);
-            break;
-        }
-        default:
-            printf(">> Input error\n");
-            break;
-        }
-    }
-}
-
-#endif
-
-/*----------------------------------------------------------------------------*
- *
- * DESCRIPTION:
- *
- *
- * INPUT:
- *
- *
- * OUTPUT:
- *      void.
- *
- * NOTE:
- *      none.
- *
- *----------------------------------------------------------------------------*/
 #ifdef CFG_SPP_SRV
 static void bt_disply_menu_spp_srv(void)
 {
@@ -4529,6 +4163,8 @@ static void bt_disply_menu_spp_srv(void)
     printf("##              disconnect device 0 with channel 2  ##\n");
     printf("##   8. disconnect all spp connect                  ##\n");
     printf("##   9. received data is written into a file        ##\n");
+    printf("##   c. connect to device with specified uuid       ##\n");
+    printf("##   f. search remote device sdp information        ##\n");
     printf("##   x. received data is not written into a file    ##\n");
     printf("##   d. dump connection information                 ##\n");
     printf("##   s. Show Menu                                   ##\n");
@@ -4651,7 +4287,7 @@ static void bt_hdl_menu_spp_srv(bts2_app_stru *bts2_app_data)
                 bts2_app_data->select_device_id = device_id;
                 bts2_app_data->select_srv_chnl = srv_chl;
             }
-            bt_spp_srv_disc_req(bts2_app_data, bts2_app_data->select_device_id, bts2_app_data->select_srv_chnl);
+            bt_spp_disc_req(bts2_app_data, bts2_app_data->select_device_id, bts2_app_data->select_srv_chnl);
         }
         break;
     }
@@ -4670,7 +4306,7 @@ static void bt_hdl_menu_spp_srv(bts2_app_stru *bts2_app_data)
 
                 while (curr_list)
                 {
-                    bt_spp_srv_disc_req(bts2_app_data, sub_inst->device_id, curr_list->srv_chnl);
+                    bt_spp_disc_req(bts2_app_data, sub_inst->device_id, curr_list->srv_chnl);
                     curr_list = (bts2_spp_service_list *)curr_list->next_struct;
                 }
             }
@@ -4680,7 +4316,7 @@ static void bt_hdl_menu_spp_srv(bts2_app_stru *bts2_app_data)
     case '9':
     {
 #if RT_USING_DFS
-        bt_spp_srv_set_write_into_file(bts2_app_data, 1);
+        bt_spp_set_write_into_file(bts2_app_data, 1);
 #else
         printf("DFS not enable!\n");
 #endif
@@ -4689,7 +4325,7 @@ static void bt_hdl_menu_spp_srv(bts2_app_stru *bts2_app_data)
     case 'x':
     {
 #if RT_USING_DFS
-        bt_spp_srv_set_write_into_file(bts2_app_data, 0);
+        bt_spp_set_write_into_file(bts2_app_data, 0);
 #else
         printf("DFS not enable!\n");
 #endif
@@ -4697,7 +4333,7 @@ static void bt_hdl_menu_spp_srv(bts2_app_stru *bts2_app_data)
     }
     case 'd':
     {
-        bt_spp_srv_dump_all_spp_connect_information(bts2_app_data);
+        bt_spp_dump_all_spp_connect_information(bts2_app_data);
         break;
     }
     case 's':
@@ -4709,6 +4345,64 @@ static void bt_hdl_menu_spp_srv(bts2_app_stru *bts2_app_data)
     {
         bts2_app_data->menu_id = menu_main;
         bt_disply_menu(bts2_app_data);
+        break;
+    }
+    case 'c':
+    {
+        BTS2S_BD_ADDR bd;
+        int reuslt = 0;
+        int uuid_len = 0;
+        uint32_t mac[6];
+        uint32_t uuid[2];
+        reuslt = sscanf((const char *)bts2_app_data->input_str + 1, "%02X%02X%02X%02X%02X%02X", \
+                        &mac[0], &mac[1], \
+                        &mac[2], &mac[3], \
+                        &mac[4], &mac[5]);
+        bd.lap = (mac[3] << 16) | (mac[4] << 8) | mac[5];
+        bd.uap = (U8)mac[2];
+        bd.nap = (U16)((mac[0] << 8) | mac[1]);
+        rt_kprintf("abcde,len = %d\n", bts2_app_data->input_str_len);
+        uuid_len = bts2_app_data->input_str[13] - '0';
+        U8 *uuid_tmp = bmalloc(uuid_len);
+        memset(uuid_tmp, 0x01, uuid_len);
+
+        reuslt = sscanf((const char *)bts2_app_data->input_str + 14, "%02X%02X", \
+                        &uuid[0], &uuid[1]);
+
+        uuid_tmp[0] = (U8)uuid[0];
+        uuid_tmp[1] = (U8)uuid[1];
+
+        gap_wr_scan_enb_req(bts2_task_get_app_task_id(), 0, 0);
+        spp_clt_conn_req_ext(&bd, 0xff, FALSE, NULL, uuid_tmp, uuid_len);
+        break;
+    }
+    case 'f':
+    {
+        BTS2S_BD_ADDR bd;
+        int reuslt = 0;
+        int uuid_len = 0;
+        uint32_t mac[6];
+        uint32_t uuid[2];
+        reuslt = sscanf((const char *)bts2_app_data->input_str + 1, "%02X%02X%02X%02X%02X%02X", \
+                        &mac[0], &mac[1], \
+                        &mac[2], &mac[3], \
+                        &mac[4], &mac[5]);
+        bd.lap = (mac[3] << 16) | (mac[4] << 8) | mac[5];
+        bd.uap = (U8)mac[2];
+        bd.nap = (U16)((mac[0] << 8) | mac[1]);
+        rt_kprintf("abcde,len = %d\n", bts2_app_data->input_str_len);
+        uuid_len = bts2_app_data->input_str[13] - '0';
+        U8 *uuid_tmp = bmalloc(uuid_len);
+        memset(uuid_tmp, 0x01, uuid_len);
+
+        reuslt = sscanf((const char *)bts2_app_data->input_str + 14, "%02X%02X", \
+                        &uuid[0], &uuid[1]);
+
+        uuid_tmp[0] = (U8)uuid[0];
+        uuid_tmp[1] = (U8)uuid[1];
+
+        gap_wr_scan_enb_req(bts2_task_get_app_task_id(), 0, 0);
+        spp_clt_sdp_search_req(&bd, uuid_tmp, uuid_len);
         break;
     }
     default:
@@ -4774,9 +4468,6 @@ static void bt_disply_menu_spp_srv_0(bts2_app_stru *bts2_app_data)
  *----------------------------------------------------------------------------*/
 static void bt_hdl_menu_spp_srv_0(bts2_app_stru *bts2_app_data)
 {
-    bts2_spp_srv_inst_data *ptr;
-    ptr = bts2_app_data->spp_srv_inst_ptr;
-
     if (bts2_app_data->input_str[0] == 'r')
     {
         bts2_app_data->menu_id = menu_spp_srv;
@@ -4784,7 +4475,7 @@ static void bt_hdl_menu_spp_srv_0(bts2_app_stru *bts2_app_data)
     }
     else
     {
-        bt_spp_srv_set_instance_index(bts2_app_data);
+        bt_spp_set_instance_index(bts2_app_data);
     }
 }
 
@@ -4839,9 +4530,6 @@ static void bt_disply_menu_spp_srv_3(void)
  *----------------------------------------------------------------------------*/
 static void bt_hdl_menu_spp_srv_3(bts2_app_stru *bts2_app_data)
 {
-    bts2_spp_srv_inst_data *ptr;
-    ptr = bts2_app_data->spp_srv_inst_ptr;
-
     if (bts2_app_data->input_str[0] == 'r')
     {
         bts2_app_data->menu_id = menu_spp_srv;
@@ -4854,7 +4542,7 @@ static void bt_hdl_menu_spp_srv_3(bts2_app_stru *bts2_app_data)
 
         device_id = bts2_app_data->input_str[0] - '0';
         srv_chl = bts2_app_data->input_str[1] - '0';
-        bt_spp_srv_sending_data_to_peer(bts2_app_data, device_id, srv_chl);
+        bt_spp_sending_data_to_peer(bts2_app_data, device_id, srv_chl);
     }
 }
 
@@ -4922,7 +4610,7 @@ static void bt_hdl_menu_spp_srv_4(bts2_app_stru *bts2_app_data)
         device_id = bts2_app_data->input_str[0] - '0';
         srv_chl = bts2_app_data->input_str[1] - '0';
 #if RT_USING_DFS
-        bt_spp_srv_select_file_to_send(bts2_app_data, device_id, srv_chl);
+        bt_spp_select_file_to_send(bts2_app_data, device_id, srv_chl, (char *)&bts2_app_data->input_str[2]);
 #else
         printf("DFS not enable!\n");
 #endif
@@ -5039,7 +4727,7 @@ static void bt_hdl_menu_spp_srv_5(bts2_app_stru *bts2_app_data)
 
             device_id = bts2_app_data->input_str[0] - '0';
             srv_chl = bts2_app_data->input_str[1] - '0';
-            bt_spp_srv_mode_change_req(bts2_app_data, device_id, srv_chl, (U8)(bts2_app_data->input_str[0] - '0'));
+            bt_spp_mode_change_req(bts2_app_data, device_id, srv_chl, (U8)(bts2_app_data->input_str[0] - '0'));
             break;
         }
         default:
@@ -5079,7 +4767,7 @@ static void bt_hdl_menu_spp_srv_6(bts2_app_stru *bts2_app_data)
 
         device_id = bts2_app_data->input_str[0] - '0';
         srv_chl = bts2_app_data->input_str[1] - '0';
-        bt_spp_srv_sending_random_data(bts2_app_data, device_id, srv_chl);
+        bt_spp_sending_random_data(bts2_app_data, device_id, srv_chl);
     }
 }
 
@@ -5785,34 +5473,6 @@ void bt_hdl_menu(bts2_app_stru *bts2_app_data)
         break;
     }
 
-#ifdef CFG_SPP_CLT
-    case menu_spp_clt:
-    {
-        bt_hdl_menu_spp_clt(bts2_app_data);
-        break;
-    }
-    case menu_spp_clt_0:
-    {
-        bt_hdl_menu_spp_clt_0(bts2_app_data);
-        break;
-    }
-    case menu_spp_clt_3:
-    {
-        bt_hdl_menu_spp_clt_3(bts2_app_data);
-        break;
-    }
-    case menu_spp_clt_4:
-    {
-        bt_hdl_menu_spp_clt_4(bts2_app_data);
-        break;
-    }
-    case menu_spp_clt_5:
-    {
-        bt_hdl_menu_spp_clt_5(bts2_app_data);
-        break;
-    }
-#endif
-
 #ifdef CFG_SPP_SRV
     case menu_spp_srv:
     {
@@ -6206,33 +5866,6 @@ void bt_disply_menu(bts2_app_stru *bts2_app_data)
         break;
     }
 
-#ifdef CFG_SPP_CLT
-    case menu_spp_clt:
-    {
-        bt_disply_menu_spp_clt();
-        break;
-    }
-    case menu_spp_clt_0:
-    {
-        bt_disply_menu_spp_clt_0();
-        break;
-    }
-    case menu_spp_clt_3:
-    {
-        bt_disply_menu_spp_clt_3();
-        break;
-    }
-    case menu_spp_clt_4:
-    {
-        bt_disply_menu_spp_clt_4();
-        break;
-    }
-    case menu_spp_clt_5:
-    {
-        bt_disply_menu_spp_clt_5();
-        break;
-    }
-#endif
 #ifdef CFG_SPP_SRV
     case menu_spp_srv:
     {

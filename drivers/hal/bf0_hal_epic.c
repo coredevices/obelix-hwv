@@ -65,7 +65,6 @@
 #define EPIC_PRINTF(...)  //rt_kprintf(__VA_ARGS__)
 
 /**  >> EPIC_TRIGO_SHIFT to normalize*/
-#define EPIC_TRIGO_SHIFT 15
 
 #define EPIC_MATH_MIN(a, b) ((a) < (b) ? (a) : (b))
 #define EPIC_MATH_MIN3(a, b, c) (EPIC_MATH_MIN(EPIC_MATH_MIN(a,b), c))
@@ -166,6 +165,9 @@
 
 #define IS_REAL_INSTANCE(ins) (((uint32_t)(EPIC)) == ((uint32_t)(ins)))
 
+#define RETURN_ERROR(hepic,ret_v) \
+        do{ (hepic)->ErrorCode = __LINE__;  return ret_v; }while(0)
+
 
 
 
@@ -189,11 +191,7 @@ enum
 };
 
 
-typedef struct
-{
-    int16_t x;
-    int16_t y;
-} EPIC_PointTypeDef;
+
 
 typedef struct
 {
@@ -1325,7 +1323,7 @@ static HAL_StatusTypeDef EPIC_Overwrite_L8Table(EPIC_HandleTypeDef *hepic, uint3
     if (NULL == pLTab)
     {
         HAL_ASSERT(0);
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
     if (LTab_Cnt > EPIC_MAX_LOOKUP_TABLE_CNT) LTab_Cnt = EPIC_MAX_LOOKUP_TABLE_CNT;
     if (hepic->RamInstance_used)
@@ -1428,7 +1426,7 @@ static HAL_StatusTypeDef EPIC_ConfigLayer(EPIC_HandleTypeDef *hepic, EPIC_LAYER_
     if ((config->x_offset < 0)
             || (config->y_offset < 0))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 #if defined(SF32LB52X)
     HAL_ASSERT(layer_idx < EPIC_LAYER_IDX_1);
@@ -1609,7 +1607,7 @@ static HAL_StatusTypeDef EPIC_ContConfigLayer(EPIC_HandleTypeDef *hepic, uint32_
     if ((x_offset < 0)
             || (y_offset < 0))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 
     EPIC_LAYER_IDX layer_idx = hepic->api_cfg.cont_cfg.epic_layer[idx];
@@ -1881,7 +1879,7 @@ static HAL_StatusTypeDef EPIC_ConfigOutputLayerEx(EPIC_HandleTypeDef *hepic,
     if ((output->x_offset < 0)
             || (output->y_offset < 0))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
     HAL_ASSERT(output->total_width >= output->width);
 
@@ -1907,7 +1905,7 @@ static HAL_StatusTypeDef EPIC_ConfigOutputLayerEx(EPIC_HandleTypeDef *hepic,
     }
     else
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 
     if ((2 == input_num)
@@ -2009,7 +2007,7 @@ static inline HAL_StatusTypeDef EPIC_ContConfigOutputLayer(EPIC_HandleTypeDef *h
 
     if ((x0 < 0) || (y0 < 0))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
     HAL_ASSERT(output->total_width >= output->width);
 
@@ -2889,6 +2887,14 @@ static HAL_StatusTypeDef EPIC_ContConfigVideoLayer(EPIC_HandleTypeDef *epic_hand
     Vlayer_x->EXTENTS = MAKE_REG_VAL(config->width, EPIC_VL_EXTENTS_MAX_COL_Msk, EPIC_VL_EXTENTS_MAX_COL_Pos)
                         | MAKE_REG_VAL(config->height, EPIC_VL_EXTENTS_MAX_LINE_Msk, EPIC_VL_EXTENTS_MAX_LINE_Pos);
 
+#ifndef SF32LB55X
+    Vlayer_x->SCALE_RATIO_H = MAKE_REG_VAL(EPIC_SCALE_1, EPIC_VL_SCALE_RATIO_H_XPITCH_Msk, EPIC_VL_SCALE_RATIO_H_XPITCH_Pos);
+    Vlayer_x->SCALE_RATIO_V = MAKE_REG_VAL(EPIC_SCALE_1, EPIC_VL_SCALE_RATIO_V_YPITCH_Msk, EPIC_VL_SCALE_RATIO_V_YPITCH_Pos);
+#else
+    Vlayer_x->SCALE_RATIO = MAKE_REG_VAL(EPIC_SCALE_1, EPIC_VL_SCALE_RATIO_XPITCH_Msk, EPIC_VL_SCALE_RATIO_XPITCH_Pos)
+                            | MAKE_REG_VAL(EPIC_SCALE_1, EPIC_VL_SCALE_RATIO_YPITCH_Msk, EPIC_VL_SCALE_RATIO_YPITCH_Pos);
+#endif /* SF32LB55X */
+
     if (IS_Ax_COLOR_MODE(config->color_mode))
     {
         HAL_ASSERT(config->color_en);
@@ -3012,7 +3018,7 @@ static HAL_StatusTypeDef EPIC_ConfigMaskLayer(EPIC_HandleTypeDef *hepic, EPIC_LA
     if ((config->x_offset < 0)
             || (config->y_offset < 0))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 
     HAL_ASSERT(layer_idx < EPIC_LAYER_IDX_MAX);
@@ -3095,7 +3101,7 @@ static HAL_StatusTypeDef EPIC_ContConfigMaskLayer(EPIC_HandleTypeDef *hepic, uin
     if ((x_offset < 0)
             || (y_offset < 0))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 
     EPIC_LAYER_IDX layer_idx = hepic->api_cfg.cont_cfg.epic_layer[idx];
@@ -3180,13 +3186,13 @@ static HAL_StatusTypeDef EPIC_DisableMaskLayer(EPIC_TypeDef *epic)
 static HAL_StatusTypeDef EPIC_ConfigMaskLayer(EPIC_HandleTypeDef *hepic, EPIC_LAYER_IDX layer_idx,
         EPIC_BlendingDataType *config)
 {
-    return HAL_ERROR;
+    RETURN_ERROR(hepic, HAL_ERROR);
 }
 
 static HAL_StatusTypeDef EPIC_ContConfigMaskLayer(EPIC_HandleTypeDef *hepic, uint32_t idx,
         EPIC_BlendingDataType *config)
 {
-    return HAL_ERROR;
+    RETURN_ERROR(hepic, HAL_ERROR);
 }
 
 static HAL_StatusTypeDef EPIC_DisableMaskLayer(EPIC_TypeDef *epic)
@@ -3718,11 +3724,7 @@ HAL_StatusTypeDef HAL_EPIC_Init(EPIC_HandleTypeDef *epic)
 void HAL_EPIC_RotDataInit(EPIC_TransformCfgTypeDef *rot_cfg)
 {
     HAL_ASSERT(NULL != rot_cfg);
-    rot_cfg->angle  = 0;
-    rot_cfg->h_mirror = 0;
-    rot_cfg->v_mirror = 0;
-    rot_cfg->pivot_x  = 0;
-    rot_cfg->pivot_y  = 0;
+    memset(rot_cfg, 0, sizeof(EPIC_TransformCfgTypeDef));
     rot_cfg->scale_x  = EPIC_INPUT_SCALING_FACTOR_1;
     rot_cfg->scale_y  = EPIC_INPUT_SCALING_FACTOR_1;
 }
@@ -3793,14 +3795,14 @@ HAL_StatusTypeDef HAL_EPIC_BlendStart(EPIC_HandleTypeDef *epic,
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 #ifndef SF32LB55X
     if (IS_ALPHA_MASK_LAYER(fg) && IS_ALPHA_MASK_LAYER(bg))
-        return HAL_ERROR;//Only one mask layer supported.
+        RETURN_ERROR(epic, HAL_ERROR);//Only one mask layer supported.
 #endif /* SF32LB55X */
 
-    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     EPIC_ENABLE(epic);
 
@@ -3823,7 +3825,7 @@ HAL_StatusTypeDef HAL_EPIC_BlendStart(EPIC_HandleTypeDef *epic,
     }
 
     epic->Instance->COMMAND |= EPIC_COMMAND_START;
-    while (epic->Instance->STATUS != 0x0);
+    EPIC_WaitDone(epic);
 #ifdef HAL_EZIP_MODULE_ENABLED
     while (HAL_OK != HAL_EZIP_CheckReady(epic->hezip))
     {
@@ -3881,20 +3883,20 @@ HAL_StatusTypeDef HAL_EPIC_BlendStart_IT(EPIC_HandleTypeDef *epic,
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
 #ifndef SF32LB55X
     if (IS_ALPHA_MASK_LAYER(fg) && IS_ALPHA_MASK_LAYER(bg))
-        return HAL_ERROR;//Only one mask layer supported.
+        RETURN_ERROR(epic, HAL_ERROR);//Only one mask layer supported.
 #endif /* SF32LB55X */
 
     if ((fg->width > fg->total_width) || (bg->width > bg->total_width))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
-    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     EPIC_ENABLE(epic);;
 
@@ -3946,22 +3948,22 @@ HAL_StatusTypeDef HAL_EPIC_BlendStartEx(EPIC_HandleTypeDef *epic,
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     if ((input_layer_num > MAX_EPIC_LAYER) || (0 == input_layer_num))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
     for (i = 0; i < input_layer_num; i++)
     {
         if (input_layer[i].width > input_layer[i].total_width)
         {
-            return HAL_ERROR;
+            RETURN_ERROR(epic, HAL_ERROR);
         }
     }
-    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     EPIC_ENABLE(epic);
 
@@ -3990,7 +3992,7 @@ HAL_StatusTypeDef HAL_EPIC_BlendStartEx(EPIC_HandleTypeDef *epic,
 
 
     epic->Instance->COMMAND |= EPIC_COMMAND_START;
-    while (epic->Instance->STATUS != 0x0);
+    EPIC_WaitDone(epic);
 #ifdef HAL_EZIP_MODULE_ENABLED
     while (HAL_OK != HAL_EZIP_CheckReady(epic->hezip))
     {
@@ -4032,23 +4034,23 @@ HAL_StatusTypeDef HAL_EPIC_BlendStartEx_IT(EPIC_HandleTypeDef *epic,
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     if (input_layer_num > MAX_EPIC_LAYER) //((input_layer_num > MAX_EPIC_LAYER) || (0 == input_layer_num))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
     for (i = 0; i < input_layer_num; i++)
     {
         if (input_layer[i].width > input_layer[i].total_width)
         {
-            return HAL_ERROR;
+            RETURN_ERROR(epic, HAL_ERROR);
         }
     }
 
-    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     EPIC_ENABLE(epic);
 
@@ -4118,21 +4120,21 @@ HAL_StatusTypeDef HAL_EPIC_Rotate(EPIC_HandleTypeDef *epic, EPIC_TransformCfgTyp
 
     if (!EPIC_IS_VALID_SCALE(rot_cfg->scale_x) || !EPIC_IS_VALID_SCALE(rot_cfg->scale_y))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
 #ifndef SF32LB55X
     if ((IS_ALPHA_MASK_LAYER(fg) && IS_NEED_TRANSFROM(rot_cfg)) //Mask layer can't transform
             || IS_ALPHA_MASK_LAYER(bg)//Mask layer have no target
        )
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
 #endif /* SF32LB55X */
 
-    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
 
@@ -4160,9 +4162,7 @@ HAL_StatusTypeDef HAL_EPIC_Rotate(EPIC_HandleTypeDef *epic, EPIC_TransformCfgTyp
         if (HAL_OK == ret)
         {
             epic->Instance->COMMAND |= EPIC_COMMAND_START;
-            while (epic->Instance->STATUS != 0x0)
-            {
-            }
+            EPIC_WaitDone(epic);
 
 #ifdef HAL_EZIP_MODULE_ENABLED
             while (HAL_OK != HAL_EZIP_CheckReady(epic->hezip))
@@ -4227,21 +4227,21 @@ HAL_StatusTypeDef HAL_EPIC_Rotate_IT(EPIC_HandleTypeDef *epic, EPIC_TransformCfg
     HAL_ASSERT(NULL == epic->IntXferCpltCallback);
     if (!EPIC_IS_VALID_SCALE(rot_cfg->scale_x) || !EPIC_IS_VALID_SCALE(rot_cfg->scale_y))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
 #ifndef SF32LB55X
     if ((IS_ALPHA_MASK_LAYER(fg) && IS_NEED_TRANSFROM(rot_cfg)) //Mask layer can't transform
             || IS_ALPHA_MASK_LAYER(bg)//Mask layer have no target
        )
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
 #endif /* SF32LB55X */
 
-    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     EPIC_ENABLE(epic);
@@ -4327,10 +4327,10 @@ HAL_StatusTypeDef HAL_EPIC_FillStart_IT(EPIC_HandleTypeDef *epic, EPIC_FillingCf
     HAL_ASSERT(param);
     HAL_ASSERT(NULL == epic->IntXferCpltCallback);
 
-    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     EPIC_ENABLE(epic);
@@ -4371,11 +4371,11 @@ HAL_StatusTypeDef HAL_EPIC_FillStart(EPIC_HandleTypeDef *epic, EPIC_FillingCfgTy
 
     HAL_ASSERT(param);
     HAL_ASSERT(NULL == epic->IntXferCpltCallback);
-    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     EPIC_ENABLE(epic);
@@ -4396,7 +4396,7 @@ HAL_StatusTypeDef HAL_EPIC_FillStart(EPIC_HandleTypeDef *epic, EPIC_FillingCfgTy
     epic->Instance->COMMAND |= EPIC_COMMAND_START;
 
     /* wait complete */
-    while (epic->Instance->STATUS != 0x0);
+    EPIC_WaitDone(epic);
 
 __EXIT:
 
@@ -4428,11 +4428,11 @@ HAL_StatusTypeDef HAL_EPIC_Copy_IT(EPIC_HandleTypeDef *epic, EPIC_BlendingDataTy
 #endif /* if 0 */
 
     HAL_ASSERT(NULL == epic->IntXferCpltCallback);
-    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(dst->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     EPIC_ENABLE(epic);
@@ -4480,6 +4480,7 @@ HAL_StatusTypeDef HAL_EPIC_Copy_IT(EPIC_HandleTypeDef *epic, EPIC_BlendingDataTy
     ret = EPIC_ConfigOutputLayer(epic->Instance, &src_bak, &dst_bak, &dst_bak);
     if (HAL_OK != ret)
     {
+        epic->ErrorCode = __LINE__;
         goto __EXIT;
     }
 
@@ -4540,11 +4541,11 @@ HAL_StatusTypeDef HAL_EPIC_FillGrad_IT(EPIC_HandleTypeDef *epic, EPIC_GradCfgTyp
 
     HAL_ASSERT(param);
     HAL_ASSERT(NULL == epic->IntXferCpltCallback);
-    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     EPIC_ENABLE(epic);
@@ -4586,11 +4587,11 @@ HAL_StatusTypeDef HAL_EPIC_FillGrad(EPIC_HandleTypeDef *epic, EPIC_GradCfgTypeDe
 
     HAL_ASSERT(param);
     HAL_ASSERT(NULL == epic->IntXferCpltCallback);
-    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(param->color_mode)) RETURN_ERROR(epic, HAL_ERROR);
 
     if (HAL_EPIC_STATE_READY != epic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(epic, HAL_BUSY);
     }
 
     EPIC_ENABLE(epic);
@@ -4614,7 +4615,7 @@ HAL_StatusTypeDef HAL_EPIC_FillGrad(EPIC_HandleTypeDef *epic, EPIC_GradCfgTypeDe
     epic->Instance->COMMAND |= EPIC_COMMAND_START;
 
     /* wait complete */
-    while (epic->Instance->STATUS != 0x0);
+    EPIC_WaitDone(epic);
 
 __EXIT:
 
@@ -4663,26 +4664,26 @@ HAL_StatusTypeDef HAL_EPIC_ContBlendStart(EPIC_HandleTypeDef *hepic,
 
     if (HAL_EPIC_STATE_READY != hepic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(hepic, HAL_BUSY);
     }
 
     if (input_layer->width > input_layer->total_width)
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 #ifdef HAL_EZIP_MODULE_ENABLED
     if (IS_EZIP_COLOR_MODE(input_layer->color_mode))
     {
-        return HAL_ERROR;//Not support EZIP now
+        RETURN_ERROR(hepic, HAL_ERROR);//Not support EZIP now
     }
 #endif
 
     if (IS_NEED_TRANSFROM(&input_layer->transform_cfg))
     {
-        return HAL_ERROR; //Not support transform too.
+        RETURN_ERROR(hepic, HAL_ERROR); //Not support transform too.
     }
 
-    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) RETURN_ERROR(hepic, HAL_ERROR);
 
     EPIC_ENABLE(hepic);
 
@@ -4765,7 +4766,7 @@ HAL_StatusTypeDef HAL_EPIC_ContBlendRepeat(EPIC_HandleTypeDef *hepic,
 
     if ((HAL_EPIC_STATE_BUSY != hepic->State) || (EPIC_API_CONTINUE != hepic->api_type) || (!input_layer))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 
 #ifdef EPIC_CONT_BLEND_DEBUG
@@ -4830,7 +4831,8 @@ HAL_StatusTypeDef HAL_EPIC_ContBlendStop(EPIC_HandleTypeDef *hepic)
 {
     if (EPIC_API_CONTINUE == hepic->api_type)
     {
-        while (hepic->Instance->STATUS != 0x0);
+        //while(hepic->Instance->STATUS != 0);
+        EPIC_WaitDone(hepic);
 
 
         EPIC_DisableLayer(hepic->Instance, EPIC_LAYER_IDX_0);
@@ -4847,9 +4849,14 @@ HAL_StatusTypeDef HAL_EPIC_ContBlendStop(EPIC_HandleTypeDef *hepic)
     }
     else
     {
-        return HAL_EPIC_NOTHING_TO_DO;
+        return HAL_OK;
     }
 
+}
+
+bool HAL_EPIC_IsHWBusy(EPIC_HandleTypeDef *hepic)
+{
+    return (hepic->Instance->STATUS != 0x0);
 }
 
 HAL_StatusTypeDef HAL_EPIC_TransStart(EPIC_HandleTypeDef *hepic,
@@ -4873,22 +4880,22 @@ HAL_StatusTypeDef HAL_EPIC_TransStart(EPIC_HandleTypeDef *hepic,
 
     if (HAL_EPIC_STATE_READY != hepic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(hepic, HAL_BUSY);
     }
 
     if ((input_layer_num > MAX_EPIC_LAYER) || (0 == input_layer_num) || (NULL == hor_path) || (NULL == ver_path))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(hepic, HAL_ERROR);
     }
 
     for (i = 0; i < input_layer_num; i++)
     {
         if (input_layer[i].width > input_layer[i].total_width)
         {
-            return HAL_ERROR;
+            RETURN_ERROR(hepic, HAL_ERROR);
         }
     }
-    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) return HAL_ERROR;
+    if (!EPIC_SUPPROT_OUT_FORMAT(output_layer->color_mode)) RETURN_ERROR(hepic, HAL_ERROR);
 
     EPIC_ENABLE(hepic);
     EPIC_InitRamInstance(hepic);
@@ -4989,7 +4996,7 @@ HAL_StatusTypeDef HAL_EPIC_TransStart(EPIC_HandleTypeDef *hepic,
     }
 
 
-    while (hepic->Instance->STATUS != 0x0);
+    EPIC_WaitDone(hepic);
 #ifdef HAL_EZIP_MODULE_ENABLED
     while (HAL_OK != HAL_EZIP_CheckReady(hepic->hezip))
     {
@@ -5033,7 +5040,7 @@ void HAL_EPIC_LayerSetDataOffset(EPIC_BlendingDataType *layer, int16_t x, int16_
 {
     int32_t pixel_depth = EPIC_GetColorDepth(layer->color_mode);
 
-    if (0 == (pixel_depth >> 3))
+    if (0 == (pixel_depth & 0x7))
     {
         int32_t offset_pixels = ((int32_t)(y - layer->y_offset)) * layer->total_width;
 
@@ -5100,7 +5107,7 @@ HAL_StatusTypeDef HAL_EPIC_BlendFastStart_IT(EPIC_HandleTypeDef *hepic, EPIC_Han
 
     if (HAL_EPIC_STATE_READY != hepic->State)
     {
-        return HAL_BUSY;
+        RETURN_ERROR(hepic, HAL_BUSY);
     }
     hepic->State = HAL_EPIC_STATE_BUSY;
 
@@ -5125,7 +5132,7 @@ HAL_StatusTypeDef HAL_EPIC_BlendFastStart_IT(EPIC_HandleTypeDef *hepic, EPIC_Han
 
     EPIC_CommitInstance(hepic);
 #ifdef HAL_EZIP_MODULE_ENABLED
-    if (HAL_EPIC_STATE_BUSY == hepic_s->hezip->State)
+    if ((int)HAL_EPIC_STATE_BUSY == (int)hepic_s->hezip->State)
     {
         hepic->hezip->CpltCallback = hepic_s->hezip->CpltCallback;
         hepic->hezip->RamInstance_used = 1;
@@ -5262,7 +5269,6 @@ static void EPIC_EzipCpltCallback(EZIP_HandleTypeDef *ezip)
 }
 #endif /* HAL_EZIP_MODULE_ENABLED */
 
-
 /**
  * @brief  Rotate fg, blend with bg and output to dst in polling mode
  *
@@ -5288,32 +5294,32 @@ static HAL_StatusTypeDef EPIC_ConfigRotation(EPIC_HandleTypeDef *epic,
 
 #ifndef SF32LB55X
     if (IS_FRAC_COORD_LAYER(fg) && IS_FRAC_COORD_LAYER(bg))
-        return HAL_ERROR;//Support 1 fractional coordinate layer now
+        RETURN_ERROR(epic, HAL_ERROR);//Support 1 fractional coordinate layer now
 #endif /* SF32LB55X */
 
 #ifdef HAL_EZIP_MODULE_ENABLED
     if (IS_EZIP_COLOR_MODE(fg->color_mode) && IS_EZIP_COLOR_MODE(bg->color_mode))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
     if (IS_EZIP_COLOR_MODE(fg->color_mode) && (0 != rot_cfg->angle))
     {
         /* don't support ezip rotation */
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 #endif
 
 #if defined(SF32LB56X)||defined(SF32LB52X)
     if ((IS_YUV_COLOR_MODE(fg->color_mode) && IS_YUV_COLOR_MODE(bg->color_mode)) || IS_YUV_COLOR_MODE(dst->color_mode))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
     if (IS_YUV_COLOR_MODE(fg->color_mode) && (0 != rot_cfg->angle))
     {
         /* don't support YUV rotation */
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 
 #endif /* SF32LB56X */
@@ -5437,13 +5443,13 @@ HAL_StatusTypeDef EPIC_ConfigBlend(EPIC_HandleTypeDef *epic,
 
 #ifndef SF32LB55X
     if (IS_ALPHA_MASK_LAYER(fg) && IS_ALPHA_MASK_LAYER(bg))
-        return HAL_ERROR;//Only one mask layer supported.
+        RETURN_ERROR(epic, HAL_ERROR);//Only one mask layer supported.
 
     if (IS_FRAC_COORD_LAYER(fg) && IS_ALPHA_MASK_LAYER(fg))
-        return HAL_ERROR;//Mask layer not support fractional coordinate
+        RETURN_ERROR(epic, HAL_ERROR);//Mask layer not support fractional coordinate
 
     if (IS_FRAC_COORD_LAYER(fg) && IS_FRAC_COORD_LAYER(bg))
-        return HAL_ERROR;//Support 1 fractional coordinate layer now
+        RETURN_ERROR(epic, HAL_ERROR);//Support 1 fractional coordinate layer now
 
 #endif /* SF32LB55X */
 
@@ -5452,14 +5458,14 @@ HAL_StatusTypeDef EPIC_ConfigBlend(EPIC_HandleTypeDef *epic,
 #ifdef HAL_EZIP_MODULE_ENABLED
     if (IS_EZIP_COLOR_MODE(bg->color_mode) && IS_EZIP_COLOR_MODE(fg->color_mode))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 #endif
 
 #if defined(SF32LB56X)||defined(SF32LB52X)
     if ((IS_YUV_COLOR_MODE(fg->color_mode) && IS_YUV_COLOR_MODE(bg->color_mode)) || IS_YUV_COLOR_MODE(dst->color_mode))
     {
-        return HAL_ERROR;
+        RETURN_ERROR(epic, HAL_ERROR);
     }
 #endif /* SF32LB56X */
 
@@ -5537,12 +5543,12 @@ HAL_StatusTypeDef EPIC_ConfigBlend(EPIC_HandleTypeDef *epic,
 
     if (HAL_OK != ret)
     {
-        return ret;
+        RETURN_ERROR(epic, ret);
     }
     ret = EPIC_ConfigOutputLayer(epic->Instance, fg, bg, dst);
     if (HAL_OK != ret)
     {
-        return ret;
+        RETURN_ERROR(epic, ret);
     }
 #ifdef HAL_EZIP_MODULE_ENABLED
     if (IS_EZIP_COLOR_MODE(fg->color_mode) && EPIC_IsLayerActive(epic->Instance, fg_layer_idx))
@@ -5843,6 +5849,7 @@ HAL_StatusTypeDef EPIC_ConfigFilling(EPIC_HandleTypeDef *epic, EPIC_FillingCfgTy
     ret = EPIC_ConfigOutputLayer(epic->Instance, &blending_cfg, &blending_cfg, &blending_cfg);
     if (HAL_OK != ret)
     {
+        epic->ErrorCode = __LINE__;
         goto __EXIT;
     }
 

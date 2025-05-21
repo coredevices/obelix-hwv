@@ -46,7 +46,7 @@
 #ifndef _BTS2_DBG_H_
 #define _BTS2_DBG_H_
 #include "stdint.h"
-#include "rtthread.h"
+#include "rtconfig.h"
 #include "bf0_ble_common.h"
 #define BT_TAG_D 0
 #define BT_TAG_I 1

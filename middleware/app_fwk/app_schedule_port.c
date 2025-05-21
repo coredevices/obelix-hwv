@@ -2,7 +2,6 @@
  *      INCLUDES
  *********************/
 #include "gui_app_int.h"
-#include "bf0_lib.h"
 
 #ifdef PKG_USING_LITTLEVGL2RTT
 screen_t port_app_sche_create_scr(void)

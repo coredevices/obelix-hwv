@@ -230,10 +230,14 @@ _write_r(struct _reent *ptr, int fd, const void *buf, size_t nbytes)
 #ifndef RT_USING_DFS
     if (fileno(stdout) == fd)
     {
+#ifdef RT_USING_CONSOLE
         rt_device_t console;
 
         console = rt_console_get_device();
         if (console) return rt_device_write(console, -1, buf, nbytes);
+#else
+        return 0;
+#endif
     }
 
     return 0;

@@ -133,23 +133,24 @@ class bmp:
             bit_pos  = 0
 
             for x in range(0,self.w,1):
+
+                #defalut foreground color for A2/A4/A8
                 a = 255
+                r = 255
+                g = 0
+                b = 0
 
                 if bin_format == "a8":
-                    r = ord(bin_array[index])
-                    g = r
-                    b = r
+                    a = ord(bin_array[index])
                     index=index+1
                 elif bin_format == "a4":
-                    r = (ord(bin_array[index]) & bit_mask)>>bit_pos
-                    #print ("x,y = %d,%d, src=%02x, mask=%02x,  v=%02x"%(x,y,ord(bin_array[index]),bit_mask,r))
+                    a = (ord(bin_array[index]) & bit_mask)>>bit_pos
+                    #print ("x,y = %d,%d, src=%02x, mask=%02x,  v=%02x"%(x,y,ord(bin_array[index]),bit_mask,a))
                     
-                    r = r << 4 #To RGB888
-                    if (r > 0):
-                        r = r | 0x0f;
-                    
-                    g = r
-                    b = r
+                    a = a << 4 #To A8
+                    if (a > 0):
+                        a = a | 0x0f;
+
 
                     if (x + 1 == self.w) or (4 == bit_pos):
                         index=index+1
@@ -164,17 +165,14 @@ class bmp:
                         
                 elif bin_format == "a2":
                     
-                    r = (ord(bin_array[index]) & bit_mask)>>bit_pos
-                    #print ("x,y = %d,%d, src=%02x, mask=%02x,  v=%02x"%(x,y,ord(bin_array[index]),bit_mask,r))
+                    a = (ord(bin_array[index]) & bit_mask)>>bit_pos
+                    #print ("x,y = %d,%d, src=%02x, mask=%02x,  v=%02x"%(x,y,ord(bin_array[index]),bit_mask,a))
                     
-                    r = r << 6 #To RGB888
-                    if (r > 0):
-                        r = r | 0x3f;
+                    a = a << 6 #To A8
+                    if (a > 0):
+                        a = a | 0x3f;
 
-                    g = r
-                    b = r
-                    
-                    
+
 
                     if (x + 1 == self.w) or (6 == bit_pos):
                         index=index+1
@@ -230,11 +228,14 @@ class bmp:
                     g = 0
                     b = 0
 
-                #mix with white background
+                #mix with background
+                bg_r = 0
+                bg_g = 0
+                bg_b = 0
 
-                r = int((r * a)/255 + (255-a))
-                g = int((g * a)/255 + (255-a))
-                b = int((b * a)/255 + (255-a))
+                r = int(((r * a) + (255-a)*bg_r)/255)
+                g = int(((g * a) + (255-a)*bg_g)/255)
+                b = int(((b * a) + (255-a)*bg_b)/255)
                 rgb888 = r << 16 | g<<8 | b
                 self.paint_point(x, y, rgb888)
 

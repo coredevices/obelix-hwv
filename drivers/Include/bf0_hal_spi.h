@@ -624,6 +624,55 @@ UNUSED(tmpreg_ovr);                            \
   */
 #define SPI_RESET_CRC(__HANDLE__) do{CLEAR_BIT((__HANDLE__)->Instance->CR1, SPI_CR1_CRCEN);\
                                        SET_BIT((__HANDLE__)->Instance->CR1, SPI_CR1_CRCEN);}while(0U)
+/** @brief  Set the ssp clock Cycles when SSP works in master and RWOT mode.
+  * @param  \__HANDLE__ specifies the SPI Handle.
+  *         This parameter can be SPI where x: 1, 2, or 3 to select the SPI peripheral.
+  * @param  \NUM specifies the ssp clock Cycles.
+  * @retval None
+  */
+#define SPI_RWOT_CCM(__HANDLE__, NUM)  ((__HANDLE__)->Instance->RWOT_CCM = (uint32_t)(NUM))
+
+/** @brief  Set the SPI RWOT Receive without transmit mode.
+ * @param  \__HANDLE__ specifies the SPI Handle.
+            This parameter can be SPI where x: 1, 2, or 3 to select the SPI peripheral.
+ * @retval None
+ */
+#define  SPI_SET_RWOT_RECEIVE_WITHOUT_TRANSMIT_MODE(__HANDLE__)  SET_BIT((__HANDLE__)->Instance->RWOT_CTRL, SPI_RWOT_CTRL_RWOT)
+
+/** @brief  Set the SPI RWOT Transmit/receive mode.
+* @param  \__HANDLE__ specifies the SPI Handle.
+*         0 = Transmit/receive mode; 1 = Receive without transmit mode.
+* @retval None
+*/
+#define SPI_SET_RWOT_TRANSMIT_RECEIVE_MODE(__HANDLE__)  CLEAR_BIT((__HANDLE__)->Instance->RWOT_CTRL, SPI_RWOT_CTRL_RWOT)
+
+/** @brief  Enable RWOT Cycle Counter Mode
+* @param  \__HANDLE__ specifies the SPI Handle.
+*         0 = disable; 0 = Receive without transmit mode.
+* @retval None
+*/
+#define SPI_RWOT_CYCEL_ENABLE(__HANDLE__)  SET_BIT((__HANDLE__)->Instance->RWOT_CTRL, SPI_RWOT_CTRL_CYCLE_RWOT_EN)
+
+/** @brief  Disable RWOT Cycle Counter Mode
+* @param  \__HANDLE__ specifies the SPI Handle.
+*         0 = disable; 0 = Receive without transmit mode.
+* @retval None
+*/
+#define SPI_RWOT_CYCEL_DISABLE(__HANDLE__)  CLEAR_BIT((__HANDLE__)->Instance->RWOT_CTRL, SPI_RWOT_CTRL_CYCLE_RWOT_EN)
+
+/** @brief  Set RWOT Cycle
+* @param  \__HANDLE__ specifies the SPI Handle.
+*         0 = disable; 0 = Receive without transmit mode.
+* @retval None
+*/
+#define SPI_RWOT_SET_CYCEL(__HANDLE__)  SET_BIT((__HANDLE__)->Instance->RWOT_CTRL, SPI_RWOT_CTRL_SET_RWOT_CYCLE)
+
+/** @brief  Clear RWOT Cycle
+* @param  \__HANDLE__ specifies the SPI Handle.
+*         0 = disable; 0 = Receive without transmit mode.
+* @retval None
+*/
+#define SPI_RWOT_CLEAR_CYCEL(__HANDLE__)  SET_BIT((__HANDLE__)->Instance->RWOT_CTRL, SPI_RWOT_CTRL_CLR_RWOT_CYCLE)
 
 
 #define IS_SPI_MODE(MODE) (((MODE) == SPI_MODE_SLAVE) || \

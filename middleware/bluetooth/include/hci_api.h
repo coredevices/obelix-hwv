@@ -2698,7 +2698,7 @@ void hcia_sync_disc_req(U16 hdl, U8 reason);
  *----------------------------------------------------------------------------*/
 void hcia_free_umsg_msg(BTS2U_HCI_MSG *umsg);
 
-void hcia_register_receive_earphone_connect_req_handler(BOOL (*cb)(BTS2S_BD_ADDR *p_bd));
+void hcia_register_receive_connect_req_handler(BOOL (*cb)(BTS2S_BD_ADDR *p_bd, U24 dev_cls));
 
 void hcia_set_sniff_mode_enable(BOOL enable);
 BOOL hcia_get_sniff_mode_enable(void);

@@ -52,29 +52,25 @@
 #include "os_adaptor.h"
 
 #include "dfu_internal.h"
-#include "bf0_sibles.h"
 
-#ifdef BLUETOOTH
+#ifdef BSP_BLE_SIBLES
     #include "bf0_sibles_internal.h"
-#endif
-#include "bf0_sibles_serial_trans_service.h"
-#include "att.h"
-#include "bf0_ble_gap.h"
-#include "bf0_sibles.h"
-#include "bf0_ble_common.h"
-#include "bf0_sibles_advertising.h"
-#include "ble_connection_manager.h"
-
-#if !defined(BSP_BLE_SIBLES) && defined(BSP_USING_DATA_SVC)
+    #include "bf0_sibles_serial_trans_service.h"
+    #include "att.h"
+    #include "bf0_ble_gap.h"
+    #include "bf0_sibles.h"
+    #include "bf0_ble_common.h"
+    #include "bf0_sibles_advertising.h"
+    #include "ble_connection_manager.h"
+    #define BLE_DFU_CATEID 0x01
+#elif defined(BSP_USING_DATA_SVC)
     #include "dfu_port_srv.h"
 #endif
-
 
 #define LOG_TAG "DFU_P"
 #include "log.h"
 
 
-#define BLE_DFU_CATEID 0x01
 
 
 typedef struct
@@ -97,7 +93,9 @@ typedef struct
         uint8_t last_tx_packet;
         struct
         {
+#ifdef BSP_BLE_SIBLES
             bd_addr_t peer_addr;
+#endif
             uint16_t mtu;
             uint16_t conn_interval;
             uint8_t peer_addr_type;
@@ -106,7 +104,6 @@ typedef struct
     } rc;
 
 } dfu_protocol_port_env_t;
-
 
 
 static OS_THREAD_DECLAR(g_dfu_tid);
@@ -130,11 +127,9 @@ __INLINE dfu_tran_protocol_t *dfu_packet2msg(void const *param_ptr)
 
 #ifdef BSP_BLE_SIBLES
 
-    #ifdef DFU_OTA_MANAGER
-        SIBLES_ADVERTISING_CONTEXT_DECLAR(g_dfu_advertising_context);
-    #endif // DFU_OTA_MANAGER
-#endif // BSP_BLE_SIBLES
-
+#ifdef DFU_OTA_MANAGER
+    SIBLES_ADVERTISING_CONTEXT_DECLAR(g_dfu_advertising_context);
+#endif // DFU_OTA_MANAGER
 
 static uint8_t ble_app_advertising_event(uint8_t event, void *context, void *data)
 {
@@ -159,11 +154,11 @@ static uint8_t ble_app_advertising_event(uint8_t event, void *context, void *dat
 }
 
 
+
 #define DEFAULT_LOCAL_NAME "OTA"
 /* Enable advertise via advertising service. */
 static void dfu_protocol_advertising_start(void)
 {
-#ifdef BSP_BLE_SIBLES
     sibles_advertising_para_t para = {0};
     uint8_t ret;
 
@@ -219,10 +214,8 @@ static void dfu_protocol_advertising_start(void)
 
     rt_free(para.adv_data.completed_name);
     rt_free(para.adv_data.manufacturer_data);
-#endif // BSP_BLE_SIBLES
 }
 
-#ifdef BSP_BLE_SIBLES
 void dfu_protocol_reset_entry(void *param)
 {
     uint32_t evt;
@@ -242,7 +235,9 @@ void dfu_protocol_reset_entry(void *param)
             HAL_Delay(200);
             dfu_protocol_advertising_start();
             /* Enable serial transmission service. */
+#ifdef BSP_BLE_SERIAL_TRANSMISSION
             ble_serial_tran_init();
+#endif
             LOG_I("receive BLE power on!\r\n");
         }
     }
@@ -282,6 +277,7 @@ int8_t dfu_protocol_session_close(void)
 #endif // BSP_BLE_SIBLES
 }
 
+#ifdef BSP_BLE_SIBLES
 int ble_dfu_protocol_event_handler(uint16_t event_id, uint8_t *data, uint16_t len, uint32_t context)
 {
     dfu_protocol_port_env_t *env = dfu_protocol_get_env();
@@ -367,8 +363,7 @@ int ble_dfu_protocol_event_handler(uint16_t event_id, uint8_t *data, uint16_t le
 
 }
 
-#ifdef BSP_BLE_SIBLES
-    BLE_EVENT_REGISTER(ble_dfu_protocol_event_handler, NULL);
+BLE_EVENT_REGISTER(ble_dfu_protocol_event_handler, NULL);
 #endif // BSP_BLE_SIBLES
 
 uint8_t *dfu_protocol_packet_buffer_alloc(dfu_protocol_msg_id_t msg_id, uint16_t length)
@@ -387,7 +382,7 @@ int8_t dfu_protocol_packet_send(uint8_t *data)
 {
     if (!data)
         return -1;
-#ifdef BLUETOOTH
+#if defined (BLUETOOTH) && defined(BSP_BLE_SERIAL_TRANSMISSION)
     dfu_protocol_port_env_t *env = dfu_protocol_get_env();
     ble_serial_tran_data_t t_data;
     dfu_tran_protocol_t *msg = dfu_packet2msg(data);
@@ -463,10 +458,8 @@ static void ble_dfu_serial_callback(uint8_t event, uint8_t *data)
 }
 #endif
 
-
-
 // For dual core.
-#if defined(BSP_BLE_SIBLES)
+#if defined(BSP_BLE_SIBLES) && defined(BSP_BLE_SERIAL_TRANSMISSION)
 BLE_SERIAL_TRAN_EXPORT(BLE_DFU_CATEID, ble_dfu_serial_callback);
 #elif defined(BSP_USING_DATA_SVC)
 

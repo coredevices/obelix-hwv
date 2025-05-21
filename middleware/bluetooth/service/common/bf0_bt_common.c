@@ -224,6 +224,35 @@ int bt_addr_convert_from_string_to_general(char *hexstr, bd_addr_t *addr)
     return i;
 }
 
+// Only handle str foramt as : xxbxxbxxbxxbxxbxx or xxxxxxxxxxxx. x is a hex string(0-9,a-f,A-F),
+// b could only string except 0
+int bt_convert_from_string_to_uuid_array(char *hexstr, uint8_t *uuid, uint8_t uuid_len)
+{
+    int i = 0;
+    int j = 0;
+
+    while (*(hexstr + j) && i < uuid_len)
+    {
+
+        uint8_t high_part = stohex(*(hexstr + j++));
+        uint8_t low_part = stohex(*(hexstr + j++));
+        if (low_part < 0 || high_part < 0)
+            break;
+
+        uuid[i] = (high_part << 4) + low_part;
+        i++;
+
+        int8_t temp = stohex(*(hexstr + j));
+        if (temp < 0)
+        {
+            temp = stohex(*(hexstr + j + 1));
+            if (temp < 0)
+                break;
+            j++;
+        }
+    }
+    return i;
+}
 
 
 __WEAK ble_common_update_type_t ble_request_public_address(bd_addr_t *addr)
@@ -301,7 +330,7 @@ void ble_nvds_config_prepare()
 #define SIFLI_NVDS_UPDATING 2
 
 #if defined(SOC_SF32LB58X)
-    #ifdef SF32LB58X_3SCO
+    #ifdef NVDS_BUF_START_ADDR
         #define NVDS_BUFF_START NVDS_BUF_START_ADDR
     #else
         #define NVDS_BUFF_START 0x204FFD00
@@ -969,6 +998,11 @@ void bt_event_publish(uint16_t type, uint16_t event_id, void *data)
     }
 
 #endif
+}
+
+RT_WEAK void blebredr_rf_power_set(uint8_t type, int8_t txpwr)
+{
+    return;
 }
 
 #ifndef SOC_SF32LB55X

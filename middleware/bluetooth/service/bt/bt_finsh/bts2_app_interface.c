@@ -356,6 +356,22 @@ int8_t bt_interface_disconnect_req(unsigned char *mac)
     return bt_disconnect_req(&bd_addr);
 }
 
+int8_t bt_interface_io_req_res(unsigned char *mac, BTS2E_SC_IO_CAPABILITY io_capability, uint8_t mitm, uint8_t bonding)
+{
+    BTS2S_BD_ADDR bd_addr;
+    bt_addr_convert_to_bts((bd_addr_t *)mac, &bd_addr);
+    sc_io_capability_rsp(&bd_addr, io_capability, mitm, bonding);
+    return 0;
+}
+
+int8_t bt_interface_user_confirm_res(unsigned char *mac, uint8_t confirm)
+{
+    BTS2S_BD_ADDR bd_addr;
+    bt_addr_convert_to_bts((bd_addr_t *)mac, &bd_addr);
+    sc_user_cfm_rsp(&bd_addr, confirm);
+    return 0;
+}
+
 void bt_interface_rd_local_name(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
@@ -370,18 +386,10 @@ void bt_interface_rd_local_bd_addr(void)
     gap_rd_local_bd_req(bts2_app_data->phdl);
 }
 
-void bt_interface_exit_sniff_mode(unsigned char *mac)
+void bt_interface_exit_sniff_mode(void)
 {
-    BTS2S_BD_ADDR bd_addr;
-    bt_addr_convert_to_bts((bd_addr_t *)mac, &bd_addr);
-    bt_exit_sniff_mode(&bd_addr);
-}
-
-void bt_interface_wr_link_policy_setting(unsigned char *mac, uint16_t link_policy_mode)
-{
-    BTS2S_BD_ADDR bd_addr;
-    bt_addr_convert_to_bts((bd_addr_t *)mac, &bd_addr);
-    bt_wr_link_policy(&bd_addr,link_policy_mode);
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bt_exit_sniff_mode(bts2_app_data);
 }
 
 void bt_interface_rd_local_rssi(unsigned char *mac)
@@ -605,6 +613,7 @@ void bt_interface_avrcp_pause(void)
     bt_avrcp_pause(bts2_app_data);
 }
 
+
 void bt_interface_avrcp_stop(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
@@ -635,6 +644,7 @@ void bt_interface_avrcp_rewind(void)
     bt_avrcp_rewind(bts2_app_data);
 }
 
+
 bt_err_t bt_interface_avrcp_set_absolute_volume_as_ct_role(U8 volume)
 {
     bt_err_t ret = BT_ERROR_UNSUPPORTED;
@@ -646,6 +656,7 @@ bt_err_t bt_interface_avrcp_set_absolute_volume_as_ct_role(U8 volume)
 #endif
     return ret;
 }
+
 
 bt_err_t bt_interface_avrcp_set_absolute_volume_as_tg_role(U8 volume)
 {
@@ -659,25 +670,76 @@ bt_err_t bt_interface_avrcp_set_absolute_volume_as_tg_role(U8 volume)
     return ret;
 }
 
+
+U8 bt_interface_avrcp_abs_vol_2_local_vol(U8 abs_vol, U8 local_max_vol)
+{
+    U8 local_vol;
+
+    if (abs_vol == 0)
+    {
+        local_vol = 0;
+    }
+    else if (abs_vol >= 127)
+    {
+        local_vol = local_max_vol;
+    }
+    else if ((local_max_vol <= 2) || (local_max_vol > 126))
+    {
+        // error vol ,just return 0;
+        local_vol = 0;
+    }
+    else
+    {
+        U16 temp_val = abs_vol * 10;
+        // excpet 0 and 127, remain 126 digits should divide to local_max_vol - 1
+        U16 temp_step = 1260 / (local_max_vol - 1);
+        local_vol = (U8)((temp_val - 1) / temp_step) + 1;
+        if (local_vol == local_max_vol)
+            local_vol--;
+    }
+
+    return local_vol;
+}
+
+U8 bt_interface_avrcp_local_vol_2_abs_vol(U8 local_vol, U8 local_max_vol)
+{
+    U8 abs_vol;
+    if (local_vol == 0)
+        abs_vol = 0;
+    else if (local_vol >= local_max_vol)
+        abs_vol = 127;
+    else if ((local_max_vol < 3) || (local_max_vol > 126))
+        abs_vol = 0;
+    else
+    {
+        // excpet 0 and 127, remain 126 digits should divide to local_max_vol - 1
+        U16 temp_step = 1260 / (local_max_vol - 1);
+        abs_vol = (U8)(local_vol * temp_step / 10);
+    }
+
+    return abs_vol;
+}
+
+
 void bt_interface_avrcp_playback_register_request(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_playback_register_request(bts2_app_data);
 }
 
-void bt_interface_avrcp_playback_pos_register_request(void)
+void bt_interface_playback_pos_register_request(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_playback_pos_register_request(bts2_app_data);
 }
 
-void bt_interface_avrcp_track_change_register_request(void)
+void bt_interface_track_change_register_request(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_track_register_request(bts2_app_data);
 }
 
-void bt_interface_avrcp_volume_change_register_request(void)
+void bt_interface_volume_change_register_request(void)
 {
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     bt_avrcp_volume_register_request(bts2_app_data);
@@ -713,7 +775,8 @@ U8 bt_interface_get_avrcp_playback_status(void)
 #endif
 }
 
-void bt_interface_set_can_play(void)
+
+void bt_interface_avrcp_set_can_play(void)
 {
 #ifdef CFG_AV
     bt_av_set_can_play();
@@ -728,14 +791,25 @@ BOOL bt_interface_check_avrcp_role_valid(U8 role)
         return FALSE;
 }
 
+// @deprecated - please use bt_interface_set_avrcp_role_ext
 bt_err_t bt_interface_set_avrcp_role(BTS2S_BD_ADDR *bd_addr, U8 role)
 {
+    bt_notify_device_mac_t *bd_addr_c;
+    bt_addr_convert_to_general(bd_addr, (bd_addr_t *)bd_addr_c);
+    LOG_E("deprecated - please use bt_interface_set_avrcp_role_ext");
+    return bt_interface_set_avrcp_role_ext(bd_addr_c, role);
+}
+
+bt_err_t bt_interface_set_avrcp_role_ext(bt_notify_device_mac_t *rmt_addr, U8 role)
+{
     bt_err_t ret = BT_EOK;
+    BTS2S_BD_ADDR bd_addr;
     bts2_app_stru *bts2_app_data = bts2g_app_p;
 #ifdef CFG_AVRCP
+    bt_addr_convert_to_bts((bd_addr_t *)rmt_addr, &bd_addr);
     for (U8 i = 0; i < AVRCP_MAX_CONNS; i++)
     {
-        if (bd_eq(bd_addr, &bts2_app_data->avrcp_inst.con[i].rmt_bd) == TRUE)
+        if (bd_eq(&bd_addr, &bts2_app_data->avrcp_inst.con[i].rmt_bd) == TRUE)
         {
             if (bt_interface_check_avrcp_role_valid(role))
             {
@@ -829,15 +903,27 @@ void bt_interface_add_hid_descriptor(U8 *data, U8 len)
   */
 
 #ifdef CFG_SPP_SRV
+// @deprecated - please use bt_interface_spp_send_data_ext
 bt_err_t bt_interface_spp_send_data(U8 *data, U16 len, BTS2S_BD_ADDR *bd_addr, U8 srv_chl)
+{
+    bt_notify_device_mac_t *bd_addr_c;
+    bt_addr_convert_to_general(bd_addr, (bd_addr_t *)bd_addr_c);
+    LOG_E("deprecated - please use bt_interface_spp_send_data_ext");
+    return bt_interface_spp_send_data_ext(data, len, bd_addr_c, srv_chl);
+}
+
+bt_err_t bt_interface_spp_send_data_ext(U8 *data, U16 len, bt_notify_device_mac_t *rmt_addr, U8 srv_chl)
 {
     bt_err_t ret = BT_EOK;
     bts2_app_stru *bts2_app_data = bts2g_app_p;
     U8 idx = 0xff;
     bts2_spp_srv_inst_data *bts2_spp_srv_inst = NULL;
     bts2_spp_service_list *spp_service_list = NULL;
+    BTS2S_BD_ADDR bd_addr;
 
-    if (bt_spp_srv_check_addr_is_connected(bts2_app_data, bd_addr, &idx))
+    bt_addr_convert_to_bts((bd_addr_t *)rmt_addr, &bd_addr);
+
+    if (bt_spp_check_addr_is_connected(bts2_app_data, &bd_addr, &idx))
     {
         bts2_spp_srv_inst = &bts2_app_data->spp_srv_inst[idx];
 
@@ -847,7 +933,7 @@ bt_err_t bt_interface_spp_send_data(U8 *data, U16 len, BTS2S_BD_ADDR *bd_addr, U
             return ret;
         }
 
-        if (len > bt_spp_srv_get_mtu_size(bts2_app_data, bts2_spp_srv_inst->device_id))
+        if (len > bt_spp_get_mtu_size(bts2_app_data, bts2_spp_srv_inst->device_id))
         {
             ret = BT_ERROR_INPARAM;
             return ret;
@@ -859,7 +945,42 @@ bt_err_t bt_interface_spp_send_data(U8 *data, U16 len, BTS2S_BD_ADDR *bd_addr, U
         return ret;
     }
 
-    bt_spp_srv_sending_data_by_device_id_and_srv_chnl(bts2_app_data, bts2_spp_srv_inst->device_id, srv_chl, data, len);
+    bt_spp_sending_data_by_device_id_and_srv_chnl(bts2_app_data, bts2_spp_srv_inst->device_id, srv_chl, data, len);
+
+    return ret;
+}
+
+bt_err_t bt_interface_spp_prepare_send_rand_data(U32 rand_len, bt_notify_device_mac_t *rmt_addr, U8 srv_chl)
+{
+    bt_err_t ret = BT_EOK;
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    U8 idx = 0xff;
+    bts2_spp_srv_inst_data *bts2_spp_srv_inst = NULL;
+    bts2_spp_service_list *spp_service_list = NULL;
+    BTS2S_BD_ADDR bd_addr;
+
+    bt_addr_convert_to_bts((bd_addr_t *)rmt_addr, &bd_addr);
+
+    if (bt_spp_check_addr_is_connected(bts2_app_data, &bd_addr, &idx))
+    {
+        bts2_spp_srv_inst = &bts2_app_data->spp_srv_inst[idx];
+
+        if ((bts2_spp_srv_inst->service_list & (1 << srv_chl)) == 0)
+        {
+            ret = BT_ERROR_DISCONNECTED;
+            return ret;
+        }
+
+        spp_service_list = bt_spp_get_service_list_by_srv_chl(bts2_spp_srv_inst, srv_chl);
+        spp_service_list->is_rand_going = 1;
+        spp_service_list->rand_total_len = rand_len;
+        spp_service_list->rand_packet_len = spp_service_list->mtu_size;
+    }
+    else
+    {
+        ret = BT_ERROR_DISCONNECTED;
+        return ret;
+    }
 
     return ret;
 }
@@ -885,7 +1006,16 @@ bt_err_t bt_interface_add_spp_uuid(U8 *uuid, U8 uuid_len, char *srv_name)
     return ret;
 }
 
+// @deprecated - please use bt_interface_spp_srv_data_rsp_ext
 bt_err_t bt_interface_spp_srv_data_rsp(BTS2S_BD_ADDR *bd_addr, U8 srv_chl)
+{
+    bt_notify_device_mac_t *bd_addr_c;
+    bt_addr_convert_to_general(bd_addr, (bd_addr_t *)bd_addr_c);
+    LOG_E("deprecated - please use bt_interface_spp_srv_data_rsp_ext");
+    return bt_interface_spp_srv_data_rsp_ext(bd_addr_c, srv_chl);
+}
+
+bt_err_t bt_interface_spp_srv_data_rsp_ext(bt_notify_device_mac_t *rmt_addr, U8 srv_chl)
 {
 
     bt_err_t ret = BT_EOK;
@@ -893,8 +1023,11 @@ bt_err_t bt_interface_spp_srv_data_rsp(BTS2S_BD_ADDR *bd_addr, U8 srv_chl)
     U8 idx = 0xff;
     bts2_spp_srv_inst_data *bts2_spp_srv_inst = NULL;
     bts2_spp_service_list *spp_service_list = NULL;
+    BTS2S_BD_ADDR bd_addr;
 
-    if (bt_spp_srv_check_addr_is_connected(bts2_app_data, bd_addr, &idx))
+    bt_addr_convert_to_bts((bd_addr_t *)rmt_addr, &bd_addr);
+
+    if (bt_spp_check_addr_is_connected(bts2_app_data, &bd_addr, &idx))
     {
         bts2_spp_srv_inst = &bts2_app_data->spp_srv_inst[idx];
 
@@ -910,12 +1043,21 @@ bt_err_t bt_interface_spp_srv_data_rsp(BTS2S_BD_ADDR *bd_addr, U8 srv_chl)
         return ret;
     }
 
-    spp_srv_data_rsp_ext(bts2_spp_srv_inst->device_id, srv_chl);
+    spp_data_rsp_ext(bts2_spp_srv_inst->device_id, srv_chl);
 
     return ret;
 }
 
+// @deprecated - please use bt_interface_dis_spp_by_addr_and_chl_ext
 bt_err_t bt_interface_dis_spp_by_addr_and_chl(BTS2S_BD_ADDR *bd_addr, U8 srv_chl)
+{
+    bt_notify_device_mac_t *bd_addr_c;
+    bt_addr_convert_to_general(bd_addr, (bd_addr_t *)bd_addr_c);
+    LOG_E("deprecated - please use bt_interface_dis_spp_by_addr_and_chl_ext");
+    return bt_interface_dis_spp_by_addr_and_chl_ext(bd_addr_c, srv_chl);
+}
+
+bt_err_t bt_interface_dis_spp_by_addr_and_chl_ext(bt_notify_device_mac_t *rmt_addr, U8 srv_chl)
 {
 
     bt_err_t ret = BT_EOK;
@@ -923,8 +1065,11 @@ bt_err_t bt_interface_dis_spp_by_addr_and_chl(BTS2S_BD_ADDR *bd_addr, U8 srv_chl
     U8 idx = 0xff;
     bts2_spp_srv_inst_data *bts2_spp_srv_inst = NULL;
     bts2_spp_service_list *spp_service_list = NULL;
+    BTS2S_BD_ADDR bd_addr;
 
-    if (bt_spp_srv_check_addr_is_connected(bts2_app_data, bd_addr, &idx))
+    bt_addr_convert_to_bts((bd_addr_t *)rmt_addr, &bd_addr);
+
+    if (bt_spp_check_addr_is_connected(bts2_app_data, &bd_addr, &idx))
     {
         bts2_spp_srv_inst = &bts2_app_data->spp_srv_inst[idx];
 
@@ -940,9 +1085,22 @@ bt_err_t bt_interface_dis_spp_by_addr_and_chl(BTS2S_BD_ADDR *bd_addr, U8 srv_chl
         return ret;
     }
 
-    bt_spp_srv_disc_req(bts2_app_data, bts2_spp_srv_inst->device_id, srv_chl);
+    bt_spp_disc_req(bts2_app_data, bts2_spp_srv_inst->device_id, srv_chl);
 
     return ret;
+}
+
+U8 bt_interface_spp_get_device_id_by_addr(BTS2S_BD_ADDR *bd_addr)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    bts2_spp_srv_inst_data *bts2_spp_srv_inst = NULL;
+    U8 idx = 0xff;
+    if (bt_spp_check_addr_is_connected(bts2_app_data, bd_addr, &idx))
+    {
+        bts2_spp_srv_inst = &bts2_app_data->spp_srv_inst[idx];
+        return bts2_spp_srv_inst->device_id;
+    }
+    return 0xff;
 }
 
 bt_err_t bt_interface_dis_spp_all(void)
@@ -951,9 +1109,97 @@ bt_err_t bt_interface_dis_spp_all(void)
     bt_err_t ret = BT_EOK;
     bts2_app_stru *bts2_app_data = bts2g_app_p;
 
-    bt_spp_srv_disc_req_all(bts2_app_data);
+    bt_spp_disc_req_all(bts2_app_data);
     return ret;
 }
+
+void bt_interface_dump_all_spp_connection_info(void)
+{
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+
+    bt_spp_dump_all_spp_connect_information(bts2_app_data);
+}
+
+#if RT_USING_DFS
+bt_err_t bt_interface_spp_srv_send_file(bt_notify_device_mac_t *rmt_addr, U8 srv_chl, char *file_name)
+{
+    bt_err_t ret = BT_EOK;
+    bts2_app_stru *bts2_app_data = bts2g_app_p;
+    U8 idx = 0xff;
+    bts2_spp_srv_inst_data *bts2_spp_srv_inst = NULL;
+    bts2_spp_service_list *spp_service_list = NULL;
+    BTS2S_BD_ADDR bd_addr;
+
+    bt_addr_convert_to_bts((bd_addr_t *)rmt_addr, &bd_addr);
+
+    if (bt_spp_check_addr_is_connected(bts2_app_data, &bd_addr, &idx))
+    {
+        bts2_spp_srv_inst = &bts2_app_data->spp_srv_inst[idx];
+
+        if ((bts2_spp_srv_inst->service_list & (1 << srv_chl)) == 0)
+        {
+            ret = BT_ERROR_DISCONNECTED;
+            return ret;
+        }
+    }
+    else
+    {
+        ret = BT_ERROR_DISCONNECTED;
+        return ret;
+    }
+
+    bt_spp_select_file_to_send(bts2_app_data, bts2_spp_srv_inst->device_id, srv_chl, file_name);
+    return ret;
+}
+#endif
+
+#ifdef CFG_SPP_CLT
+bt_err_t bt_interface_spp_client_conn_req(BTS2S_BD_ADDR *bd_addr, U8 *uuid, U8 uuid_len)
+{
+    bt_err_t ret = BT_EOK;
+
+    if (uuid == NULL)
+    {
+        LOG_D("Please pass in a valid uuid\n");
+        ret = BT_ERROR_INPARAM;
+        return ret;
+    }
+
+    if ((uuid_len != 2) && (uuid_len != 4) && (uuid_len != 16))
+    {
+        LOG_D("Please pass in a valid uuid length\n");
+        ret = BT_ERROR_INPARAM;
+        return ret;
+    }
+
+    bt_spp_client_start_w4conn(bd_addr, uuid, uuid_len);
+
+    return ret;
+}
+
+bt_err_t bt_interface_spp_client_sdp_search_req(BTS2S_BD_ADDR *bd_addr, U8 *uuid, U8 uuid_len)
+{
+    bt_err_t ret = BT_EOK;
+
+    if (uuid == NULL)
+    {
+        LOG_D("Please pass in a valid uuid\n");
+        ret = BT_ERROR_INPARAM;
+        return ret;
+    }
+
+    if ((uuid_len != 2) && (uuid_len != 4) && (uuid_len != 16))
+    {
+        LOG_D("Please pass in a valid uuid length\n");
+        ret = BT_ERROR_INPARAM;
+        return ret;
+    }
+
+    bt_spp_client_start_sdp_search(bd_addr, uuid, uuid_len);
+
+    return ret;
+}
+#endif
 #endif
 
 /// @}  BT_SPP_SRV
@@ -1246,9 +1492,17 @@ bt_err_t bt_interface_set_wbs_status(U8 status)
   */
 
 #ifdef BT_FINSH_PAN
+// @deprecated - please use bt_interface_update_pan_addr_ext
 void bt_interface_update_pan_addr(BTS2S_BD_ADDR *bd_addr)
 {
     bt_pan_update_addr(bd_addr);
+}
+
+void bt_interface_update_pan_addr_ext(bt_notify_device_mac_t *local_addr)
+{
+    BTS2S_BD_ADDR bd_addr;
+    bt_addr_convert_to_bts((bd_addr_t *)local_addr, &bd_addr);
+    bt_pan_update_addr(&bd_addr);
 }
 
 BOOL bt_interface_check_pan_in_sniff(void)

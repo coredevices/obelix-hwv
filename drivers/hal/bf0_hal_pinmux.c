@@ -94,8 +94,22 @@ __HAL_ROM_USED volatile uint32_t *HAL_PIN_Get_Base(int hcpu)
   */
 __HAL_ROM_USED void HAL_PIN_Select(int pad, int func, int hcpu)
 {
-    volatile uint32_t *pin = HAL_PIN_Get_Base(hcpu);
+    volatile uint32_t *pin;
     uint32_t val;
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
+
+    if (pad < PIN_PAD_MAX_H)
+    {
+        hcpu = 1;
+    }
+    else
+    {
+        hcpu = 0;
+        subsys_pad_idx -= PIN_PAD_UNDEF_L;
+    }
+
+    pin = HAL_PIN_Get_Base(hcpu);
 #ifdef hwp_pbr
     if (!hcpu && (pad >= PAD_PBR0))
     {
@@ -108,7 +122,7 @@ __HAL_ROM_USED void HAL_PIN_Select(int pad, int func, int hcpu)
     else
 #endif /* hwp_pbr */
     {
-        pin += (pad - 1);
+        pin += (subsys_pad_idx - 1);
         val = *pin;
         val &= ~(HPSYS_PINMUX_PAD_PA00_FSEL_Msk);
         val |= (func << HPSYS_PINMUX_PAD_PA00_FSEL_Pos);
@@ -1046,6 +1060,11 @@ __weak int HAL_PIN_Func2Idx(int pad, pin_function func,  int hcpu)
     int i;
     unsigned short *func_array;
 
+    if (pad >= PIN_PAD_UNDEF_L)
+    {
+        pad -= PIN_PAD_UNDEF_L;
+    }
+
     func_array = (unsigned short *)(hcpu ? pin_pad_func_hcpu[pad] : pin_pad_func_lcpu[pad]);
 
     for (i = 0; i < PIN_FUNC_SEL_NUM; i++)
@@ -1057,6 +1076,11 @@ __weak int HAL_PIN_Func2Idx(int pad, pin_function func,  int hcpu)
 __weak pin_function HAL_PIN_Idx2Func(int pad, int idx,  int hcpu)
 {
     pin_function r;
+
+    if (pad >= PIN_PAD_UNDEF_L)
+    {
+        pad -= PIN_PAD_UNDEF_L;
+    }
 
     if (hcpu)
         r = pin_pad_func_hcpu[pad][idx];
@@ -1080,10 +1104,20 @@ __HAL_ROM_USED int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
     volatile uint32_t *pin;
     int r = -1, i;
     uint32_t val;
-
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
 
     if (pad)
     {
+        if (pad < PIN_PAD_MAX_H)
+        {
+            hcpu = 1;
+        }
+        else
+        {
+            hcpu = 0;
+            subsys_pad_idx -= PIN_PAD_UNDEF_L;
+        }
         pin = HAL_PIN_Get_Base(hcpu);
         if (hcpu)
         {
@@ -1148,7 +1182,7 @@ __HAL_ROM_USED int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
             else
 #endif /* hwp_pbr */
             {
-                val = *(pin + pad - 1);
+                val = *(pin + subsys_pad_idx - 1);
                 val &= ~(HPSYS_PINMUX_PAD_PA00_FSEL_Msk | HPSYS_PINMUX_PAD_PA00_PE_Msk
                          | HPSYS_PINMUX_PAD_PA00_PS_Msk);
                 flags &= (HPSYS_PINMUX_PAD_PA00_PS_Msk | HPSYS_PINMUX_PAD_PA00_PE_Msk);
@@ -1158,7 +1192,7 @@ __HAL_ROM_USED int HAL_PIN_Set(int pad, pin_function func, int flags, int hcpu)
                  * Then IE could not be enabled by calling HAL_PIN_Set, HAL_PIN_SetMode needs to be called as well.
                  * To avoid such redundancy, alwasy enable IE for normal function except pin for analog function.
                  */
-                *(pin + pad - 1) = val | i | flags | HPSYS_PINMUX_PAD_PA00_IE_Msk;
+                *(pin + subsys_pad_idx - 1) = val | i | flags | HPSYS_PINMUX_PAD_PA00_IE_Msk;
                 r = 0;
             }
         }
@@ -1179,6 +1213,18 @@ int HAL_PIN_Set_Analog(int pad, int hcpu)
 {
     volatile uint32_t *pin;
     uint32_t val;
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
+
+    if (pad < PIN_PAD_MAX_H)
+    {
+        hcpu = 1;
+    }
+    else
+    {
+        hcpu = 0;
+        subsys_pad_idx -= PIN_PAD_UNDEF_L;
+    }
 
 #ifdef hwp_pbr
     if (!hcpu && (pad >= PAD_PBR0))
@@ -1192,9 +1238,9 @@ int HAL_PIN_Set_Analog(int pad, int hcpu)
 #endif /* hwp_pbr */
     {
         pin = HAL_PIN_Get_Base(hcpu);
-        val = *(pin + pad - 1);
+        val = *(pin + subsys_pad_idx - 1);
         val &= ~(HPSYS_PINMUX_PAD_PA00_FSEL_Msk | HPSYS_PINMUX_PAD_PA00_PE_Msk | HPSYS_PINMUX_PAD_PA00_IE_Msk);
-        *(pin + pad - 1) = val | PIN_ANALOG_FUNC;
+        *(pin + subsys_pad_idx - 1) = val | PIN_ANALOG_FUNC;
 
 #ifndef SF32LB55X
         HAL_PIN_SetAonPE(pad, 0, hcpu);
@@ -1218,6 +1264,22 @@ __HAL_ROM_USED int HAL_PIN_Update(int pad, uint32_t flags, uint32_t mask, int hc
     volatile uint32_t *pin;
     int r = -1;
     uint32_t val;
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
+
+    if (pad < PIN_PAD_MAX_H)
+    {
+        hcpu = 1;
+        HAL_RCC_HCPU_enable(HPSYS_RCC_ENR1_PINMUX1, 1);
+        pin = (volatile uint32_t *)PINMUX1_BASE;
+    }
+    else
+    {
+        hcpu = 0;
+        subsys_pad_idx -= PIN_PAD_UNDEF_L;
+        HAL_RCC_LCPU_enable(LPSYS_RCC_ENR1_PINMUX2, 1);
+        pin = (volatile uint32_t *)PINMUX2_BASE;
+    }
 
 #ifdef hwp_pbr
     if (!hcpu && (pad >= PAD_PBR0))
@@ -1226,22 +1288,12 @@ __HAL_ROM_USED int HAL_PIN_Update(int pad, uint32_t flags, uint32_t mask, int hc
     }
 #endif /* hwp_pbr */
 
-    if (pad)
+    if (subsys_pad_idx)
     {
-        if (hcpu)
-        {
-            HAL_RCC_HCPU_enable(HPSYS_RCC_ENR1_PINMUX1, 1);
-            pin = (volatile uint32_t *)PINMUX1_BASE;
-        }
-        else
-        {
-            HAL_RCC_LCPU_enable(LPSYS_RCC_ENR1_PINMUX2, 1);
-            pin = (volatile uint32_t *)PINMUX2_BASE;
-        }
-        val = *(pin + pad - 1);
+        val = *(pin + subsys_pad_idx - 1);
         val &= ~(mask);
         val |= flags;
-        *(pin + pad - 1) = val;
+        *(pin + subsys_pad_idx - 1) = val;
         r = 0;
     }
     return r;
@@ -1260,20 +1312,25 @@ __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p
     volatile uint32_t *pin;
     int r = -1, i;
     uint32_t val, flags;
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
 
-    if (pad)
+    if (pad < PIN_PAD_MAX_H)
     {
-        if (hcpu)
-        {
-            HAL_RCC_HCPU_enable(HPSYS_RCC_ENR1_PINMUX1, 1);
-            pin = (volatile uint32_t *)PINMUX1_BASE;
-        }
-        else
-        {
-            HAL_RCC_LCPU_enable(LPSYS_RCC_ENR1_PINMUX2, 1);
-            pin = (volatile uint32_t *)PINMUX2_BASE;
-        }
+        hcpu = 1;
+        HAL_RCC_HCPU_enable(HPSYS_RCC_ENR1_PINMUX1, 1);
+        pin = (volatile uint32_t *)PINMUX1_BASE;
+    }
+    else
+    {
+        hcpu = 0;
+        subsys_pad_idx -= PIN_PAD_UNDEF_L;
+        HAL_RCC_LCPU_enable(LPSYS_RCC_ENR1_PINMUX2, 1);
+        pin = (volatile uint32_t *)PINMUX2_BASE;
+    }
 
+    if (subsys_pad_idx)
+    {
 #ifdef hwp_pbr
         if (!hcpu && (pad >= PAD_PBR0))
         {
@@ -1297,7 +1354,7 @@ __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p
         else
 #endif /* hwp_pbr */
         {
-            val = *(pin + pad - 1);
+            val = *(pin + subsys_pad_idx - 1);
             i = GET_REG_VAL(val, HPSYS_PINMUX_PAD_PA00_FSEL_Msk, HPSYS_PINMUX_PAD_PA00_FSEL_Pos);
             flags = val & (HPSYS_PINMUX_PAD_PA00_PE_Msk | HPSYS_PINMUX_PAD_PA00_PS_Msk
                            | HPSYS_PINMUX_PAD_PA00_IE_Msk);
@@ -1343,7 +1400,6 @@ __HAL_ROM_USED int HAL_PIN_Get(int pad, pin_function *p_func, PIN_ModeTypeDef *p
         }
         }
 
-
         if (i < PIN_FUNC_SEL_NUM)
         {
             *p_func = HAL_PIN_Idx2Func(pad, i, hcpu);
@@ -1370,17 +1426,23 @@ __HAL_ROM_USED int HAL_PIN_Set_DS0(int pad, int hcpu, uint8_t set)
 {
     volatile uint32_t *pin;
     int r = -1;
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
 
-    if (pad)
+    if (pad < PIN_PAD_MAX_H)
     {
-        if (hcpu)
-        {
-            pin = (volatile uint32_t *)PINMUX1_BASE;
-        }
-        else
-        {
-            pin = (volatile uint32_t *)PINMUX2_BASE;
-        }
+        hcpu = 1;
+        pin = (volatile uint32_t *)PINMUX1_BASE;
+    }
+    else
+    {
+        hcpu = 0;
+        subsys_pad_idx -= PIN_PAD_UNDEF_L;
+        pin = (volatile uint32_t *)PINMUX2_BASE;
+    }
+
+    if (subsys_pad_idx)
+    {
 #ifdef hwp_pbr
         if (!hcpu && (pad >= PAD_PBR0))
         {
@@ -1399,11 +1461,11 @@ __HAL_ROM_USED int HAL_PIN_Set_DS0(int pad, int hcpu, uint8_t set)
         {
             if (set)
             {
-                *(pin + pad - 1) |= HPSYS_PINMUX_PAD_PA00_DS0;
+                *(pin + subsys_pad_idx - 1) |= HPSYS_PINMUX_PAD_PA00_DS0;
             }
             else
             {
-                *(pin + pad - 1) &= ~HPSYS_PINMUX_PAD_PA00_DS0;
+                *(pin + subsys_pad_idx - 1) &= ~HPSYS_PINMUX_PAD_PA00_DS0;
             }
         }
         r = 0;
@@ -1422,17 +1484,23 @@ __HAL_ROM_USED int HAL_PIN_Set_DS1(int pad, int hcpu, uint8_t set)
 {
     volatile uint32_t *pin;
     int r = -1;
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
 
-    if (pad)
+    if (pad < PIN_PAD_MAX_H)
     {
-        if (hcpu)
-        {
-            pin = (volatile uint32_t *)PINMUX1_BASE;
-        }
-        else
-        {
-            pin = (volatile uint32_t *)PINMUX2_BASE;
-        }
+        hcpu = 1;
+        pin = (volatile uint32_t *)PINMUX1_BASE;
+    }
+    else
+    {
+        hcpu = 0;
+        subsys_pad_idx -= PIN_PAD_UNDEF_L;
+        pin = (volatile uint32_t *)PINMUX2_BASE;
+    }
+
+    if (subsys_pad_idx)
+    {
 #ifdef hwp_pbr
         if (!hcpu && (pad >= PAD_PBR0))
         {
@@ -1451,11 +1519,11 @@ __HAL_ROM_USED int HAL_PIN_Set_DS1(int pad, int hcpu, uint8_t set)
         {
             if (set)
             {
-                *(pin + pad - 1) |= HPSYS_PINMUX_PAD_PA00_DS1;
+                *(pin + subsys_pad_idx - 1) |= HPSYS_PINMUX_PAD_PA00_DS1;
             }
             else
             {
-                *(pin + pad - 1) &= ~HPSYS_PINMUX_PAD_PA00_DS1;
+                *(pin + subsys_pad_idx - 1) &= ~HPSYS_PINMUX_PAD_PA00_DS1;
             }
         }
         r = 0;
@@ -1471,8 +1539,22 @@ __HAL_ROM_USED int HAL_PIN_SetMode(int pad, int hcpu, PIN_ModeTypeDef mode)
     uint32_t val;
     uint32_t mask;
     uint32_t reg;
+    /* starting from 0, 1 is the first valid pad */
+    int subsys_pad_idx = pad;
 
-    if (pad)
+    if (pad < PIN_PAD_MAX_H)
+    {
+        hcpu = 1;
+        pin = (volatile uint32_t *)PINMUX1_BASE;
+    }
+    else
+    {
+        hcpu = 0;
+        subsys_pad_idx -= PIN_PAD_UNDEF_L;
+        pin = (volatile uint32_t *)PINMUX2_BASE;
+    }
+
+    if (subsys_pad_idx)
     {
 #ifdef SF32LB56X
         if (hcpu && (hwp_pmuc->LXT_CR & PMUC_LXT_CR_EN)
@@ -1482,16 +1564,6 @@ __HAL_ROM_USED int HAL_PIN_SetMode(int pad, int hcpu, PIN_ModeTypeDef mode)
             return r;
         }
 #endif /* SF32LB56X */
-
-        if (hcpu)
-        {
-            pin = (volatile uint32_t *)PINMUX1_BASE;
-        }
-        else
-        {
-            pin = (volatile uint32_t *)PINMUX2_BASE;
-        }
-
 
 #ifdef hwp_pbr
         if (!hcpu && (pad >= PAD_PBR0))
@@ -1548,9 +1620,8 @@ __HAL_ROM_USED int HAL_PIN_SetMode(int pad, int hcpu, PIN_ModeTypeDef mode)
         else
 #endif /* hwp_pbr */
         {
-            reg = *(pin + pad - 1);
+            reg = *(pin + subsys_pad_idx - 1);
             mask = (HPSYS_PINMUX_PAD_PA00_IE_Msk | HPSYS_PINMUX_PAD_PA00_PS_Msk | HPSYS_PINMUX_PAD_PA00_PE_Msk);
-
 
             switch (mode)
             {
@@ -1595,7 +1666,7 @@ __HAL_ROM_USED int HAL_PIN_SetMode(int pad, int hcpu, PIN_ModeTypeDef mode)
             reg &= ~mask;
             reg |= (val & mask);
 
-            *(pin + pad - 1) = reg;
+            *(pin + subsys_pad_idx - 1) = reg;
 
 #ifndef SF32LB55X
             HAL_PIN_SetAonPE(pad, val, hcpu);

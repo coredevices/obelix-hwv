@@ -778,6 +778,11 @@ static void monitor_cb(lv_disp_drv_t *drv, uint32_t time, uint32_t px)
 
     //    lv_obj_invalidate(lv_scr_act());
 }
+#if (0 == LV_LOG_TRACE)
+    #include <stdio.h>
+    #undef LV_LOG
+    #define LV_LOG(...) printf(__VA_ARGS__)
+#endif
 
 static void generate_report(void)
 {

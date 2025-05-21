@@ -15,7 +15,7 @@
 
 //#include "EventRecorder.h"
 #include "lv_ext_resource_manager.h"
-#include "bf0_lib.h"
+#include "cell_transform.h"
 #include "log.h"
 #include "custom_trans_anim.h"
 
@@ -57,9 +57,9 @@ LV_IMG_DECLARE(img_world_clock);
 
 /*a virtual circle include gap between icons*/
 #if (LV_VER_RES_MAX > LV_HOR_RES_MAX)
-    #define ICON_OUTER_RADIUS  (LV_VER_RES_MAX / 12)
+    #define ICON_OUTER_RADIUS  (LV_VER_RES_MAX / 9)
 #else
-    #define ICON_OUTER_RADIUS  (LV_HOR_RES_MAX / 12)
+    #define ICON_OUTER_RADIUS  (LV_HOR_RES_MAX / 9)
 #endif
 
 #define ICON_OUTER_DIAMETER  (ICON_OUTER_RADIUS * 2)

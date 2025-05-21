@@ -48,7 +48,9 @@
 #include <board.h>
 #include <string.h>
 #include "data_service_subscriber.h"
-#include "ancs_service.h"
+#ifdef BLUETOOTH
+    #include "ancs_service.h"
+#endif /* BLUETOOTH */
 #include "flashdb.h"
 #include "drv_flash.h"
 #ifdef BLUETOOTH

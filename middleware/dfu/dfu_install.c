@@ -53,7 +53,7 @@
 
 #include "rtconfig.h"
 
-#ifdef OTA_55X
+#if defined(OTA_55X)
 
 #include "dfu.h"
 #include "dfu_internal.h"
@@ -616,11 +616,11 @@ int dfu_img_install_lcpu_rom_patch(dfu_ctrl_env_t *env)
     return r;
 }
 
-int dfu_image_install_flash_offline(dfu_ctrl_env_t *env, uint8_t image_id, uint32_t length, uint32_t image_offset, uint8_t image_flag)
+int dfu_image_install_flash_package(dfu_ctrl_env_t *env, uint8_t image_id, uint32_t length, uint32_t image_offset, uint8_t image_flag)
 {
     if (image_flag == 0)
     {
-        LOG_I("dfu_image_install_flash_offline copy");
+        LOG_I("dfu_image_install_flash_package copy");
         dfu_image_header_int_t *header = malloc(sizeof(dfu_image_header_int_t));
         header->flag = 0;
         header->img_id = image_id;
@@ -650,7 +650,7 @@ int dfu_image_install_flash_offline(dfu_ctrl_env_t *env, uint8_t image_id, uint3
         return 0;
     }
 
-    LOG_I("dfu_image_install_flash_offline");
+    LOG_I("dfu_image_install_flash_package");
     dfu_image_header_int_t *header = malloc(sizeof(dfu_image_header_int_t));
 
     uint8_t *dfu_key = NULL;

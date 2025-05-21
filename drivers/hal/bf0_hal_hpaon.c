@@ -289,7 +289,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_HPAON_EnableWakeupSrc(HPAON_WakeupSrcTypeDe
 
 #ifndef SF32LB55X
 
-        if (src >= HPAON_WAKEUP_SRC_PIN8)
+#ifdef HPSYS_AON_CR3_PIN16_MODE
+        if (src >= HPAON_WAKEUP_SRC_PIN16)
+        {
+            src -= 16;
+            cr = &hwp_hpsys_aon->CR3;
+        }
+#else
+        if (0)
+        {
+            /* do nothing */
+        }
+#endif
+        else if (src >= HPAON_WAKEUP_SRC_PIN8)
         {
             src -= 8;
             cr = &hwp_hpsys_aon->CR2;
@@ -437,7 +449,21 @@ __HAL_ROM_USED  HAL_StatusTypeDef HAL_HPAON_GetWakeupPinMode(uint8_t wakeup_pin,
 #ifdef SF32LB55X
     cr = &hwp_hpsys_aon->CR;
 #else
-    if (wakeup_pin > 7)
+
+#ifdef HPSYS_AON_CR3_PIN16_MODE
+    if (wakeup_pin > 15)
+    {
+        wakeup_pin -= 16;
+        cr = &hwp_hpsys_aon->CR3;
+
+    }
+#else
+    if (0)
+    {
+        /* do nothing */
+    }
+#endif /* HPSYS_AON_CR3_PIN16_MODE */
+    else if (wakeup_pin > 7)
     {
         wakeup_pin -= 8;
         cr = &hwp_hpsys_aon->CR2;

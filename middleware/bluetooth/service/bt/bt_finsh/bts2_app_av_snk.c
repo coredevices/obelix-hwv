@@ -61,7 +61,10 @@
 #if defined(AUDIO_USING_MANAGER) && defined(AUDIO_BT_AUDIO)
     #include "audio_server.h"
 #endif
-
+#if PKG_USING_VBE_DRC
+    #include "vbe_eq_drc_api.h"
+    #define A2DP_VBE_OUT_BUFFER_SIZE     8192
+#endif
 uint8_t   bts2s_avsnk_openFlag;//0x00:dont open a2dp profile; 0x01:open a2dp profile;
 uint8_t   frms_per_payload;
 
@@ -80,6 +83,8 @@ extern bts2_app_stru *bts2g_app_p;
 
 #ifdef CFG_AV_AAC
     static NeAACDecHandle hAac;
+    static unsigned long  aac_samplerate;
+    static uint8_t        is_aac_inited;
 #endif
 
 
@@ -275,7 +280,6 @@ static U8 *play_data_decode(bts2s_av_inst_data *inst, U16 *out_len)
         char *faad_copyright_string = NULL;
         NeAACDecFrameInfo frameInfo;
         NeAACDecConfigurationPtr config;
-        unsigned long samplerate;
         unsigned char channels;
         void *sample_buffer;
 
@@ -287,11 +291,15 @@ static U8 *play_data_decode(bts2s_av_inst_data *inst, U16 *out_len)
 #endif
         // Check if decoder has the needed capabilities
         // Open the library
-        char err = NeAACDecInit(hAac, (unsigned char *)fin, fileread, &samplerate,
-                                &channels);
-        if (err != 0)
+        if (!is_aac_inited)
         {
-            RT_ASSERT(0);
+            char err = NeAACDecInit(hAac, (unsigned char *)fin, fileread, &aac_samplerate,
+                                    &channels);
+            if (err != 0)
+            {
+                RT_ASSERT(0);
+            }
+            is_aac_inited = 1;
         }
         unsigned long frame_index = 0;
         frameInfo.bytesconsumed = 0;
@@ -346,6 +354,9 @@ static void decode_playback_thread(void *args)
     U8  is_stopped = 1;
     U8  debug_tx_cnt = 0;
     int  ret_write = 0;
+#if PKG_USING_VBE_DRC
+    uint32_t vbe_out_size;
+#endif
     g_playback_evt = rt_event_create("playback_evt", RT_IPC_FLAG_FIFO);
 
     while (1)
@@ -372,22 +383,45 @@ static void decode_playback_thread(void *args)
             //interval = decode_len * 1000 / BT_MUSIC_SAMPLERATE / 4; //use interval to rt_event_recv will crash rt_free
             USER_TRACE("bt_music: open len=%d\r\n", decode_len);
 
-            USER_TRACE("sbc decode src_len:%d, dst_len:%d\n", inst_data->snk_data.pt_curdata->len, decode_len);
-
+            USER_TRACE("decode src_len:%d, dst_len:%d\n", inst_data->snk_data.pt_curdata->len, decode_len);
+            if (decode_len == 0)
+            {
+                rt_thread_mdelay(5);
+                rt_event_send(g_playback_evt, PLAYBACK_START_EVENT_FLAG);
+                continue;
+            }
 
             audio_parameter_t param = {0};
-            param.write_samplerate = inst_data->con[inst_data->con_idx].act_cfg.sample_freq;
+            if (inst_data->snk_data.codec == AV_SBC)
+            {
+                param.write_samplerate = inst_data->con[inst_data->con_idx].act_cfg.sample_freq;
+            }
+#ifdef CFG_AV_AAC
+            else if (inst_data->snk_data.codec == AV_MPEG24_AAC)
+            {
+                param.write_samplerate = inst_data->con[inst_data->con_idx].act_aac_cfg.sample_freq;
+            }
+#endif
+            else
+            {
+                USER_TRACE("Unsupported codec!!!!!\n");
+                RT_ASSERT(0);
+            }
             param.write_channnel_num = 2;
             param.write_bits_per_sample = 16;
             param.write_cache_size = 8192;
             debug_tx_cnt = 0;
             inst_data->snk_data.audio_client = audio_open(AUDIO_TYPE_BT_MUSIC, AUDIO_TX, &param, audio_bt_music_client_cb, NULL);
             is_stopped = 0;
+#if PKG_USING_VBE_DRC
+            inst_data->snk_data.vbe_out = rt_malloc(A2DP_VBE_OUT_BUFFER_SIZE);
+            RT_ASSERT(inst_data->snk_data.vbe_out);
+            inst_data->snk_data.vbe = vbe_drc_open(44100, 2, 16);
+            vbe_out_size = vbe_drc_process(inst_data->snk_data.vbe, (int16_t *)decode_data, decode_len / 2, (int16_t *)inst_data->snk_data.vbe_out, A2DP_VBE_OUT_BUFFER_SIZE);
+#endif
         }
         if (evt & PLAYBACK_GETDATA_EVENT_FLAG)
         {
-            U16 decode_len_old = decode_len;
-
             if (debug_tx_cnt == 0)
             {
                 USER_TRACE("a2dp get data,total:%d,full:%d,empty:%d, curr %d\r\n", inst_data->snk_data.playlist.total_num,
@@ -402,6 +436,7 @@ static void decode_playback_thread(void *args)
             }
         }
 
+#if !defined(CFG_AV_AAC)
         if (decode_len == 0)
         {
             //decode_data = play_data_decode(inst_data, &decode_len);
@@ -409,10 +444,20 @@ static void decode_playback_thread(void *args)
             decode_data = inst_data->snk_data.decode_buf;
             memset(decode_data, 0, decode_len);
         }
+#else
+        if (decode_len == 0)
+        {
+            decode_data = play_data_decode(inst_data, &decode_len);
+        }
+#endif
 
         while (decode_len > 0)
         {
+#if PKG_USING_VBE_DRC
+            ret_write = audio_write(inst_data->snk_data.audio_client, inst_data->snk_data.vbe_out, vbe_out_size);
+#else
             ret_write = audio_write(inst_data->snk_data.audio_client, decode_data, decode_len);
+#endif
             if (ret_write < 0)
             {
                 USER_TRACE("playback write ret:%d\n", ret_write);
@@ -425,14 +470,23 @@ static void decode_playback_thread(void *args)
             else
             {
                 decode_data = play_data_decode(inst_data, &decode_len);
+#if PKG_USING_VBE_DRC
+                vbe_out_size = vbe_drc_process(inst_data->snk_data.vbe, (int16_t *)decode_data, decode_len / 2, (int16_t *)inst_data->snk_data.vbe_out, A2DP_VBE_OUT_BUFFER_SIZE);
+#endif
             }
         }
-
     }
 }
+
+#ifdef CFG_AV_AAC
+    #define DEPLAYBACK_STACK_SIZE   (1024 * 16)
+#else
+    #define DEPLAYBACK_STACK_SIZE   1024
+#endif
+
 #if defined(SF32LB52X)
 
-    static rt_uint8_t deplayback_thread_stack[1024];
+    static rt_uint8_t deplayback_thread_stack[DEPLAYBACK_STACK_SIZE];
     static struct rt_thread deplayback_thread;
 #endif
 static int audio_decode_thread_init(void)
@@ -449,7 +503,7 @@ static int audio_decode_thread_init(void)
                    RT_THREAD_TICK_DEFAULT);
     g_playback_thread = &deplayback_thread;
 #else
-    g_playback_thread = rt_thread_create("deplayback_th", decode_playback_thread, NULL, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
+    g_playback_thread = rt_thread_create("deplayback_th", decode_playback_thread, NULL, DEPLAYBACK_STACK_SIZE, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
 
 #endif
     if (g_playback_thread)
@@ -481,6 +535,12 @@ static void stop_audio_playback(bts2s_av_inst_data *inst)
         audio_close(inst->snk_data.audio_client);
         inst->snk_data.audio_client = NULL;
 #endif
+#if PKG_USING_VBE_DRC
+        vbe_drc_close(inst->snk_data.vbe);
+        rt_free(inst->snk_data.vbe_out);
+        inst->snk_data.vbe = NULL;
+        inst->snk_data.vbe_out = NULL;
+#endif
     }
 
     list_all_free(&(inst->snk_data.playlist));
@@ -507,6 +567,13 @@ static void stop_audio_playback_temporarily(bts2s_av_inst_data *inst)
         audio_close(inst->snk_data.audio_client);
         inst->snk_data.audio_client = NULL;
 #endif
+#if PKG_USING_VBE_DRC
+        vbe_drc_close(inst->snk_data.vbe);
+        rt_free(inst->snk_data.vbe_out);
+        inst->snk_data.vbe = NULL;
+        inst->snk_data.vbe_out = NULL;
+#endif
+
     }
 
     list_all_free(&(inst->snk_data.playlist));
@@ -855,11 +922,20 @@ U16 bt_avsnk_calculate_decode_buffer_size(bts2s_av_inst_data *inst, U8 con_idx)
  *----------------------------------------------------------------------------*/
 void bt_avsnk_hdl_disc_handler(bts2s_av_inst_data *inst, uint8_t con_idx)
 {
-
+    U8 codec = inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.codec;
 #if defined(AUDIO_USING_MANAGER) && defined(AUDIO_BT_AUDIO)
     stop_audio_playback(inst);
 #endif
     bts2_sbc_decode_completed();
+
+#ifdef CFG_AV_AAC
+    if ((codec == AV_MPEG24_AAC) && is_aac_inited)
+    {
+        is_aac_inited = 0;
+        NeAACDecClose(hAac);
+        hAac = NULL;
+    }
+#endif
 
 }
 
@@ -902,7 +978,38 @@ int8_t bt_avsnk_hdl_start_cfm(bts2s_av_inst_data *inst, uint8_t con_idx)
 
 void bt_avsnk_close_handler(bts2s_av_inst_data *inst, uint8_t con_idx)
 {
+    U8 codec = inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.codec;
+    inst->snk_data.reveive_start = 0;
+#if defined(AUDIO_USING_MANAGER) && defined(AUDIO_BT_AUDIO)
+    stop_audio_playback(inst);
+#endif
 
+#ifdef CFG_AV_AAC
+    if ((codec == AV_MPEG24_AAC) && is_aac_inited)
+    {
+        is_aac_inited = 0;
+        NeAACDecClose(hAac);
+        hAac = NULL;
+    }
+#endif
+}
+
+void bt_avsnk_abort_handler(bts2s_av_inst_data *inst, uint8_t con_idx)
+{
+    U8 codec = inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.codec;
+    inst->snk_data.reveive_start = 0;
+#if defined(AUDIO_USING_MANAGER) && defined(AUDIO_BT_AUDIO)
+    stop_audio_playback(inst);
+#endif
+
+#ifdef CFG_AV_AAC
+    if ((codec == AV_MPEG24_AAC) && is_aac_inited)
+    {
+        is_aac_inited = 0;
+        NeAACDecClose(hAac);
+        hAac = NULL;
+    }
+#endif
 }
 
 // extern void bt_hid_reset_num_count_drag_down(void);
@@ -949,9 +1056,10 @@ uint8_t bt_avsnk_hdl_start_ind(bts2s_av_inst_data *inst, BTS2S_AV_START_IND *msg
                 }
                 else
                 {
-                    //TODO: AAC handle
 #ifdef CFG_AV_AAC
+                    USER_TRACE("aac open\n");
                     hAac = NeAACDecOpen();
+                    is_aac_inited = 0;
                     // Get the current config
                     NeAACDecConfigurationPtr conf =
                         NeAACDecGetCurrentConfiguration(hAac);
@@ -982,23 +1090,23 @@ uint8_t bt_avsnk_hdl_start_ind(bts2s_av_inst_data *inst, BTS2S_AV_START_IND *msg
     if ((res == AV_ACPT) && (i == msg->list_len))
     {
         USER_TRACE(">> accept to start the stream\n");
-// #ifdef CFG_HID
-//         bt_hid_reset_num_count_drag_down();
-// #endif
 
         inst->snk_data.play_rd_idx = inst->snk_data.play_wr_idx = 0;
         inst->snk_data.codec = codec;
 #if defined(AUDIO_USING_MANAGER) && defined(AUDIO_BT_AUDIO)
-        list_all_free(&(inst->snk_data.playlist));
-        if (inst->snk_data.decode_buf == NULL)
+        if (inst->snk_data.codec == AV_SBC)
         {
-            U16 decode_buffer_size;
-            decode_buffer_size = bt_avsnk_calculate_decode_buffer_size(inst, con_idx);
-            USER_TRACE("decode_buffer_size = %d\n", decode_buffer_size);
-            inst->snk_data.decode_buf = bmalloc(decode_buffer_size);
-            inst->snk_data.decode_buf_len = decode_buffer_size;
+            if (inst->snk_data.decode_buf == NULL)
+            {
+                U16 decode_buffer_size;
+                decode_buffer_size = bt_avsnk_calculate_decode_buffer_size(inst, con_idx);
+                USER_TRACE("decode_buffer_size = %d\n", decode_buffer_size);
+                inst->snk_data.decode_buf = bmalloc(decode_buffer_size);
+                inst->snk_data.decode_buf_len = decode_buffer_size;
+            }
+            BT_OOM_ASSERT(inst->snk_data.decode_buf);
         }
-        BT_OOM_ASSERT(inst->snk_data.decode_buf);
+        list_all_free(&(inst->snk_data.playlist));
 #endif
         inst->snk_data.reveive_start = 1;
 
@@ -1048,8 +1156,12 @@ void bt_avsnk_hdl_suspend_ind(bts2s_av_inst_data *inst, uint8_t con_idx)
 #endif
 
 #ifdef CFG_AV_AAC
-    if (codec == AV_MPEG24_AAC)
+    if ((codec == AV_MPEG24_AAC) && is_aac_inited)
+    {
+        is_aac_inited = 0;
         NeAACDecClose(hAac);
+        hAac = NULL;
+    }
 #endif
 }
 /*----------------------------------------------------------------------------*
@@ -1076,7 +1188,7 @@ void bt_avsnk_hdl_streamdata_ind(bts2s_av_inst_data *inst, uint8_t con_idx, BTS2
     codec = inst->local_seid_info[inst->con[con_idx].local_seid_idx].local_seid.codec;
 
 
-    if (bt_av_get_slience_filter_enable())
+    if (bt_av_get_slience_filter_enable() && (codec == AV_SBC))
     {
         if (msg->len <= (AV_FIXED_MEDIA_PKT_HDR_SIZE + 1))
         {

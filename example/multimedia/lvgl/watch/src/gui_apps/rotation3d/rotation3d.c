@@ -52,7 +52,7 @@ LV_IMG_DECLARE(d3d_rotate);
 **/
 
 
-//#define ROTATION_3D_CACHE_SRC
+#define ROTATION_3D_CACHE_SRC
 
 typedef struct
 {
@@ -323,7 +323,11 @@ static void on_pause(void)
 #ifdef ROTATION_3D_CACHE_SRC
     if (rotation3d.src_image_sram)
     {
-        lv_img_buf_free(rotation3d.src_image_sram);
+        rotation3d.src_image[0] = (lv_img_dsc_t *) LV_EXT_IMG_GET(d3d_rotate);
+        rotation3d.src_image[1] = (lv_img_dsc_t *) LV_EXT_IMG_GET(d3d_rotate);
+
+
+        app_cache_copy_free(rotation3d.src_image_sram);
         rotation3d.src_image_sram = NULL;
     }
 #endif /* ROTATION_3D_CACHE_SRC */
@@ -344,15 +348,14 @@ static void on_pause(void)
 static void on_resume(void)
 {
 #ifdef ROTATION_3D_CACHE_SRC
-    lv_img_dsc_t *p_src = rotation3d.src_image[0];
-    rotation3d.src_image_sram = lv_img_buf_alloc(p_src->header.w, p_src->header.h, p_src->header.cf);
-    RT_ASSERT(rotation3d.src_image_sram);
-    lv_memcpy((void *)rotation3d.src_image_sram->data, p_src->data, p_src->data_size);
-    rotation3d.src_image[0] = rotation3d.src_image_sram;
-    rotation3d.src_image[1] = rotation3d.src_image_sram;
+    if (!rotation3d.src_image_sram)
+    {
+        rotation3d.src_image_sram = app_cache_copy_alloc(rotation3d.src_image[0], ROTATE_MEM);
+        RT_ASSERT(rotation3d.src_image_sram);
 
-
-    lv_img_set_src(rotation3d.image[0], rotation3d.src_image[0]);
+        rotation3d.src_image[0] = rotation3d.src_image_sram;
+        rotation3d.src_image[1] = rotation3d.src_image_sram;
+    }
 #endif
 
     if (!rotation3d.redraw_task)

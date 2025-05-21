@@ -503,6 +503,7 @@ FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ0[] =
     {0x1c, 0x40, 0x18, 0, 0x1000000},   //GM25Q128A
     {0x68, 0x40, 0x17, 0, 0x800000},   //BY25Q64ES_RDID
     {0x68, 0x40, 0x18, 0, 0x1000000},   //BY25Q128ES_RDID
+    {0x0B, 0x40, 0X18, 0, 0x1000000},   //XT25F128F_RDID
     {FLASH_INVALID_ID, 0, 0, 0, 0},      //last one
 };
 
@@ -519,10 +520,8 @@ FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ1[] =
     {0xef, 0x60, 0x18, 0, 0x1000000},   //W25Q128JW_RDID
     {0xef, 0x40, 0x18, 0, 0x1000000},   //W25Q128JV_RDID
     {0x0B, 0x60, 0X18, 0, 0x1000000},   //XT25Q128DW_RDID
-    {0x0B, 0x40, 0X18, 1, 0x1000000},   //XT25F128F_RDID
     {0x5e, 0x50, 0x18, 0, 0x1000000},   //ZB25LQ128BW_RDID
     {0xa1, 0x28, 0x18, 0, 0x1000000},   //FM25W128_RDID
-    {0x68, 0x40, 0x18, 0, 0x1000000},   //BY25Q128ES_RDID
     {0xc8, 0x43, 0x18, 1, 0x1000000},   //GD25Q128F_RDID
     {0xc8, 0x40, 0x18, 0, 0x1000000},   //MD25Q128_RDID
     {0xc8, 0x40, 0x17, 0, 0x800000},    //MD25Q64C_RDID
@@ -560,6 +559,8 @@ FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ4[] =
 FT_CONST FLASH_RDID_TYPE_T flash_cmd_id_pool_typ5[] =
 {
     {0xc2, 0x25, 0x39, 0, 0x2000000},   //MX25U25643G_RDID
+    {0xc2, 0x25, 0x37, 0, 0x800000},    //MX25U6432F_RDID
+    {0xc2, 0x20, 0x19, 1, 0x2000000},   //MX25L25645G
     {0x25, 0x70, 0x18, 0, 0x1000000},   //SK25LP128_RDID
     {FLASH_INVALID_ID, 0, 0, 0, 0},      //last one
 };

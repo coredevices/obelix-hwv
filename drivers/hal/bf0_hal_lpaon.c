@@ -258,7 +258,19 @@ __HAL_ROM_USED HAL_StatusTypeDef HAL_LPAON_EnableWakeupSrc(LPAON_WakeupSrcTypeDe
 #endif /* hwp_pbr */
 
 #ifndef SF32LB55X
-        if (src >= LPAON_WAKEUP_SRC_PIN8)
+#ifdef LPSYS_AON_CR3_PIN16_MODE
+        if (src >= LPAON_WAKEUP_SRC_PIN16)
+        {
+            src -= 16;
+            cr = &hwp_lpsys_aon->CR3;
+        }
+#else
+        if (0)
+        {
+            /* do nothing */
+        }
+#endif /* LPSYS_AON_CR3_PIN16_MODE */
+        else if (src >= LPAON_WAKEUP_SRC_PIN8)
         {
             src -= 8;
             cr = &hwp_lpsys_aon->CR2;
@@ -385,7 +397,20 @@ __HAL_ROM_USED  HAL_StatusTypeDef HAL_LPAON_GetWakeupPinMode(uint8_t wakeup_pin,
 #ifdef SF32LB55X
     cr = &hwp_lpsys_aon->CR;
 #else
-    if (wakeup_pin > 7)
+
+#ifdef LPSYS_AON_CR3_PIN16_MODE
+    if (wakeup_pin > 15)
+    {
+        wakeup_pin -= 16;
+        cr = &hwp_lpsys_aon->CR3;
+    }
+#else
+    if (0)
+    {
+        /* do nothing */
+    }
+#endif /* LPSYS_AON_CR3_PIN16_MODE */
+    else if (wakeup_pin > 7)
     {
         wakeup_pin -= 8;
         cr = &hwp_lpsys_aon->CR2;
@@ -403,8 +428,12 @@ __HAL_ROM_USED  HAL_StatusTypeDef HAL_LPAON_GetWakeupPinMode(uint8_t wakeup_pin,
     return HAL_OK;
 }
 
-
-__HAL_ROM_USED void HAL_LPAON_ConfigStartAddr(uint32_t *start_addr)
+#ifdef SOC_BF0_HCPU
+    __weak
+#else
+    __HAL_ROM_USED
+#endif
+void HAL_LPAON_ConfigStartAddr(uint32_t *start_addr)
 {
     hwp_lpsys_aon->SPR = (*start_addr);
     start_addr++;

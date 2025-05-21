@@ -2,7 +2,7 @@
 源码路径：example\rt_device\pm
 ## 支持的平台
 例程可以运行在以下开发板.
-* em-lb566
+* sf32lb56-devkit-lcd_n16r12n1
 * eh-lb551
 * em-lb525
 * em-lb587
@@ -461,6 +461,7 @@ sifli_standby_handler ->BSP_IO_Power_Down-> 汇编 WFI 进入 standby-> 定时�
 SystemInitFromStandby -> HAL_Init -> BSP_IO_Init-> restore_context-> PC 指针设置到 sifli_standby_handler 函数 WFI 后指令继续运行 -> BSP_Power_Up-> 执行 RTT 设备 RT_DEVICE_CTRL_RESUME 设备恢复函数 -> log 打印[pm]W:11620520 -> log 打印[pm]WSR:0x80<br>
 * LCPU休眠唤醒<br>
 Lcpu休眠唤醒流程跟 hcpu 待机流程基本一样，差异点：sifli_standby_handler-> sifli_standby_handler_core->休眠时IO配置函数BSP_IO_Power_Down->内存休眠函数soc_power_down-> 汇编 WFI 进入 standby->定时器或者IO唤醒 -> 函数 SystemPowerOnModeInit ->SystemPowerOnInitLCPU-> HAL_Init-> BSP_IO_Init-> restore_context-> 设置到 WFI 指令后继续执行  -> 内存退出休眠函数soc_power_up-> IO休眠后配置函数BSP_Power_Up-> 执行 RTT 设备 RT_DEVICE_CTRL_RESUME 设备恢复函数 -> log 打印[pm]W:11620520 -> log 打印[pm]WSR:0x80<br>
+
 #### eh-lb551
 * hcpu休眠唤醒<br>
 55系列跟56系列待机流程一样，差异点在唤醒的函数不一样<br>
@@ -494,14 +495,16 @@ Lcpu唤醒流程56系列一样<br>
 按下唤醒PIN从Hibernate唤醒后，可以判断`(PM_HIBERNATE_BOOT == SystemPowerOnModeGet())`是否为`hibernate boot`和按键的时间长短来判断是否需要开机<br>
 Log中打印的`boot from hibernate!!!`可以指示从hibernate开机<br>
 ## 异常诊断
-### 唤醒Log解读<br>
+### 唤醒Log解读
+```
    [pm]S:3,298998<br>
     S表示已进入休眠，3表示休眠为PM_SLEEP_MODE_DEEP模式，4代表PM_SLEEP_MODE_STANDBY，298998为Gtimer时间戳<br>
    [pm]W:462858 <br>
    W表示已唤醒，462858为Gtimer时间戳<br>
    [pm]WSR:0x4 <br>
    WSR为唤醒寄存器，0x04为WSR寄存器值，需要对照规格书查看具体来自哪个唤醒源<br>
-### 没PM[S]打印<br>
+```
+### 没PM[S]打印
 原因1：<br>
 确认下面宏已经打开<br>
 ```

@@ -11,7 +11,8 @@ obj = []
 lib = []
 
 # add LittlevGL common include
-src = src + Glob('*.c')
+if (GetDepend('PKG_USING_LITTLEVGL2RTT') and GetDepend('LVGL_V8') and (GetDepend('BF0_HCPU') or GetDepend('BSP_USING_PC_SIMULATOR'))) or GetDepend('DFU_OTA_MANAGER'):
+    src = src + Glob('*.c')
 if  GetDepend('FREETYPE_TINY_FONT'):
     if GetDepend('BSP_USING_PC_SIMULATOR'):
         if os.path.isfile(os.path.join(cwd, 'Tiny_font_msvc.lib')):
@@ -23,21 +24,6 @@ if  GetDepend('FREETYPE_TINY_FONT'):
         if os.path.isfile(os.path.join(cwd, 'Tiny_font_rvds.lib')):
             lib=['Tiny_font_rvds']    
     
-if not os.path.isfile(os.path.join(cwd, '../src/SConscript')) or GetDepend('USING_LIBRARY_ONLY'):
-    if GetDepend('BSP_USING_PC_SIMULATOR'):
-        lib=lib+['sifli_lib_msvc']
-    else:
-        if GetDepend('BF0_HCPU'):
-            if rtconfig.PLATFORM=='gcc':
-                lib=lib+['libsifli_lib_gcc']
-            else:
-                lib=lib+['sifli_lib_rvds']
-        else:
-            if rtconfig.PLATFORM=='gcc':
-                lib=lib+['libsifli_lib_l_gcc']
-            else:
-                lib=lib+['sifli_lib_l_rvds']
-
 if GetDepend('PKG_USING_SOUNDPLUS'):
     lib=lib+['soundplus_sve.lib']
 

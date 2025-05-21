@@ -565,7 +565,7 @@ int bf0_pll_calibration()
             delta_cnt_max = pll_cnt - target_cnt;
         }
 
-#ifdef SOC_SF32LB58X
+#if 0 //#ifdef SOC_SF32LB58X
         if (delta_cnt_min <= delta_cnt && delta_cnt_min <= delta_cnt_max)
         {
             fc_vco_min  = (fc_vco_min  < 2) ? 2 : fc_vco_min;

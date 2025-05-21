@@ -3,7 +3,6 @@
  *********************/
 #include "gui_app_int.h"
 
-#include "bf0_lib.h"
 
 
 //#define STOP_APP_IF_PAUSED

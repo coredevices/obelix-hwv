@@ -286,6 +286,31 @@ void _lv_refr_set_disp_refreshing(lv_disp_t * disp)
     disp_refr = disp;
 }
 
+#ifdef DRV_EPIC_NEW_API
+extern uint32_t lv_gpu_render_start(lv_disp_drv_t *disp_drv);
+extern void lv_gpu_render_end(lv_disp_drv_t *disp_drv, uint32_t rl,lv_area_t *p_area);
+uint32_t rl = 0;
+#endif
+void _lv_refr_set_disp_to_draw_start(lv_disp_t * disp)
+{
+    _lv_refr_set_disp_refreshing(disp);
+    #ifdef DRV_EPIC_NEW_API
+        LV_ASSERT(0 == rl);
+        rl = lv_gpu_render_start(disp->driver);
+    #endif
+}
+
+void _lv_refr_set_disp_to_draw_end(lv_disp_t * disp, lv_area_t *p_area)
+{
+    #ifdef DRV_EPIC_NEW_API
+        if(rl)
+        {
+            lv_gpu_render_end(disp_refr->driver, rl, p_area);
+            rl = 0;
+        }
+    #endif
+    _lv_refr_set_disp_refreshing(disp);
+}
 /**
  * Called periodically to handle the refreshing
  * @param tmr pointer to the timer itself
@@ -539,22 +564,7 @@ static int all_joined_area_intersect(lv_area_t *refresh_area, lv_area_t *joined_
 
     return started;
 }
-#if defined(BSP_USING_RAMLESS_LCD)
-static void lv_refr_join_area(void)
-{
-    if(disp_refr->inv_p == 0) return;
-
-    lv_area_t scr_area;
-    scr_area.x1 = 0;
-    scr_area.y1 = 0;
-    scr_area.x2 = lv_disp_get_hor_res(disp_refr) - 1;
-    scr_area.y2 = lv_disp_get_ver_res(disp_refr) - 1;
-
-    disp_refr->inv_area_joined[0] = 0;
-    disp_refr->inv_areas[0] = scr_area;
-    disp_refr->inv_p = 1;
-}
-#elif (defined(LV_FB_ONE_NOT_SCREEN_SIZE) || defined(LV_FB_TWO_NOT_SCREEN_SIZE)) && defined(BSP_USING_LCD_FRAMEBUFFER)
+#if (defined(LV_FB_ONE_NOT_SCREEN_SIZE) || defined(LV_FB_TWO_NOT_SCREEN_SIZE)) && defined(BSP_USING_LCD_FRAMEBUFFER)
 static bool get_next_refr_area(const lv_disp_t *disp, lv_area_t *area)
 {
     lv_coord_t update_rows = lv_area_get_height(area);
@@ -591,7 +601,6 @@ static bool get_next_refr_area(const lv_disp_t *disp, lv_area_t *area)
  */
 static void lv_refr_join_area(void)
 {
-    lv_coord_t row;
     lv_coord_t update_rows = LV_FB_LINE_NUM;
     uint16_t  new_inv_p = 0;
     lv_area_t new_inv_areas[LV_INV_BUF_SIZE];
@@ -654,6 +663,13 @@ static void lv_refr_join_area(void)
     lv_memset_00(disp_refr->inv_area_joined, sizeof(disp_refr->inv_area_joined));
     lv_memcpy(disp_refr->inv_areas, new_inv_areas, sizeof(new_inv_areas[0])*new_inv_p);
     disp_refr->inv_p = new_inv_p;
+
+
+#if defined(LCD_FB_USING_TWO_COMPRESSED)||defined(LCD_FB_USING_TWO_UNCOMPRESSED)
+    extern void pre_render_start(lv_disp_t *disp);
+    pre_render_start(disp_refr);
+#endif 
+    
 }
 
 #else

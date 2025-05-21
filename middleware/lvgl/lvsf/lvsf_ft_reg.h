@@ -9,6 +9,8 @@
 #ifdef LV_USING_FREETYPE_ENGINE
 
 #include "lv_freetype.h"
+#include "section.h"
+#include "lvsf_font.h"
 
 #define LVSF_GET_FT(lib) (const void*)&(RES_PATH "font" "/" STRINGIFY(lib) TTF_SUFFIX)
 
@@ -23,7 +25,7 @@ typedef struct
 typedef struct
 {
     const char                  *font_name;
-    lv_font_freetype_lib_dsc_t  *font_lib;
+    const lv_font_freetype_lib_dsc_t  *font_lib;
     uint16_t                     font_size;
 } font_desc_t;
 
@@ -41,7 +43,7 @@ typedef struct
 //Because font is searched from small to large
 #ifndef USING_FREETYPE_ANY_SIZE
 #define LVSF_FREETYPE_FONT_REGISTER(freetype_font)          \
-    extern lv_font_freetype_lib_dsc_t CONCAT_2(freetype_font, _lib);    \
+    extern const lv_font_freetype_lib_dsc_t CONCAT_2(freetype_font, _lib);    \
     LVSF_FONT_REGISTER(freetype_font, FONT_SMALL);          \
     LVSF_FONT_REGISTER(freetype_font, FONT_NORMAL);         \
     LVSF_FONT_REGISTER(freetype_font, FONT_SUBTITLE);       \
@@ -51,7 +53,7 @@ typedef struct
     LVSF_FONT_REGISTER(freetype_font, FONT_SUPER);
 #else
 #define LVSF_FREETYPE_FONT_REGISTER(freetype_font)          \
-    extern lv_font_freetype_lib_dsc_t CONCAT_2(freetype_font, _lib); \
+    extern const lv_font_freetype_lib_dsc_t CONCAT_2(freetype_font, _lib); \
     LVSF_FONT_REGISTER(freetype_font, 12);                  \
     LVSF_FONT_REGISTER(freetype_font, 13);                  \
     LVSF_FONT_REGISTER(freetype_font, 14);                  \

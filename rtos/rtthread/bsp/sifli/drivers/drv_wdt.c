@@ -62,15 +62,18 @@
 #define LOG_TAG             "drv.wdt"
 #include <drv_log.h>
 
-#if defined(SOC_SF32LB52X)
-    #define WDT_CLOCK_FREQ wdt_get_backup_clk_freq()
-#else
-    #if defined(LXT_DISABLE)||defined(SOC_SF32LB55X)
-        #define WDT_CLOCK_FREQ HAL_LPTIM_GetFreq()
-    #elif defined(FPGA)
-        #define WDT_CLOCK_FREQ 12000  // For FPGA, RC10K is actually 12K
+// Shall remove in future
+#if 0
+    #if defined(SOC_SF32LB52X)
+        #define WDT_CLOCK_FREQ wdt_get_backup_clk_freq()
     #else
-        #define WDT_CLOCK_FREQ 10000  // For ASIC, RC10K might vary
+        #if defined(LXT_DISABLE)||defined(SOC_SF32LB55X)
+            #define WDT_CLOCK_FREQ HAL_LPTIM_GetFreq()
+        #elif defined(FPGA)
+            #define WDT_CLOCK_FREQ 12000  // For FPGA, RC10K is actually 12K
+        #else
+            #define WDT_CLOCK_FREQ 10000  // For ASIC, RC10K might vary
+        #endif
     #endif
 #endif
 
@@ -78,6 +81,8 @@ static WDT_HandleTypeDef hwdt, hiwdt;
 static struct rt_watchdog_ops ops;
 static rt_watchdog_t watchdog;
 static rt_err_t wdt_set_timeout(WDT_HandleTypeDef *wdt, rt_uint32_t reload_timeout);
+static uint32_t wdt_get_backup_time(void);
+
 
 RT_WEAK void wdt_store_exception_information(void)
 {
@@ -95,7 +100,7 @@ void wdt_reconfig(void)
 #ifdef SOC_BF0_HCPU
     hiwdt.Instance = hwp_iwdt;
     HAL_WDT_Refresh(&hiwdt);
-    wdt_set_timeout(&hiwdt, WDT_TIMEOUT);
+    wdt_set_timeout(&hiwdt, wdt_get_backup_time());
 #endif
 }
 
@@ -149,7 +154,118 @@ void WDT_IRQHandler(void)
 #endif
 
 
+#if defined(SOC_BF0_HCPU) && defined(SOC_SF32LB52X)
+    uint32_t watchdog_status = 1;
+#endif // defined(SOC_BF0_HCPU) && defined(SOC_SF32LB52X)
 
+static void wdt_set_backup_status(uint32_t status)
+{
+#ifdef SOC_BF0_HCPU
+
+#ifdef SOC_SF32LB52X
+    watchdog_status = status;
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_STATUS, &status, 4);
+#else // !SOC_SF32LB52X
+    HAL_Set_backup(RTC_BAKCUP_WDT_STATUS, status);
+#endif // SOC_SF32LB52X
+
+#else // !SOC_BF0_HCPU
+
+#ifdef SOC_SF32LB52X
+    // Do nothing
+#else // !SOC_SF32LB52X
+    HAL_Set_backup(RTC_BAKCUP_WDT_STATUS, status);
+#endif // SOC_SF32LB52X
+
+#endif //SOC_BF0_HCPU
+}
+
+static uint32_t wdt_get_backup_status(void)
+{
+    uint32_t status = 0;
+#ifdef SOC_BF0_HCPU
+
+#ifdef SOC_SF32LB52X
+    status = watchdog_status;
+#else // !SOC_SF32LB52X
+    status = HAL_Get_backup(RTC_BAKCUP_WDT_STATUS);
+#endif // SOC_SF32LB52X
+
+#else // !SOC_BF0_HCPU
+
+#ifdef SOC_SF32LB52X
+    uint16_t len = 4;
+    HAL_LCPU_CONFIG_get(HAL_LCPU_CONFIG_WDT_STATUS, (uint8_t *)&status, &len);
+#else // !SOC_SF32LB52X
+    status = HAL_Get_backup(RTC_BAKCUP_WDT_STATUS);
+#endif // SOC_SF32LB52X
+
+#endif // SOC_BF0_HCPU
+    return status;
+}
+
+static uint16_t wdt_get_backup_clk_freq(void)
+{
+    uint16_t freq = LXT_FREQ;
+
+#ifdef SOC_SF32LB52X
+
+#ifdef SOC_BF0_HCPU
+    // Do nothing
+#else // !SOC_BF0_HCPU
+    uint16_t len = 2;
+    HAL_LCPU_CONFIG_get(HAL_LCPU_CONFIG_WDT_CLK_FEQ, (uint8_t *)&freq, &len);
+#endif // SOC_BF0_HCPU
+
+#else // !SOC_SF32LB52X
+
+#if defined(SOC_SF32LB56X) || defined(SOC_SF32LB58X)
+    // 56x or 58x always use RC10K as WDT clock source
+    uint32_t is_xtal_enb = 0;
+#else // !defined(SOC_SF32LB56X) || defined(SOC_SF32LB58X)
+    uint32_t is_xtal_enb = HAL_LXT_ENABLED();
+#endif // defined(SOC_SF32LB56X) || defined(SOC_SF32LB58X)
+    if (!is_xtal_enb)
+    {
+        uint32_t cycle = HAL_Get_backup(RTC_BACKUP_LPCYCLE_AVE);
+        if (cycle == 0)
+            freq = 10000; // FPGA also tread 10K to adapt with ROM only versions
+        else
+            freq = (uint16_t)(48000000UL / (float)cycle * HAL_RC_CAL_GetLPCycle());
+    }
+#endif // SOC_SF32LB52X
+
+    return freq;
+}
+
+
+
+static uint32_t wdt_get_backup_time(void)
+{
+    uint32_t time = WDT_TIMEOUT;
+#if defined(LCPU_CONFIG_V2) || defined(SOC_SF32LB52X)
+    uint16_t len = 4;
+    HAL_LCPU_CONFIG_get(HAL_LCPU_CONFIG_WDT_TIME, (uint8_t *)&time, &len);
+    // Not set 0 as wdt time
+    if (time == 0)
+        time = 30;
+#endif // defined(LCPU_CONFIG_V2) || defined(SOC_SF32LB52X)
+    return time;
+}
+
+
+
+void wdt_set_iwdt_timeout(WDT_HandleTypeDef *iwdt, uint32_t timeout)
+{
+#if defined(SOC_BF0_HCPU) && !defined(SOC_SF32LB52X)
+    iwdt->Instance = hwp_iwdt;
+    wdt_set_timeout(iwdt, timeout);
+#endif // defined(SOC_BF0_HCPU) && !defined(SOC_SF32LB52X)
+}
+
+
+// Shall remove in future
+#if 0
 #ifdef SOC_SF32LB52X
 #define HAL_Get_backup(idx) wdt_get_backup_status()
 #define wdt_set_iwdt_timeout(iwdt,timeout)
@@ -226,7 +342,7 @@ static uint32_t wdt_get_backup_time(void)
 #endif
 
 #endif //SOC_SF32LB52X
-
+#endif
 
 static rt_err_t wdt_init(rt_watchdog_t *wdt)
 {
@@ -235,19 +351,19 @@ static rt_err_t wdt_init(rt_watchdog_t *wdt)
 #else
     hwdt.Instance = hwp_wdt2;
 #endif
-    if (BSP_WDT_TIMEOUT  >= 2) // Minimal timeout is 2 seconds
-        hwdt.Init.Reload = hwdt.Init.Reload * (BSP_WDT_TIMEOUT  - 1);
+    if (wdt_get_backup_time()  >= 2) // Minimal timeout is 2 seconds
+        hwdt.Init.Reload = hwdt.Init.Reload * (wdt_get_backup_time()  - 1);
     else
-        hwdt.Init.Reload = WDT_CLOCK_FREQ;
+        hwdt.Init.Reload = wdt_get_backup_clk_freq();
 
-    hwdt.Init.Reload2 = WDT_CLOCK_FREQ * WDT_REBOOT_TIMEOUT;
+    hwdt.Init.Reload2 = wdt_get_backup_clk_freq() * WDT_REBOOT_TIMEOUT;
     __HAL_WDT_INT(&hwdt, 1);
 
 
 #ifdef SOC_BF0_HCPU
     hiwdt.Instance = hwp_iwdt;
-    hiwdt.Init.Reload = WDT_CLOCK_FREQ * WDT_TIMEOUT + IWDT_RELOAD_DIFFTIME;
-    hiwdt.Init.Reload2 = WDT_CLOCK_FREQ * IWDT_RELOAD_DIFFTIME;
+    hiwdt.Init.Reload = wdt_get_backup_clk_freq() * wdt_get_backup_time() + IWDT_RELOAD_DIFFTIME;
+    hiwdt.Init.Reload2 = wdt_get_backup_clk_freq() * IWDT_RELOAD_DIFFTIME;
     __HAL_WDT_INT(&hiwdt, 1);
 #endif
 
@@ -257,15 +373,15 @@ static rt_err_t wdt_init(rt_watchdog_t *wdt)
 
 static rt_err_t wdt_set_timeout(WDT_HandleTypeDef *wdt, rt_uint32_t reload_timeout)
 {
-    wdt->Init.Reload = WDT_CLOCK_FREQ * reload_timeout;
+    wdt->Init.Reload = wdt_get_backup_clk_freq() * reload_timeout;
 
     if (hwp_iwdt == wdt->Instance)
-        wdt->Init.Reload2 = WDT_CLOCK_FREQ * IWDT_RELOAD_DIFFTIME;
+        wdt->Init.Reload2 = wdt_get_backup_clk_freq() * IWDT_RELOAD_DIFFTIME;
     else
-        wdt->Init.Reload2 = WDT_CLOCK_FREQ * WDT_REBOOT_TIMEOUT;
+        wdt->Init.Reload2 = wdt_get_backup_clk_freq() * WDT_REBOOT_TIMEOUT;
 
     //Disable by status
-    if (HAL_Get_backup(RTC_BAKCUP_WDT_STATUS) != 0x01)
+    if (wdt_get_backup_status() != 0x01)
         return -RT_ERROR;
     if (HAL_WDT_Init(wdt) != HAL_OK)//wdt init
     {
@@ -287,7 +403,7 @@ static rt_err_t wdt_control(rt_watchdog_t *wdt, int cmd, void *arg)
     /* feed the watchdog */
     case RT_DEVICE_CTRL_WDT_KEEPALIVE:
     {
-        if (HAL_Get_backup(RTC_BAKCUP_WDT_STATUS) != 0x01)
+        if (wdt_get_backup_status() != 0x01)
             break;
         HAL_WDT_Refresh(&hwdt);
 #ifdef SOC_BF0_HCPU
@@ -297,7 +413,11 @@ static rt_err_t wdt_control(rt_watchdog_t *wdt, int cmd, void *arg)
     break;
     /* set watchdog timeout */
     case RT_DEVICE_CTRL_WDT_SET_TIMEOUT:
+#if defined(ROM_CONFIG_V2) && defined(SOC_BF0_LCPU)
+        wdt_set_timeout(&hwdt, wdt_get_backup_time());
+#else // !ROM_CONFIG_V2
         wdt_set_timeout(&hwdt, *((rt_uint32_t *)arg));
+#endif // ROM_CONFIG_V2
 #ifdef SOC_BF0_HCPU
         wdt_set_timeout(&hiwdt, (*((rt_uint32_t *)arg)) + IWDT_RELOAD_DIFFTIME);
 #endif
@@ -313,21 +433,21 @@ static rt_err_t wdt_control(rt_watchdog_t *wdt, int cmd, void *arg)
 #if defined(RT_USING_PM)
     case RT_DEVICE_CTRL_SUSPEND:
     {
-        uint32_t status = HAL_Get_backup(RTC_BAKCUP_WDT_STATUS);
-        wdt_set_iwdt_timeout(hiwdt, IWDT_SLEEP_TIMEOUT);
+        uint32_t status = wdt_get_backup_status();
+        wdt_set_iwdt_timeout(&hiwdt, IWDT_SLEEP_TIMEOUT);
     }
     break;
 
     case RT_DEVICE_CTRL_RESUME:
     {
-        uint32_t status = HAL_Get_backup(RTC_BAKCUP_WDT_STATUS);
+        uint32_t status = wdt_get_backup_status();
         if (0x01 == status)
         {
             __HAL_WDT_STOP(&hwdt);
             hwdt.Instance = hwp_wdt1;
-            wdt_set_timeout(&hwdt, WDT_TIMEOUT);
+            wdt_set_timeout(&hwdt, wdt_get_backup_time());
 
-            wdt_set_iwdt_timeout(hiwdt, WDT_TIMEOUT + IWDT_RELOAD_DIFFTIME);
+            wdt_set_iwdt_timeout(&hiwdt, wdt_get_backup_time() + IWDT_RELOAD_DIFFTIME);
         }
     }
     break;
@@ -336,9 +456,9 @@ static rt_err_t wdt_control(rt_watchdog_t *wdt, int cmd, void *arg)
     case RT_DEVICE_CTRL_WDT_STOP:
     {
 #if defined(SOC_SF32LB52X)
-        HAL_Set_backup(RTC_BAKCUP_WDT_STATUS, 0XFF);
+        wdt_set_backup_status(0XFF);
 #else
-        HAL_Set_backup(RTC_BAKCUP_WDT_STATUS, 0);
+        wdt_set_backup_status(0);
 #endif
         __HAL_WDT_STOP(&hwdt);
 #ifdef SOC_BF0_HCPU
@@ -380,22 +500,22 @@ static rt_err_t wdt_control(rt_watchdog_t *wdt, int cmd, void *arg)
             hwdt2.Instance = hwp_wdt2;
             HAL_HPAON_WakeCore(CORE_ID_LCPU);
             __HAL_WDT_STOP(&hwdt2);
-            wdt_set_timeout(&hwdt2, WDT_TIMEOUT);
+            wdt_set_timeout(&hwdt2, wdt_get_backup_time());
             HAL_HPAON_CANCEL_LP_ACTIVE_REQUEST();
 #endif
             hiwdt.Instance = hwp_iwdt;
-            wdt_set_timeout(&hiwdt, WDT_TIMEOUT + IWDT_RELOAD_DIFFTIME);
+            wdt_set_timeout(&hiwdt, wdt_get_backup_time() + IWDT_RELOAD_DIFFTIME);
 #endif
             __HAL_SYSCFG_Enable_WDT_REBOOT(1);
         }
-        HAL_Set_backup(RTC_BAKCUP_WDT_STATUS, status);
+        wdt_set_backup_status(status);
     }
     break;
 
     case RT_DEVICE_CTRL_WDT_GET_STATUS:
     {
         uint32_t *status = (uint32_t *)arg;
-        *status = HAL_Get_backup(RTC_BAKCUP_WDT_STATUS);
+        *status = wdt_get_backup_status();
 #if defined(SOC_SF32LB52X) && defined(SOC_BF0_HCPU)
         if (0xFF == *status)
         {
@@ -415,7 +535,7 @@ __ROM_USED void rt_wdt_restore(void)
 {
 #ifdef SOC_BF0_LCPU
     //WDT_HandleTypeDef wdt_handle;
-    uint32_t wdt_status = HAL_Get_backup(RTC_BAKCUP_WDT_STATUS);
+    uint32_t wdt_status = wdt_get_backup_status();
     if (0x01 == wdt_status)
     {
         HAL_WDT_Init(&hwdt);

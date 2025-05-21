@@ -52,8 +52,7 @@
  * INCLUDE FILES
  ****************************************************************************************
     */
-#include <rtthread.h>
-#include <rtdevice.h>
+#include <rtconfig.h>
 #include <board.h>
 #ifdef BSP_USING_PC_SIMULATOR
     #include <stdbool.h>
@@ -186,6 +185,7 @@ enum ble_gap_event_t
     BLE_GAP_PERIODIC_ADV_SYNC_CREATED_IND,   /**< This event indicates periodic advertising sync created. */
     BLE_GAP_PERIODIC_ADV_SYNC_STOPPED_IND,   /**< This event indicates periodic advertising sync stopped. */
     BLE_GAP_PERIODIC_ADV_SYNC_ESTABLISHED_IND, /**< This event indicates periodic advertising sync established. */
+    BLE_GAP_CREATE_CONNECTION_STOP_IND,      /**< This event indicates create connection stopped. */
 };
 
 /**
@@ -1500,6 +1500,16 @@ typedef struct
     uint8_t reason;
 } ble_gap_scan_stopped_ind_t;
 
+/**
+ * @brief The structure of #BLE_GAP_CREATE_CONNECTION_STOP_IND
+ */
+typedef struct
+{
+    /// Activity identifier
+    uint8_t actv_idx;
+    /// Stopped reason
+    uint8_t reason;
+} ble_gap_create_connection_stop_ind_t;
 
 
 typedef struct
@@ -2209,11 +2219,20 @@ uint8_t ble_gap_stop_advertising(ble_gap_adv_stop_t *adv_stop);
 uint8_t ble_gap_delete_advertising(ble_gap_adv_delete_t *del);
 
 /**
- * @brief Start scan. The event #BLE_GAP_SCAN_START_CNF will indicate the result.
+ * @brief Start scan which properties auto set active scan and 1M phy. The event #BLE_GAP_SCAN_START_CNF will indicate the result.
    @param[in] scan_param Scan start parameters.
    @retval The status of send to BLE subsystem.
  */
 uint8_t ble_gap_scan_start(ble_gap_scan_start_t *scan_param);
+
+
+/**
+ * @brief Start scan. The event #BLE_GAP_SCAN_START_CNF will indicate the result.
+   @param[in] scan_param Scan start parameters.
+   @retval The status of send to BLE subsystem.
+ */
+uint8_t ble_gap_scan_start_ex(ble_gap_scan_start_t *scan_param);
+
 
 /**
  * @brief Stop scan.The event #BLE_GAP_SCAN_STOP_CNF will indicate the result.

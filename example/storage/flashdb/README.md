@@ -4,10 +4,6 @@
 
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
-### nand
-+ eh-lb525
-
-### nor
 + em-lb525
 + eh-lb523
 
@@ -24,11 +20,7 @@
 
 ### 硬件需求
 运行该例程前，需要准备：
-+ 一块本例程支持的开发板。
-
-```{note}
-nand工程只能运行于使用nand的板子，nor工程只能运行于使用nor的板子
-```
++ 一块本例程支持的开发板（[支持的平台](quick_start)）。
 
 ### menuconfig配置
 
@@ -85,7 +77,7 @@ $ ./uart_download.bat
 
 please input the serial port num:5
 ```
-关于编译、下载的详细步骤，请参考[](/quickstart/get-started.md)的相关介绍。
+关于编译、下载的详细步骤，请参考[快速上手](quick_start)的相关介绍。
 
 ```{tip}
 project/nor 是对应nor方案，编译下载方式相同，区别是对应的board不同。

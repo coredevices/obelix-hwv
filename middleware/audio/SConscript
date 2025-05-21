@@ -1,13 +1,14 @@
 Import('RTT_ROOT')
 Import('rtconfig')
 from building import *
+import os
 
 cwd = GetCurrentDir()
 src = []
 list = os.listdir(cwd)
 
 CPPPATH = [cwd]
-CPPPATH += [cwd + './include']
+CPPPATH += [os.path.join(cwd, 'include')]
 
 
 if GetDepend('BF0_HCPU'):

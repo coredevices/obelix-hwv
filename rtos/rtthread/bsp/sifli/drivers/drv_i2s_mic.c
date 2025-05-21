@@ -339,7 +339,7 @@ static rt_err_t bf0_audio_i2s_start(struct bf0_i2s_audio *aud)
     bf0_enable_pll(hi2s->Init.rx_cfg.sample_rate, 0);
 
 
-#ifndef ASIC  //i2s mic on FPGA  
+#ifndef ASIC  //i2s mic on FPGA
     /*FPGA have NONE I2S TX device*/
 
 #else    //i2s codec on evb_z0
@@ -513,6 +513,7 @@ static rt_size_t bf0_audio_trans(struct rt_audio_device *audio, const void *writ
 {
     struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
     HAL_StatusTypeDef res = HAL_OK;
+    RT_ASSERT(size <= AUDIO_DATA_SIZE / 2);
     if (writeBuf != NULL)
     {
         res = HAL_I2S_Transmit_DMA(&(aud->hi2s), (uint8_t *)writeBuf, size);
@@ -576,7 +577,7 @@ int rt_bf0_i2s_mic_init(void)
         hi2s->hdmarx->Instance = bf0_i2s_audio_obj[0].dma_handle;
         hi2s->hdmarx->Init.Request = bf0_i2s_audio_obj[0].dma_request;
 
-#ifndef ASIC  //i2s mic on FPGA  
+#ifndef ASIC  //i2s mic on FPGA
         hi2s->Init.src_clk_freq =     3 * 1024 * 1000;   //FPGA A0 I2S clk source is 3.072MHz
 
         hi2s->Init.rx_cfg.data_dw = 16;
@@ -644,6 +645,7 @@ INIT_DEVICE_EXPORT(rt_bf0_i2s_mic_init);
 /**
   * @brief RX DMA interrupt handler.
   */
+#ifndef DMA_SUPPORT_DYN_CHANNEL_ALLOC
 void MIC_DMA_RX_IRQHandler(void)
 {
     /* enter interrupt */
@@ -655,6 +657,7 @@ void MIC_DMA_RX_IRQHandler(void)
     rt_interrupt_leave();
 
 }
+#endif /* DMA_SUPPORT_DYN_CHANNEL_ALLOC */
 
 /**
   * @brief Rx Transfer half completed callbacks
@@ -978,7 +981,7 @@ int cmd_mic(int argc, char *argv[])
                     strcpy(g_transport_name, argv[2]);
                 else
                     strcpy(g_transport_name, "uart4");
-#endif //MIC_TEST_FILE_SAVE  
+#endif //MIC_TEST_FILE_SAVE
                 // start record thread
                 tid = rt_thread_create("aud_th", bf0_audio_entry, g_mic, 1024, RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
                 rt_thread_startup(tid);
@@ -1033,7 +1036,7 @@ int cmd_mic(int argc, char *argv[])
                     }
                     close(aud_fptr);
                 }
-#endif //MIC_SAVE2RAM                
+#endif //MIC_SAVE2RAM
 #endif
 
             }

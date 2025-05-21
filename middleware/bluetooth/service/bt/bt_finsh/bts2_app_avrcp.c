@@ -69,9 +69,7 @@ static int tlabel = 0;
 #undef ASSIGN_TLABEL
 #define ASSIGN_TLABEL ((U8)(tlabel++ % 16))
 
-#ifdef AUDIO_USING_MANAGER
-    extern uint8_t a2dp_set_speaker_volume(uint8_t volume);
-#endif
+
 extern bts2_app_stru *bts2g_app_p;
 uint8_t   bts2s_avrcp_openFlag;//0x00:dont open avrcp profile; 0x01:open avrcp profile;
 #ifdef BSP_BQB_TEST
@@ -86,6 +84,7 @@ uint8_t   bts2s_avrcp_openFlag;//0x00:dont open avrcp profile; 0x01:open avrcp p
 
 
 // #define SDK_AVRCP_USE_PASS_THROUGH      1
+
 
 bt_avrcp_music_detail_t music_detail_info;
 
@@ -1140,7 +1139,6 @@ void bt_avrcp_get_capabilities_confirm(bts2_app_stru *bts2_app_data, BTS2S_AVRCP
             if (events_id)
             {
                 bmemcpy(events_id, avrcmsg->data + 10, capability_count);
-
                 U8 role = bt_avrcp_get_role_by_addr(bts2_app_data, &bts2_app_data->avrcp_inst.con[0].rmt_bd);
 
                 for (int i = 0; i < capability_count; i++)
@@ -1813,15 +1811,9 @@ static void bt_avrcp_hdl_vendor_depend_cmd_ind(bts2_app_stru *bts2_app_data)
 
                 // TODO: set volume
                 bts2_app_data->avrcp_inst.ab_volume = volume;
-#ifdef AUDIO_USING_MANAGER
-                uint8_t relative_volume = 0;
-                relative_volume = a2dp_set_speaker_volume(volume);
 
-#if defined(CFG_AVRCP)
-                bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_ABSOLUTE_VOLUME, &relative_volume, sizeof(uint8_t));
-#endif
-                USER_TRACE("<< set absolute volume %d relative_volume:%d\n", volume, relative_volume);
-#endif
+                bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_ABSOLUTE_VOLUME, &volume, sizeof(uint8_t));
+                USER_TRACE("<< set absolute volume %d \n", volume);
 
                 bt_avrcp_set_absolute_volume_response(bts2_app_data, volume);
                 break;
@@ -1970,12 +1962,7 @@ static void bt_avrcp_hdl_vendor_depend_cmd_cfm(bts2_app_stru *bts2_app_data)
 
                     INFO_TRACE("<< VOLUME_CHANGED  volume%x\n", volume);
 
-#ifdef AUDIO_USING_MANAGER
-                    uint8_t relative_volume = a2dp_set_speaker_volume(volume);
-#if defined(CFG_AVRCP)
-                    bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_ABSOLUTE_VOLUME, &relative_volume, sizeof(uint8_t));
-#endif
-#endif
+                    bt_interface_bt_event_notify(BT_NOTIFY_AVRCP, BT_NOTIFY_AVRCP_ABSOLUTE_VOLUME, &volume, sizeof(uint8_t));
 
                     if (avrcmsg->c_type == AVRCP_CR_CHANGED)
                     {
@@ -2301,6 +2288,7 @@ static void bt_avrcp_hdl_pass_through_cmd_ind(bts2_app_stru *bts2_app_data)
                     USER_TRACE("FORWARD OFF\n");
                     // input_ev(inst->input, EV_KEY, KEY_NEXTSONG, 0);
                     /*  avrcp_target(BT_AVRCP_FORWARD, NULL);*/
+
 #if defined(AUDIO_USING_MANAGER) && defined(SDK_AVRCP_USE_PASS_THROUGH) && defined(CFG_AV_SRC)
                     bts2s_av_inst_data *inst = bt_av_get_inst_data();
                     int con_idx;

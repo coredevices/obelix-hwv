@@ -5,7 +5,7 @@
 ## 支持的平台
 <!-- 支持哪些板子和芯片平台 -->
 + em-lb525
-
++ em-lb587
 ## 概述
 <!-- 例程简介 -->
 本例程演示基于rt-device（使用rt-thread）的rgbled驱动，包含：
@@ -28,8 +28,20 @@
 ```c
 menuconfig --board=em-lb525
 ```
-BSP使能RGBLED   
-![BSP_USING_RGBLED：](./assets/menuconfig_rgbled.png)
+外设使能RGBLED   
+![Enable rgbled:](./assets/menuconfig_rgb2.png)
+
+对应外设的pwm,Channel配置
+![Enable PWM:](./assets/menuconfig_rgb2.png)
+
+**注意**: pwm设置已经是设置TIM配置，注意检查Enable timer配置是否造成冲突
+![Enable timer:](./assets/menuconfig_rgb3.png)
+
+类似冲突错误：
+![Enable timer:](./assets/Possible_error1.png)
+
+pwmt通道与rgb配置的不同出现错误：
+![Enable timer:](./assets/Possible_error2.png)
 
 
 ### 编译和烧录
@@ -49,7 +61,7 @@ please input the serial port num:5
 
 ## 例程的预期结果
 <!-- 说明例程运行结果，比如哪几个灯会亮，会打印哪些log，以便用户判断例程是否正常运行，运行结果可以结合代码分步骤说明 -->
-例程启动后，串口输出如下：
+例程启动后，串口循环输出颜色字符，硬件rgbled也显示对应颜色：
 ```
 12-25 11:51:46:770    start display color!
 12-25 11:51:47:266    -> black
@@ -68,9 +80,12 @@ please input the serial port num:5
 ## 异常诊断
 
 1. 通过PWM/DMA寄存器确认PWM/DMA配置状态：
+2. Enable rgb的配置错误
 
-![PWM_DMA](./assets/reg_rgbled.png)
-
+GTIM2的寄存器状态：
+![PWM_DMA](./assets/reg_rgled_gtim.png)
+DMAC1的寄存器状态：
+![PWM_DMA](./assets/reg_rgled_dma.png)
 
 ## 参考文档
 <!-- 对于rt_device的示例，rt-thread官网文档提供的较详细说明，可以在这里添加网页链接，例如，参考RT-Thread的[RTC文档](https://www.rt-thread.org/document/site/#/rt-thread-version/rt-thread-standard/programming-manual/device/rtc/rtc) -->

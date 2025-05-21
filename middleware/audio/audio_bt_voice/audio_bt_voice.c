@@ -65,14 +65,14 @@
 #define DBG_LVL           AUDIO_DBG_LVL
 #include "log.h"
 
-#ifndef SF32LB58X_3SCO
-    #define BT_SCO_MAX_NUM    1
-    #define BT_SCO_TX_HAS_HEADER 0
-    #define SOFT_CVSD_ENCODE  0
-#else
+#if defined(SF32LB58X) && defined(LCPU_CONFIG_V2)
     #define BT_SCO_MAX_NUM    3
     #define BT_SCO_TX_HAS_HEADER 1
     #define SOFT_CVSD_ENCODE  1
+#else
+    #define BT_SCO_MAX_NUM    1
+    #define BT_SCO_TX_HAS_HEADER 0
+    #define SOFT_CVSD_ENCODE  0
 #endif
 
 #define AUDIO_FMT_PCM   0
@@ -820,9 +820,9 @@ int bt_voice_init(void)
 
     q_cfg.qid = SYS_HL_BT_AUDIO_QUEUE;
     q_cfg.tx_buf_size = 0;
-    q_cfg.tx_buf_addr = NULL;
-    q_cfg.tx_buf_addr_alias = NULL;
-    q_cfg.rx_buf_addr = NULL;
+    q_cfg.tx_buf_addr = (uint32_t)NULL;
+    q_cfg.tx_buf_addr_alias = (uint32_t)NULL;
+    q_cfg.rx_buf_addr = (uint32_t)NULL;
     q_cfg.rx_ind = _hl_bt_audio_queue_rx_ind;
     q_cfg.user_data = 0;
     g_msbc_fifo = (uint8_t *)audio_mem_malloc(AUDIO_MSBC_BUFFER_LEN);

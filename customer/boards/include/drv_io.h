@@ -133,7 +133,7 @@ int BSP_Flash_hw2_init_with_no_dtr(void);
 int BSP_Flash_hw3_init(void);
 int BSP_Flash_hw4_init(void);
 int BSP_Flash_hw5_init(void);
-
+uint32_t flash_get_freq(int clk_module, uint16_t clk_div, uint8_t hcpu);
 
 int BSP_Flash_Init(void);
 
@@ -141,7 +141,7 @@ int BSP_Flash_Init(void);
  * @brief SDIO
  */
 void BSP_SD_PowerUp(void);
-void BSP_SD_PowerDown(void);
+
 
 void BSP_GPIO_Set(int pin, int val, int is_porta);
 

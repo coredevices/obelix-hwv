@@ -538,7 +538,7 @@ void lv_canvas_draw_rect(lv_obj_t * canvas, lv_coord_t x, lv_coord_t y, lv_coord
     init_fake_disp(canvas, &fake_disp, &driver, &clip_area);
 
     lv_disp_t * refr_ori = _lv_refr_get_disp_refreshing();
-    _lv_refr_set_disp_refreshing(&fake_disp);
+    _lv_refr_set_disp_to_draw_start(&fake_disp);
 
     /*Disable anti-aliasing if drawing with transparent color to chroma keyed canvas*/
     lv_color_t ctransp = LV_COLOR_CHROMA_KEY;
@@ -555,7 +555,7 @@ void lv_canvas_draw_rect(lv_obj_t * canvas, lv_coord_t x, lv_coord_t y, lv_coord
 
     lv_draw_rect(driver.draw_ctx, draw_dsc, &coords);
 
-    _lv_refr_set_disp_refreshing(refr_ori);
+    _lv_refr_set_disp_to_draw_end(refr_ori, NULL);
 
     deinit_fake_disp(canvas, &fake_disp);
 
@@ -582,7 +582,7 @@ void lv_canvas_draw_text(lv_obj_t * canvas, lv_coord_t x, lv_coord_t y, lv_coord
     init_fake_disp(canvas, &fake_disp, &driver, &clip_area);
 
     lv_disp_t * refr_ori = _lv_refr_get_disp_refreshing();
-    _lv_refr_set_disp_refreshing(&fake_disp);
+    _lv_refr_set_disp_to_draw_start(&fake_disp);
 
     lv_area_t coords;
     coords.x1 = x;
@@ -591,7 +591,7 @@ void lv_canvas_draw_text(lv_obj_t * canvas, lv_coord_t x, lv_coord_t y, lv_coord
     coords.y2 = dsc->header.h - 1;
     lv_draw_label(driver.draw_ctx, draw_dsc, &coords, txt, NULL);
 
-    _lv_refr_set_disp_refreshing(refr_ori);
+    _lv_refr_set_disp_to_draw_end(refr_ori, NULL);
 
     deinit_fake_disp(canvas, &fake_disp);
 
@@ -624,7 +624,7 @@ void lv_canvas_draw_img(lv_obj_t * canvas, lv_coord_t x, lv_coord_t y, const voi
     init_fake_disp(canvas, &fake_disp, &driver, &clip_area);
 
     lv_disp_t * refr_ori = _lv_refr_get_disp_refreshing();
-    _lv_refr_set_disp_refreshing(&fake_disp);
+    _lv_refr_set_disp_to_draw_start(&fake_disp);
 
     lv_area_t coords;
     coords.x1 = x;
@@ -634,7 +634,7 @@ void lv_canvas_draw_img(lv_obj_t * canvas, lv_coord_t x, lv_coord_t y, const voi
 
     lv_draw_img(driver.draw_ctx, draw_dsc, &coords, src);
 
-    _lv_refr_set_disp_refreshing(refr_ori);
+    _lv_refr_set_disp_to_draw_end(refr_ori, NULL);
 
     deinit_fake_disp(canvas, &fake_disp);
 
@@ -661,7 +661,7 @@ void lv_canvas_draw_line(lv_obj_t * canvas, const lv_point_t points[], uint32_t 
     init_fake_disp(canvas, &fake_disp, &driver, &clip_area);
 
     lv_disp_t * refr_ori = _lv_refr_get_disp_refreshing();
-    _lv_refr_set_disp_refreshing(&fake_disp);
+    _lv_refr_set_disp_to_draw_start(&fake_disp);
 
 
     /*Disable anti-aliasing if drawing with transparent color to chroma keyed canvas*/
@@ -676,7 +676,7 @@ void lv_canvas_draw_line(lv_obj_t * canvas, const lv_point_t points[], uint32_t 
         lv_draw_line(driver.draw_ctx, draw_dsc, &points[i], &points[i + 1]);
     }
 
-    _lv_refr_set_disp_refreshing(refr_ori);
+    _lv_refr_set_disp_to_draw_end(refr_ori, NULL);
 
     deinit_fake_disp(canvas, &fake_disp);
 
@@ -703,7 +703,7 @@ void lv_canvas_draw_polygon(lv_obj_t * canvas, const lv_point_t points[], uint32
     init_fake_disp(canvas, &fake_disp, &driver, &clip_area);
 
     lv_disp_t * refr_ori = _lv_refr_get_disp_refreshing();
-    _lv_refr_set_disp_refreshing(&fake_disp);
+    _lv_refr_set_disp_to_draw_start(&fake_disp);
 
     /*Disable anti-aliasing if drawing with transparent color to chroma keyed canvas*/
     lv_color_t ctransp = LV_COLOR_CHROMA_KEY;
@@ -714,7 +714,7 @@ void lv_canvas_draw_polygon(lv_obj_t * canvas, const lv_point_t points[], uint32
 
     lv_draw_polygon(driver.draw_ctx, draw_dsc, points, point_cnt);
 
-    _lv_refr_set_disp_refreshing(refr_ori);
+    _lv_refr_set_disp_to_draw_end(refr_ori, NULL);
 
     deinit_fake_disp(canvas, &fake_disp);
 
@@ -742,12 +742,12 @@ void lv_canvas_draw_arc(lv_obj_t * canvas, lv_coord_t x, lv_coord_t y, lv_coord_
     init_fake_disp(canvas, &fake_disp, &driver, &clip_area);
 
     lv_disp_t * refr_ori = _lv_refr_get_disp_refreshing();
-    _lv_refr_set_disp_refreshing(&fake_disp);
+    _lv_refr_set_disp_to_draw_start(&fake_disp);
 
     lv_point_t p = {x, y};
     lv_draw_arc(driver.draw_ctx, draw_dsc, &p, r,  start_angle, end_angle);
 
-    _lv_refr_set_disp_refreshing(refr_ori);
+    _lv_refr_set_disp_to_draw_end(refr_ori, NULL);
 
     deinit_fake_disp(canvas, &fake_disp);
 

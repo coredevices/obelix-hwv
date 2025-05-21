@@ -5,7 +5,7 @@ import os
 import subprocess
 import shutil
 import sys
-import png
+# import png
 import logging
 
 output_folder = "output"
@@ -97,7 +97,7 @@ const lv_i18n_lang_t {}_lang =
 }};
 '''
     data = u''
-    for k, v in s.iteritems():
+    for k, v in s.items():
         # k = "str_" + k
         # data = data + u'char *{} = "{}";\n'.format(k,v)
         # key and singular
@@ -201,7 +201,7 @@ def GenerateStrRes(str_src_dir, str_output_dir):
     lang_pack = set()
     for f_name in string_res_file:
         try:
-            f = open(f_name)
+            f = open(f_name, encoding='utf-8')
             s = json.load(f)
         finally:
             f.close()
@@ -744,7 +744,11 @@ def GenFtabCFile(src, output_name, imgs_info):
                     else:
                         print('WARNING: img "{}" not found'.format(proj_name))
 
-    assert 'bootloader' in ftab, "bootloader not configured"
+    bootloader_needed = not building.GetDepend('SOC_SF32LB55X')
+    if bootloader_needed:
+        assert 'bootloader' in ftab, "bootloader not configured"
+    elif 'bootloader' in ftab:
+        bootloader_needed = True
     # assert 'main' in ftab, "main not configured"
 
     InitIndentation()
@@ -769,16 +773,18 @@ def GenFtabCFile(src, output_name, imgs_info):
         '.ftab[0] = {.base = FLASH_TABLE_START_ADDR,      .size = FLASH_TABLE_SIZE,      .xip_base = 0, .flags = 0},')
     s += MakeLine(
         '.ftab[1] = {.base = FLASH_CAL_TABLE_START_ADDR,  .size = FLASH_CAL_TABLE_SIZE,  .xip_base = 0, .flags = 0},')
-    s += MakeLine('.ftab[3] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
-        ftab['bootloader']['base'], ftab['bootloader']['max_size'], ftab['bootloader']['xip']))
+    if bootloader_needed:
+        s += MakeLine('.ftab[3] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
+            ftab['bootloader']['base'], ftab['bootloader']['max_size'], ftab['bootloader']['xip']))
     if 'main' in ftab:
         s += MakeLine('.ftab[4] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
             ftab['main']['base'], ftab['main']['max_size'], ftab['main']['xip']))
     s += MakeLine(
         '.ftab[5] = {.base = FLASH_BOOT_PATCH_START_ADDR, .size = FLASH_BOOT_PATCH_SIZE, .xip_base = '
         'BOOTLOADER_PATCH_CODE_ADDR, .flags = 0},')
-    s += MakeLine('.ftab[7] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
-        ftab['bootloader']['base'], ftab['bootloader']['max_size'], ftab['bootloader']['xip']))
+    if bootloader_needed:
+        s += MakeLine('.ftab[7] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
+            ftab['bootloader']['base'], ftab['bootloader']['max_size'], ftab['bootloader']['xip']))
     if 'main' in ftab:
         s += MakeLine('.ftab[8] = {{.base = 0x{:08X}, .size = 0x{:08X},  .xip_base = 0x{:08X}, .flags = 0}},'.format(
             ftab['main']['base'], ftab['main']['max_size'], ftab['main']['xip']))
@@ -802,9 +808,12 @@ def GenFtabCFile(src, output_name, imgs_info):
         '.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_HCPU)] = {{.length = 0x{:08X}, .blksize = 512, .flags = DFU_FLAG_AUTO}},'.format(
             size))
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU)] = {.length = 0xFFFFFFFF},')
-    s += MakeLine(
-        '.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)] = {{.length = 0x{:08X}, .blksize = 512, .flags = DFU_FLAG_AUTO}},'.format(
-            bl_size))
+    if bootloader_needed:
+        s += MakeLine(
+            '.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)] = {{.length = 0x{:08X}, .blksize = 512, .flags = DFU_FLAG_AUTO}},'.format(
+                bl_size))
+    else:
+        s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)] = {.length = 0xFFFFFFFF},')
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BOOT)] = {.length = 0xFFFFFFFF},')
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_LCPU2)] = {.length = 0xFFFFFFFF},')
     s += MakeLine('.imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BCPU2)] = {.length = 0xFFFFFFFF},')
@@ -848,9 +857,12 @@ def GenFtabCFile(src, output_name, imgs_info):
     else:
         s += MakeLine('.running_imgs[CORE_HCPU] = (struct image_header_enc *)0xFFFFFFFF,')
     s += MakeLine('.running_imgs[CORE_LCPU] = (struct image_header_enc *)0xFFFFFFFF,')
-    s += MakeLine(
-        '.running_imgs[CORE_BL] = (struct image_header_enc *)&(((struct sec_configuration '
-        '*)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)]),')
+    if bootloader_needed:
+        s += MakeLine(
+            '.running_imgs[CORE_BL] = (struct image_header_enc *)&(((struct sec_configuration '
+            '*)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_IMG_BL)]),')
+    else:
+        s += MakeLine('.running_imgs[CORE_BL] = (struct image_header_enc *)0xFFFFFFFF,')    
     s += MakeLine('.running_imgs[CORE_BOOT] = (struct image_header_enc *)0xFFFFFFFF,')
 
     DecIndentation()
@@ -907,6 +919,7 @@ def BuildJLinkLoadScript(main_env):
     s_file = MakeLine('[FILEINFO]')
     s_num = 0
 
+    download_file = []
     env_list = building.GetEnvList()
     for env in env_list:
         # if building.IsEmbeddedProjEnv(env):
@@ -924,14 +937,20 @@ def BuildJLinkLoadScript(main_env):
                 for d in dir_list:
                     bin_path = os.path.join(bin_file, d)
                     s += MakeLine('loadbin {} 0x{:08X}'.format(os.path.relpath(bin_path, work_dir), info[d]))
-
+                    download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': info[d]
+                    })
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info[d]))
                     s_num += 1
             else:
                 assert os.path.isfile(bin_file), "{} should be a file as map defines".format(env['name'])
                 s += MakeLine('loadbin {} 0x{:08X}'.format(os.path.relpath(bin_file, work_dir), info))
-
+                download_file.append({
+                        'name': os.path.relpath(bin_file, work_dir),
+                        'addr': info
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info))
                 s_num += 1
@@ -946,18 +965,25 @@ def BuildJLinkLoadScript(main_env):
                         continue
                     hex_path = os.path.join(hex_file, d)
                     s += MakeLine('loadfile {}'.format(os.path.relpath(hex_path, work_dir)))
-
+                    download_file.append({
+                        'name': os.path.relpath(hex_path, work_dir),
+                        'addr': 0xFFFFFFFF
+                    })
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                     s_num += 1
             elif not building.IsEmbeddedProjEnv(env):
                 s += MakeLine('loadfile {}'.format(os.path.relpath(hex_file, work_dir)))
-
+                download_file.append({
+                        'name': os.path.relpath(hex_file, work_dir),
+                        'addr': 0xFFFFFFFF
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                 s_num += 1
 
     custom_img_list = building.GetCustomImgList()
+    
     for env in custom_img_list:
         if env['name'] in img_download_info:
             # load address is defined in map, load binary using address
@@ -977,11 +1003,18 @@ def BuildJLinkLoadScript(main_env):
 
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info[d]))
+                    download_file.append({
+                        'name': os.path.relpath(bin_path, work_dir),
+                        'addr': info[d]
+                    })
                     s_num += 1
             else:
                 assert os.path.isfile(bin_file), "{} should be a file as map defines".format(bin_file)
                 s += MakeLine('loadbin {} 0x{:08X}'.format(os.path.relpath(bin_file, work_dir), info))
-
+                download_file.append({
+                        'name': os.path.relpath(bin_file, work_dir),
+                        'addr': info
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(bin_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,info))
                 s_num += 1
@@ -1002,13 +1035,19 @@ def BuildJLinkLoadScript(main_env):
                         continue
                     hex_path = os.path.join(hex_file, d)
                     s += MakeLine('loadfile {}'.format(os.path.relpath(hex_path, work_dir)))
-
+                    download_file.append({
+                        'name': os.path.relpath(hex_path, work_dir),
+                        'addr': 0XFFFFFFFF
+                    })
                     s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_path, work_dir)))
                     s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                     s_num += 1
             elif not building.IsEmbeddedProjEnv(env):
                 s += MakeLine('loadfile {}'.format(os.path.relpath(hex_file, work_dir)))
-
+                download_file.append({
+                        'name': os.path.relpath(hex_file, work_dir),
+                        'addr': 0XFFFFFFFF
+                    })
                 s_file += MakeLine('FILE{}={}'.format(s_num,os.path.relpath(hex_file, work_dir)))
                 s_file += MakeLine('ADDR{}=0x{:08X}'.format(s_num,0XFFFFFFFF))
                 s_num += 1
@@ -1042,11 +1081,19 @@ def BuildJLinkLoadScript(main_env):
     f.write(s)
     f.close()
 
+    device = main_env['JLINK_DEVICE']
+    device = device.split('_')[0][:-1]
+
+    download_list = ' '.join(f"\"{file['name']}@0x{file['addr']:08X}\"" for file in download_file)
+
     uart_comment = '@echo off\ntitle=uart download\nset WORK_PATH=%~dp0\nset CURR_PATH=%cd%\ncd %WORK_PATH%\n:start\necho,\necho      \
 Uart Download\necho,\nset /p input=please input the serial port num:\ngoto download\n:download\necho com%input%\n'
-    uart_comment += MakeLine('{} --func 0 --port com%input% --baund 3000000 --loadram 1 --postact 1 --device {} \
---file ImgBurnList.ini --log ImgBurn.log\nif %errorlevel%==0 (\n    echo Download Successful\n)else (\n    echo Download Failed\n    \
-echo logfile:%WORK_PATH%ImgBurn.log\n)\ncd %CURR_PATH%\n'.format(ImgDownUart_PATH, main_env['JLINK_DEVICE']))
+    if os.getenv("LEGACY_ENV"):
+        uart_comment += MakeLine('{} --func 0 --port com%input% --baund 3000000 --loadram 1 --postact 1 --verify --device {} \
+    --file ImgBurnList.ini --log ImgBurn.log\nif %errorlevel%==0 (\n    echo Download Successful\n)else (\n    echo Download Failed\n    \
+    echo logfile:%WORK_PATH%ImgBurn.log\n)\ncd %CURR_PATH%\n'.format(ImgDownUart_PATH, main_env['JLINK_DEVICE']))
+    else:
+        uart_comment += MakeLine(f"sftool -p COM%input% -c {device} write_flash {download_list}\n")
     uart_comment += MakeLine('if "%ENV_ROOT%"=="" pause\n')
     uart_f = open(os.path.join(main_env['build_dir'], 'uart_download.bat'), 'w')
     uart_f.write(uart_comment)

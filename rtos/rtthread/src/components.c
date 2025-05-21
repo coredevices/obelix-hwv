@@ -158,6 +158,11 @@ void rt_application_init(void);
 void rt_hw_board_init(void);
 int rtthread_startup(void);
 
+RT_WEAK void pre_main(void)
+{
+    // do nothing
+};
+
 #if defined(__CC_ARM) || defined(__CLANG_ARM)
 extern int $Super$$main(void);
 RT_WEAK void mpu_reconfig(void)
@@ -173,6 +178,7 @@ int $Sub$$main(void)
     SCB_CleanDCache();
 #endif
     mpu_reconfig();
+    pre_main();
     rtthread_startup();
     return 0;
 }
@@ -192,6 +198,7 @@ extern int main(void);
 /* Add -eentry to arm-none-eabi-gcc argument */
 int entry(void)
 {
+    pre_main();
     rtthread_startup();
     return 0;
 }

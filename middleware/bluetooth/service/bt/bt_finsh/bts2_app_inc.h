@@ -96,12 +96,8 @@ extern "C" {
 #include "bts2_usb_sys.h"
 #endif
 
-#ifdef CFG_SPP_CLT
-#include "spp_clt_api.h"
-#endif
-
 #ifdef CFG_SPP_SRV
-#include "spp_srv_api.h"
+#include "spp_api.h"
 #endif
 
 #ifdef CFG_HFP_HF
@@ -148,8 +144,7 @@ extern "C" {
 
 /* app header files */
 #include "bts2_app_demo.h"
-#include "bts2_app_spp_c.h"
-#include "bts2_app_spp_s.h"
+#include "bts2_app_spp.h"
 #include "bts2_app_generic.h"
 #include "bts2_app_menu.h"
 #include "bts2_app_hfp_hf.h"

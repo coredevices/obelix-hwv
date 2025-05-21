@@ -52,6 +52,10 @@
 //#define LOG_TAG              "hal.audcodec"
 //#include "drv_log.h"
 
+#ifdef SF32LB58X
+    #define BSP_ENABLE_DAC2     1
+#endif
+
 
 static void HAL_AUDCODEC_DMA_Init(DMA_HandleTypeDef          *hdma, uint8_t from_mem);
 

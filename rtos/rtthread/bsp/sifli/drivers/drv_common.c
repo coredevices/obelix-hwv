@@ -440,7 +440,7 @@ __HAL_ROM_USED float HAL_LPTIM_GetFreq()
 {
     if (HAL_LXT_DISABLED())
     {
-        uint32_t cycle = HAL_Get_backup(RTC_BACKUP_LPCYCLE_AVE);
+        uint32_t cycle = HAL_RC_CAL_get_average_cycle_on_48M();
         if (cycle == 0)
             return 9700;
         else

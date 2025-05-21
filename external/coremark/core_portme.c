@@ -18,7 +18,10 @@ Original Author: Shay Gal-on
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "rtconfig.h"
+#ifdef BSP_USING_RTTHREAD
 #include <rtthread.h>
+#endif /* BSP_USING_RTTHREAD */
 #include "coremark.h"
 #include "board.h"
 

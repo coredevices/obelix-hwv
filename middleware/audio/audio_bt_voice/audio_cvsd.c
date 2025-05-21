@@ -87,7 +87,7 @@ void encode_bit(const int16_t **in, int32_t *accum,
     }
 }
 
-void cvsdEncode(cvsd_t *cvsd,  const short *in,  unsigned int input_frame_len,  unsigned int *out)
+void cvsdEncode(cvsd_t *cvsd,  const short *in,  uint32_t input_frame_len,  uint32_t *out)
 {
     const int double_word_len = 32;
     const uint32_t double_word = (double_word_len - 1);
@@ -128,7 +128,7 @@ void cvsdEncode(cvsd_t *cvsd,  const short *in,  unsigned int input_frame_len,  
     cvsd->step_size = step_size;
 }
 
-void cvsdDecode(cvsd_t *cvsd,  const unsigned char *in,  unsigned int input_frame_len,  short *out)
+void cvsdDecode(cvsd_t *cvsd,  const unsigned char *in,  uint32_t input_frame_len,  short *out)
 {
     uint32_t runner = cvsd->output_byte;
     int32_t accum = cvsd->accumulator;

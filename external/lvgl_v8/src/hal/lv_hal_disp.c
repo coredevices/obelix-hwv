@@ -713,3 +713,9 @@ void set_px_true_color_alpha(lv_disp_drv_t * disp_drv, uint8_t * buf, lv_coord_t
 #endif
 
 }
+
+void set_px_cb_rgb565(lv_disp_drv_t * disp_drv, uint8_t * buf, lv_coord_t buf_w, lv_coord_t x, lv_coord_t y,
+                             lv_color_t color, lv_opa_t opa)
+{
+    LV_ASSERT(0);//GPU use only
+}

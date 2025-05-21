@@ -125,14 +125,6 @@ typedef enum
 } bts_app_state_t;
 
 
-#ifdef CFG_SPP_CLT
-typedef enum
-{
-    spp_clt_idle,
-    spp_clt_conned
-} bts2_spp_clt_st;
-#endif
-
 #ifdef CFG_SPP_SRV
 typedef enum
 {
@@ -142,27 +134,6 @@ typedef enum
 } bts2_spp_srv_st;
 #endif
 
-#ifdef CFG_SPP_CLT
-typedef struct
-{
-    bts2_spp_clt_st  spp_clt_st;
-    U8               spp_id;/*Record current spp instance id*/
-    U16              mfs;
-    U8               sending;
-    BTS2S_BD_ADDR    bd_addr;
-    FILE             *cur_file_hdl;
-    FILE             *wr_file_hdl;
-    U32              cur_file_pos;
-    U32              cur_file_size;
-    char             file_name[MAX_ONLY_FILE_NAME_LEN];
-    char             rd_file_name[20];
-    U32              start_timer;
-    U32              last_time;
-    U32              time_id;
-    U8               timer_flag;
-    U32              counter;
-} bts2_spp_inst_data;
-#endif
 #ifdef CFG_SPP_SRV
 typedef struct
 {
@@ -195,7 +166,6 @@ typedef struct
     U8                      cur_link_mode;
     BOOL                    exit_sniff_pending;
     U16                     spp_srv_mfs;
-    U32                     cod;
     U32                     service_list;
     bts2_spp_service_list *spp_service_list;
 } bts2_spp_srv_inst_data;
@@ -294,7 +264,6 @@ typedef struct
     BTS2S_BD_ADDR rmt_bd;
     U8            role;
 } bts2_avrcp_conn;
-
 
 typedef struct
 {
@@ -399,20 +368,12 @@ typedef struct
 #endif
     /* SPP */
     /* name should prefix with spp_ */
-#ifdef CFG_SPP_CLT
-    bts2_spp_inst_data *inst_ptr;
-    bts2_spp_inst_data spp_inst[SPP_CLT_MAX_CONN_NUM];
-    U8 select_spp_clt_id;
-    U8 spp_conn_nums;
-    int file_name_len;
-#endif
 
 #ifdef CFG_SPP_SRV
     bts2_spp_srv_inst_data *spp_srv_inst_ptr;
     bts2_spp_srv_inst_data spp_srv_inst[CFG_MAX_ACL_CONN_NUM];
     U8 select_device_id;
     U8 select_srv_chnl;
-    U8 spp_srv_conn_nums;
 #endif
 
 #ifdef CFG_AVRCP

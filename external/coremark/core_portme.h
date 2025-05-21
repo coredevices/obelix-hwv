@@ -21,7 +21,10 @@ Original Author: Shay Gal-on
 */
 #ifndef CORE_PORTME_H
 #define CORE_PORTME_H
+#include "rtconfig.h"
+#ifdef BSP_USING_RTTHREAD
 #include "rtthread.h"
+#endif /* BSP_USING_RTTHREAD */
 #include "board.h"
 
 #define ITERATIONS COREMARK_ITERATIONS

@@ -688,6 +688,12 @@ HAL_StatusTypeDef HAL_ADC_Init(ADC_HandleTypeDef *hadc);
 HAL_StatusTypeDef HAL_ADC_DeInit(ADC_HandleTypeDef *hadc);
 
 /**
+  * @brief Init all ADC hardware to expected state
+  * @reture void
+  */
+void HAL_ADC_HwInit(bool cold_boot);
+
+/**
   * @}
   */
 

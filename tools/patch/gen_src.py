@@ -13,11 +13,11 @@ def print_file(file_name, fpout):
             data += ('\x00'*(4-len(data)))
         temp=struct.unpack("<L", data)
         if ((count%4)==0):
-            print>>fpout, ("\t"),        
-        print>>fpout, ("0x%08X,"%(temp)),
+            fpout.write("\t")        
+        fpout.write("0x%08X,"%(temp))
         count=count+1
         if ((count%4)==0):
-            print>>fpout, ("\n"),
+            fpout.write("\n")
         data=fp_bin.read(4)    
     fp_bin.close()
 
@@ -28,53 +28,53 @@ def gen_lcpu_img(src,dest,rom=False):
         fpout=open(os.path.join(dest, 'lcpu_img.c'),"w+")
     else:
         fpout=open(dest,"w+")    
-    print >>fpout, ("#include <stdint.h>\n"),
-    print >>fpout, ("#include <string.h>\n"),
-    print >>fpout, ("#include \"mem_map.h\"\n"),
-    print >>fpout, ("#include \"rtconfig.h\"\n"),
-    print >>fpout, ("#include \"register.h\"\n\n"),
+    fpout.write("#include <stdint.h>\n")
+    fpout.write("#include <string.h>\n")
+    fpout.write("#include \"mem_map.h\"\n")
+    fpout.write("#include \"rtconfig.h\"\n")
+    fpout.write("#include \"register.h\"\n\n")
     if (rom==True):
-        print >>fpout, ("#undef HCPU_LCPU_CODE_START_ADDR \n"),        
-        print >>fpout, ("#define HCPU_LCPU_CODE_START_ADDR (LCPU_ROM_CODE_START_ADDR+0x0B000000)\n"),        
+        fpout.write("#undef HCPU_LCPU_CODE_START_ADDR \n")        
+        fpout.write("#define HCPU_LCPU_CODE_START_ADDR (LCPU_ROM_CODE_START_ADDR+0x0B000000)\n")        
     if os.path.isdir(src):        
-        print >>fpout, ("const unsigned int g_lcpu_bin1[]= { ")
+        fpout.write("const unsigned int g_lcpu_bin1[]= { \n")
         print_file(src+'/ER_IROM1', fpout)
-        print >>fpout, ("};")
-        print >>fpout, ("const unsigned int g_lcpu_bin2[]= { ")
+        fpout.write("};\n")
+        fpout.write("const unsigned int g_lcpu_bin2[]= { \n")
         print_file(src+'/ER_IROM2', fpout)
-        print >>fpout, ("};")
-        print >>fpout, ("uint32_t lcpu_ramcode_len()\n{\n"),
-        print >>fpout, ("\treturn sizeof(g_lcpu_bin1)+sizeof(g_lcpu_bin2);\n"),
-        print >>fpout, ("}\n"),
-        print >>fpout, ("void lcpu_img_install()\n{\n"),
-        print >>fpout, ("#if (LPSYS_RAM_CBUS_BASE < (LPSYS_SRAM_BASE - 0x20000000)) \n"),
-        print >>fpout, ("\tif (sizeof(g_lcpu_bin1) <= LPSYS_ITCM_SIZE)\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin1, sizeof(g_lcpu_bin1));\n"),
-        print >>fpout, ("\telse\n\t{\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin1, LPSYS_ITCM_SIZE);\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LPSYS_SRAM_BASE), (uint8_t *)g_lcpu_bin1 + LPSYS_ITCM_SIZE, sizeof(g_lcpu_bin1) - LPSYS_ITCM_SIZE);\n"),
-        print >>fpout, ("\t}\n#else\n"),
-        print >>fpout, ("\tmemcpy((void*)(HCPU_LCPU_CODE_START_ADDR),g_lcpu_bin1,sizeof(g_lcpu_bin1));\n"),
-        print >>fpout, ("#endif\n"),
-        print >>fpout, ("\tmemcpy((void*)(LCPU_DTCM_ADDR_2_HCPU_ADDR(LPSYS_DTCM_BASE)),g_lcpu_bin2,sizeof(g_lcpu_bin2));\n"),
-        print >>fpout, ("}\n"),
+        fpout.write("};\n")
+        fpout.write("uint32_t lcpu_ramcode_len()\n{\n")
+        fpout.write("\treturn sizeof(g_lcpu_bin1)+sizeof(g_lcpu_bin2);\n")
+        fpout.write("}\n")
+        fpout.write("void lcpu_img_install()\n{\n")
+        fpout.write("#if (LPSYS_RAM_CBUS_BASE < (LPSYS_SRAM_BASE - 0x20000000)) \n")
+        fpout.write("\tif (sizeof(g_lcpu_bin1) <= LPSYS_ITCM_SIZE)\n")
+        fpout.write("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin1, sizeof(g_lcpu_bin1));\n")
+        fpout.write("\telse\n\t{\n")
+        fpout.write("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin1, LPSYS_ITCM_SIZE);\n")
+        fpout.write("\t\tmemcpy((void *)(LPSYS_SRAM_BASE), (uint8_t *)g_lcpu_bin1 + LPSYS_ITCM_SIZE, sizeof(g_lcpu_bin1) - LPSYS_ITCM_SIZE);\n")
+        fpout.write("\t}\n#else\n")
+        fpout.write("\tmemcpy((void*)(HCPU_LCPU_CODE_START_ADDR),g_lcpu_bin1,sizeof(g_lcpu_bin1));\n")
+        fpout.write("#endif\n")
+        fpout.write("\tmemcpy((void*)(LCPU_DTCM_ADDR_2_HCPU_ADDR(LPSYS_DTCM_BASE)),g_lcpu_bin2,sizeof(g_lcpu_bin2));\n")
+        fpout.write("}\n")
     else:
-        print >>fpout, ("const unsigned int g_lcpu_bin[]= { ")
+        fpout.write("const unsigned int g_lcpu_bin[]= { \n")
         print_file(src, fpout)
-        print >>fpout, ("};")
-        print >>fpout, ("uint32_t lcpu_ramcode_len()\n{\n"),
-        print >>fpout, ("\treturn sizeof(g_lcpu_bin);\n"),
-        print >>fpout, ("}\n"),		
-        print >>fpout, ("void lcpu_img_install()\n{\n"),
-        print >>fpout, ("#if (LPSYS_RAM_CBUS_BASE < (LPSYS_SRAM_BASE - 0x20000000)) \n"),
-        print >>fpout, ("\tif (sizeof(g_lcpu_bin) <= LPSYS_ITCM_SIZE)\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, sizeof(g_lcpu_bin));\n"),
-        print >>fpout, ("\telse\n\t{\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, LPSYS_ITCM_SIZE);\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LPSYS_SRAM_BASE), (uint8_t *)g_lcpu_bin + LPSYS_ITCM_SIZE, sizeof(g_lcpu_bin) - LPSYS_ITCM_SIZE);\n"),
-        print >>fpout, ("\t}\n#else\n"),
-        print >>fpout, ("\tmemcpy((void*)(HCPU_LCPU_CODE_START_ADDR),g_lcpu_bin,sizeof(g_lcpu_bin));\n"),
-        print >>fpout, ("#endif\n}\n"),
+        fpout.write("};\n")
+        fpout.write("uint32_t lcpu_ramcode_len()\n{\n")
+        fpout.write("\treturn sizeof(g_lcpu_bin);\n")
+        fpout.write("}\n")		
+        fpout.write("void lcpu_img_install()\n{\n")
+        fpout.write("#if (LPSYS_RAM_CBUS_BASE < (LPSYS_SRAM_BASE - 0x20000000)) \n")
+        fpout.write("\tif (sizeof(g_lcpu_bin) <= LPSYS_ITCM_SIZE)\n")
+        fpout.write("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, sizeof(g_lcpu_bin));\n")
+        fpout.write("\telse\n\t{\n")
+        fpout.write("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, LPSYS_ITCM_SIZE);\n")
+        fpout.write("\t\tmemcpy((void *)(LPSYS_SRAM_BASE), (uint8_t *)g_lcpu_bin + LPSYS_ITCM_SIZE, sizeof(g_lcpu_bin) - LPSYS_ITCM_SIZE);\n")
+        fpout.write("\t}\n#else\n")
+        fpout.write("\tmemcpy((void*)(HCPU_LCPU_CODE_START_ADDR),g_lcpu_bin,sizeof(g_lcpu_bin));\n")
+        fpout.write("#endif\n}\n")
     fpout.close()
 
 
@@ -83,24 +83,24 @@ def gen_lcpu_img_mix(a1src, a3src, dest):
         fpout=open(os.path.join(dest, 'lcpu_img.c'),"w+")
     else:
         fpout=open(dest,"w+")    
-    print >>fpout, ('''
+    fpout.write('''
 #include <stdint.h>
 #include <string.h>
-#include \"mem_map.h\"
-#include \"rtconfig.h\"
-#include \"register.h\"
-#include \"board.h\"
+#include "mem_map.h"
+#include "rtconfig.h"
+#include "register.h"
+#include "board.h"
 
 ''')
     
-    print >>fpout, ("const unsigned int g_lcpu_bin[]= { ")
+    fpout.write("const unsigned int g_lcpu_bin[]= { \n")
     print_file(a1src, fpout)
-    print >>fpout, ("};")
-    print >>fpout, ("const unsigned int g_lcpu_bin_a3[]= { ")
+    fpout.write("};\n")
+    fpout.write("const unsigned int g_lcpu_bin_a3[]= { \n")
     print_file(a3src, fpout)
-    print >>fpout, ("};")
+    fpout.write("};\n")
      
-    print >>fpout, ('''
+    fpout.write('''
 uint32_t lcpu_ramcode_len()
 {
     uint32_t *pData = NULL;
@@ -190,29 +190,29 @@ def gen_lcpu_img_xip(src,dest):
         fpout=open(os.path.join(dest, 'lcpu_img.c'),"w+")
     else:
         fpout=open(dest,"w+")    
-    print >>fpout, ("#include <stdint.h>\n"),
-    print >>fpout, ("#include <string.h>\n"),
-    print >>fpout, ("#include \"mem_map.h\"\n"),
-    print >>fpout, ("#include \"rtconfig.h\"\n"),
-    print >>fpout, ("#include \"register.h\"\n\n"),
+    fpout.write("#include <stdint.h>\n")
+    fpout.write("#include <string.h>\n")
+    fpout.write("#include \"mem_map.h\"\n")
+    fpout.write("#include \"rtconfig.h\"\n")
+    fpout.write("#include \"register.h\"\n\n")
     if os.path.isdir(src):        
-        print >>fpout, ("const unsigned int g_lcpu_bin[]= { ")
+        fpout.write("const unsigned int g_lcpu_bin[]= { \n")
         print_file(src+'/ER_IROM0', fpout)
-        print >>fpout, ("};")
-        print >>fpout, ("uint32_t lcpu_ramcode_len()\n{\n"),
-        print >>fpout, ("\treturn sizeof(g_lcpu_bin);\n"),
-        print >>fpout, ("}\n"),	
-        print >>fpout, ("void lcpu_img_install()\n{\n"),
-        print >>fpout, ("#if (LPSYS_RAM_CBUS_BASE < 0x100000) \n"),
-        print >>fpout, ("\tif (sizeof(g_lcpu_bin) <= LPSYS_ITCM_SIZE)\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, sizeof(g_lcpu_bin));\n"),
-        print >>fpout, ("\telse\n\t{\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, LPSYS_ITCM_SIZE);\n"),
-        print >>fpout, ("\t\tmemcpy((void *)(LPSYS_SRAM_BASE), (uint8_t *)g_lcpu_bin + LPSYS_ITCM_SIZE, sizeof(g_lcpu_bin) - LPSYS_ITCM_SIZE);\n"),
-        print >>fpout, ("\t}\n#else\n"),
-        print >>fpout, ("\tmemcpy((void*)(HCPU_LCPU_CODE_START_ADDR),g_lcpu_bin,sizeof(g_lcpu_bin));\n"),
-        print >>fpout, ("#endif\n"),
-        print >>fpout, ("}\n"),
+        fpout.write("};\n")
+        fpout.write("uint32_t lcpu_ramcode_len()\n{\n")
+        fpout.write("\treturn sizeof(g_lcpu_bin);\n")
+        fpout.write("}\n")	
+        fpout.write("void lcpu_img_install()\n{\n")
+        fpout.write("#if (LPSYS_RAM_CBUS_BASE < 0x100000) \n")
+        fpout.write("\tif (sizeof(g_lcpu_bin) <= LPSYS_ITCM_SIZE)\n")
+        fpout.write("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, sizeof(g_lcpu_bin));\n")
+        fpout.write("\telse\n\t{\n")
+        fpout.write("\t\tmemcpy((void *)(LCPU_ITCM_ADDR_2_HCPU_ADDR(LPSYS_ITCM_BASE)), g_lcpu_bin, LPSYS_ITCM_SIZE);\n")
+        fpout.write("\t\tmemcpy((void *)(LPSYS_SRAM_BASE), (uint8_t *)g_lcpu_bin + LPSYS_ITCM_SIZE, sizeof(g_lcpu_bin) - LPSYS_ITCM_SIZE);\n")
+        fpout.write("\t}\n#else\n")
+        fpout.write("\tmemcpy((void*)(HCPU_LCPU_CODE_START_ADDR),g_lcpu_bin,sizeof(g_lcpu_bin));\n")
+        fpout.write("#endif\n")
+        fpout.write("}\n")
     else:
         assert False, "dir not found"
     
@@ -220,32 +220,56 @@ def gen_lcpu_img_xip(src,dest):
 
 def gen_lcpu_patch(src,dest):
     fpout=open(dest +'lcpu_patch.c',"w+")
-    print >>fpout, ("#include <stdint.h>\n"),
-    print >>fpout, ("#include <string.h>\n"),
-    print >>fpout, ("#include \"bf0_hal.h\"\n"),
-    print >>fpout, ("#include \"mem_map.h\"\n"),
-    print >>fpout, ("#include \"register.h\"\n"),
-    print >>fpout, ("#include \"bf0_hal_patch.h\"\n"),
-    print >>fpout, ("#ifdef HAL_LCPU_PATCH_MODULE\n"),
-    print >>fpout, ("const unsigned int g_lcpu_patch_list[]= { ")
+    fpout.write("#include <stdint.h>\n")
+    fpout.write("#include <string.h>\n")
+    fpout.write("#include \"bf0_hal.h\"\n")
+    fpout.write("#include \"mem_map.h\"\n")
+    fpout.write("#include \"register.h\"\n")
+    fpout.write("#include \"bf0_hal_patch.h\"\n")
+    fpout.write("#ifdef HAL_LCPU_PATCH_MODULE\n")
+    fpout.write("const unsigned int g_lcpu_patch_list[]= { \n")
     print_file(src+'patch_list.bin', fpout)
-    print >>fpout, ("};\n")
-    print >>fpout, ("const unsigned int g_lcpu_patch_bin[]= { ")
+    fpout.write("};\n")
+    fpout.write("const unsigned int g_lcpu_patch_bin[]= { \n")
     print_file(src+'lcpu_rom_patch.bin', fpout)
-    print >>fpout, ("};")
-    print >>fpout, ("void lcpu_patch_install()\n{\n"),
-    print >>fpout, ("#ifdef SOC_BF0_HCPU\n"),
-    print >>fpout, ("\tmemset((void*)(LCPU_PATCH_START_ADDR_S),0,LCPU_PATCH_TOTAL_SIZE);\n"),
-    print >>fpout, ("\tmemcpy((void*)(LCPU_PATCH_START_ADDR_S),g_lcpu_patch_bin,sizeof(g_lcpu_patch_bin));\n"),
-    print >>fpout, ("#else\n"),
-    print >>fpout, ("\tmemset((void*)(LCPU_PATCH_START_ADDR),0,LCPU_PATCH_TOTAL_SIZE);\n"),
-    print >>fpout, ("\tmemcpy((void*)(LCPU_PATCH_START_ADDR),g_lcpu_patch_bin,sizeof(g_lcpu_patch_bin));\n"),
-    print >>fpout, ("#endif\n"),
-    print >>fpout, ("\tmemcpy((void*)(LCPU_PATCH_RECORD_ADDR),g_lcpu_patch_list,sizeof(g_lcpu_patch_list));\n"),
-    print >>fpout, ("\tHAL_PATCH_install();\n}\n")
-    print >>fpout, ("#endif\n"),
+    fpout.write("};\n")
+    fpout.write("void lcpu_patch_install()\n{\n")
+    fpout.write("#ifdef SOC_BF0_HCPU\n")
+    fpout.write("\tmemset((void*)(LCPU_PATCH_START_ADDR_S),0,LCPU_PATCH_TOTAL_SIZE);\n")
+    fpout.write("\tmemcpy((void*)(LCPU_PATCH_START_ADDR_S),g_lcpu_patch_bin,sizeof(g_lcpu_patch_bin));\n")
+    fpout.write("#else\n")
+    fpout.write("\tmemset((void*)(LCPU_PATCH_START_ADDR),0,LCPU_PATCH_TOTAL_SIZE);\n")
+    fpout.write("\tmemcpy((void*)(LCPU_PATCH_START_ADDR),g_lcpu_patch_bin,sizeof(g_lcpu_patch_bin));\n")
+    fpout.write("#endif\n")
+    fpout.write("\tmemcpy((void*)(LCPU_PATCH_RECORD_ADDR),g_lcpu_patch_list,sizeof(g_lcpu_patch_list));\n")
+    fpout.write("\tHAL_PATCH_install();\n}\n")
+    fpout.write("#endif\n")
     fpout.close()
     
+def gen_general_img(name, src, dest):
+    if not os.path.exists(os.path.dirname(dest)):
+        os.makedirs(os.path.dirname(dest))
+    if os.path.isdir(dest):
+        fpout=open(os.path.join(dest, '{}_img.c').format(name),"w+")
+    else:
+        fpout=open(dest,"w+")    
+    fpout.write("#include <stdint.h>\n")
+    fpout.write("#include <string.h>\n")
+    fpout.write("#include \"mem_map.h\"\n")
+    fpout.write("#include \"rtconfig.h\"\n")
+    fpout.write("#include \"register.h\"\n\n")
+
+    bin_var_name = "g_{}_bin".format(name)
+    fpout.write("const unsigned int {}[]= {{ \n".format(bin_var_name))
+    print_file(src, fpout)
+    fpout.write("};\n")
+    fpout.write("uint32_t {}_ramcode_len(void)\n{{\n".format(name))
+    fpout.write("\treturn sizeof({});\n".format(bin_var_name))
+    fpout.write("}\n")
+
+    fpout.close()
+
+
 if __name__ == '__main__':    
     if (sys.argv[1]=='lcpu'):
         gen_lcpu_img(sys.argv[2], sys.argv[3])
@@ -257,3 +281,5 @@ if __name__ == '__main__':
         gen_lcpu_patch(sys.argv[2], sys.argv[3])
     if (sys.argv[1]=='lcpu_xip'):
         gen_lcpu_img_xip(sys.argv[2], sys.argv[3])
+    if (sys.argv[1]=='general'):
+        gen_general_img(sys.argv[4], sys.argv[2], sys.argv[3])

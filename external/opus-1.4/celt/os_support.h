@@ -40,7 +40,7 @@
 
 #include <string.h>
 #include <stdlib.h>
-
+#include <stdint.h>
 #include "rtconfig.h"
 #ifdef SOLUTION_WATCH
 #include "audio_mem.h"
@@ -49,6 +49,8 @@
 #ifndef BF0_ACPU
 #include "rtthread.h"
 #endif
+void* opus_heap_malloc(uint32_t size);
+void  opus_heap_free(void *p);
 
 /** Opus wrapper for malloc(). To do your own dynamic allocation, all you need to do is replace this function and opus_free */
 #ifndef OVERRIDE_OPUS_ALLOC
@@ -64,16 +66,17 @@ static OPUS_INLINE void *do_opus_alloc (size_t size, const char *file, int line)
         p = acpu_call_hcpu_malloc(size);
     }
     return p;
-#endif
+#else
 
 #ifdef SOLUTION_WATCH
     p = audio_mem_malloc(size);
-    rt_kprintf("opus audio alloc=%d 0x%p\r\n", size, p);
+
 #else
-    p = malloc(size);
-#ifndef BF0_ACPU
-    rt_kprintf("opus alloc=%d 0x%p\r\n", size, p);
+    p = opus_heap_malloc(size);
+
+
 #endif
+   rt_kprintf("opus alloc=%d 0x%p\r\n", size, p);
 #endif
    return p;
 }
@@ -100,7 +103,7 @@ static OPUS_INLINE void opus_free (void *ptr)
 #ifdef SOLUTION_WATCH
     return audio_mem_free(ptr);
 #else
-   free(ptr);
+    opus_heap_free(ptr);
 #endif
 }
 #endif

@@ -548,6 +548,8 @@ static void app_clock_load_dyn_wf(void)
 extern void app_clock_rotate_bg_register(void);
 #if 1//!(defined(PKG_USING_MICROPYTHON)||defined(PKG_USING_QUICKJS))
     extern void app_clock_simple_register(void);
+    extern void app_clock_dial_register(void);
+
 #endif /* defined(PKG_USING_MICROPYTHON)||defined(PKG_USING_QUICKJS)*/
 
 #ifdef PKG_USING_FFMPEG
@@ -588,6 +590,8 @@ static void on_start(void)
 
 #if 1//!(defined(PKG_USING_MICROPYTHON)||defined(PKG_USING_QUICKJS))
     app_clock_simple_register();
+    app_clock_dial_register();
+
 #endif /* defined(PKG_USING_MICROPYTHON)||defined(PKG_USING_QUICKJS) */
     gui_script_watch_face_register();
 

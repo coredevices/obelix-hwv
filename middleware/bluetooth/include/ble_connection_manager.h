@@ -227,6 +227,7 @@ typedef struct
 {
     uint8_t conn_idx;
     uint8_t request;
+    uint8_t type;
     uint32_t confirm_data;
 } connection_manager_bond_ack_infor_t;
 
@@ -693,6 +694,12 @@ void connection_manager_create_bond_bqb(uint8_t conn_idx, uint8_t command);
  * @return CM_STATUS_OK if set success
  */
 uint8_t connection_manager_set_bond_ack(uint8_t state);
+
+/**
+ * @brief set pin code for passkey entry
+ * @param[pin] pin code
+ */
+void connection_manager_bond_pin_code_set(uint32_t pin);
 
 /**
  * @brief use to reply remote if set bond ack BOND_PENDING by connection_manager_set_bond_ack

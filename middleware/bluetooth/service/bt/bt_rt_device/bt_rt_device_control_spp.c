@@ -67,15 +67,14 @@ bt_err_t bt_sifli_control_spp(struct rt_bt_device *bt_handle, int cmd, void *arg
 
     switch (cmd)
     {
+#ifdef CFG_SPP_SRV
     case BT_CONTROL_SEND_SPP_DATA:
     {
         spp_data_t   *p_args;
 
         p_args = (spp_data_t *)args;
-        BTS2S_BD_ADDR bd_addr;
         bt_mac_t *mac_addr = &p_args->mac_addr;
-        bt_addr_convert_to_bts((bd_addr_t *)mac_addr, &bd_addr);
-        ret = bt_interface_spp_send_data(p_args->data, p_args->len, &bd_addr, p_args->srv_chl);
+        ret = bt_interface_spp_send_data_ext(p_args->data, p_args->len, (bt_notify_device_mac_t *)mac_addr, p_args->srv_chl);
     }
     break;
 
@@ -85,12 +84,38 @@ bt_err_t bt_sifli_control_spp(struct rt_bt_device *bt_handle, int cmd, void *arg
 
         p_args = (spp_common_t *)args;
 
-        BTS2S_BD_ADDR bd_addr;
         bt_mac_t *mac_addr = &p_args->mac_addr;
-        bt_addr_convert_to_bts((bd_addr_t *)mac_addr, &bd_addr);
-        ret = bt_interface_spp_srv_data_rsp(&bd_addr, p_args->srv_chl);
+        ret = bt_interface_spp_srv_data_rsp_ext((bt_notify_device_mac_t *)mac_addr, p_args->srv_chl);
     }
     break;
+
+#ifdef CFG_SPP_CLT
+    case BT_CONTROL_SEND_SPP_SDP_REQ:
+    {
+        spp_sdp_req_t *p_args;
+
+        p_args = (spp_sdp_req_t *)args;
+
+        BTS2S_BD_ADDR bd_addr;
+        bt_mac_t *mac_addr = p_args->mac_addr;
+        bt_addr_convert_to_bts((bd_addr_t *)mac_addr, &bd_addr);
+        ret = bt_interface_spp_client_sdp_search_req(&bd_addr, p_args->uuid, p_args->uuid_len);
+    }
+    break;
+
+    case BT_CONTROL_SEND_SPP_CONN_REQ:
+    {
+        spp_conn_req_t *p_args;
+
+        p_args = (spp_conn_req_t *)args;
+
+        BTS2S_BD_ADDR bd_addr;
+        bt_mac_t *mac_addr = p_args->mac_addr;
+        bt_addr_convert_to_bts((bd_addr_t *)mac_addr, &bd_addr);
+        ret = bt_interface_spp_client_conn_req(&bd_addr, p_args->uuid, p_args->uuid_len);
+    }
+    break;
+#endif
 
     case BT_CONTROL_SEND_SPP_DISC_REQ:
     {
@@ -98,12 +123,11 @@ bt_err_t bt_sifli_control_spp(struct rt_bt_device *bt_handle, int cmd, void *arg
 
         p_args = (spp_common_t *)args;
 
-        BTS2S_BD_ADDR bd_addr;
         bt_mac_t *mac_addr = &p_args->mac_addr;
-        bt_addr_convert_to_bts((bd_addr_t *)mac_addr, &bd_addr);
-        ret = bt_interface_dis_spp_by_addr_and_chl(&bd_addr, p_args->srv_chl);
+        ret = bt_interface_dis_spp_by_addr_and_chl_ext((bt_notify_device_mac_t *)mac_addr, p_args->srv_chl);
     }
     break;
+#endif
 
     default:
         ret = BT_ERROR_UNSUPPORTED;

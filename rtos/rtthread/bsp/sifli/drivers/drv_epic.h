@@ -49,7 +49,9 @@
 #include <rtdevice.h>
 #include "bf0_hal.h"
 
-//#define DRV_EPIC_NEW_API
+#define DRV_EPIC_TIMEOUT_MS 500
+
+#ifndef DRV_EPIC_NEW_API
 
 typedef enum
 {
@@ -62,10 +64,6 @@ typedef enum
     DRV_EPIC_FILL_GRAD,
     DRV_EPIC_INVALID = 0xFFFF,      //Invalid
 } drv_epic_op_type_t;
-
-#define DRV_EPIC_TIMEOUT_MS 500
-
-#ifndef DRV_EPIC_NEW_API
 
 
 typedef void (*drv_epic_cplt_cbk)(EPIC_HandleTypeDef *);
@@ -103,9 +101,6 @@ rt_err_t drv_epic_blend(EPIC_LayerConfigTypeDef *input_layers,
 rt_err_t drv_epic_transform(EPIC_LayerConfigTypeDef *input_layers,
                             uint8_t input_layer_cnt,
                             EPIC_LayerConfigTypeDef *output_canvas,
-                            EPIC_TransPath hor_path,
-                            EPIC_TransPath ver_path,
-                            void *user_data,
                             drv_epic_cplt_cbk cbk);
 
 
@@ -116,6 +111,21 @@ rt_err_t drv_epic_cont_blend(EPIC_LayerConfigTypeDef *input_layers,
 void drv_epic_cont_blend_reset(void);
 
 #else /*DRV_EPIC_NEW_API*/
+
+
+typedef enum
+{
+    DRV_EPIC_DRAW_MIN = 0,
+    DRV_EPIC_DRAW_IMAGE = DRV_EPIC_DRAW_MIN,
+    DRV_EPIC_DRAW_FILL,
+    DRV_EPIC_DRAW_LETTERS,
+    DRV_EPIC_DRAW_ARC,
+    DRV_EPIC_DRAW_RECT,
+    DRV_EPIC_DRAW_LINE,
+    DRV_EPIC_DRAW_BORDER,
+    DRV_EPIC_DRAW_MAX,
+    DRV_EPIC_INVALID = 0xFFFF,      //Invalid
+} drv_epic_op_type_t;
 
 
 typedef struct
@@ -159,6 +169,61 @@ typedef struct
             uint32_t letter_num;
             drv_epic_letter_type_t *p_letters;
         } label;
+        struct
+        {
+            int16_t center_x;
+            int16_t center_y;
+
+            uint16_t start_angle;
+            uint16_t end_angle;
+
+            uint16_t width;
+            uint16_t radius;
+            uint8_t round_start;
+            uint8_t round_end;
+
+
+            uint32_t argb8888;
+        } arc;
+        struct
+        {
+            EPIC_AreaTypeDef area;
+
+            uint16_t radius;
+            uint8_t top_fillet;
+            uint8_t bot_fillet;
+
+            uint32_t argb8888;
+        } rectangle;
+        struct
+        {
+            EPIC_PointTypeDef p1;
+            EPIC_PointTypeDef p2;
+
+            uint16_t width;
+            int32_t dash_width;
+            int32_t dash_gap;
+            uint32_t argb8888;
+            uint8_t round_start;
+            uint8_t round_end;
+            uint8_t raw_end;
+        } line;
+        struct
+        {
+            EPIC_AreaTypeDef area;
+
+            uint16_t radius;
+            uint16_t width;
+
+            uint8_t top_side : 1;
+            uint8_t bot_side : 1;
+            uint8_t left_side : 1;
+            uint8_t right_side : 1;
+            uint8_t reserved : 4;
+
+            uint32_t argb8888;
+        } border;
+
     } desc;
 
     //Offset to specified dst buf, internal use only
@@ -176,41 +241,54 @@ typedef struct
 
 typedef enum
 {
+    /*Render and save results in render list's dest buffer*/
+    EPIC_MSG_RENDER_TO_BUF,
+    /*Render and draw results on LCD,
+        has NOT effect with render list's dest buffer*/
     EPIC_MSG_RENDER_DRAW,
 } EPIC_MsgIdDef;
 
-typedef uint32_t *drv_epic_render_list_t;
+typedef void *drv_epic_render_list_t;
+typedef void (*drv_epic_render_cb)(drv_epic_render_list_t rl, EPIC_LayerConfigTypeDef *p_dst, void *usr_data, uint32_t last);
+
 typedef struct
 {
-    uint32_t cf;
-    uint8_t *buf1;
-    uint8_t *buf2;
-    EPIC_AreaTypeDef area;
-    uint32_t buf_bytes;
+    EPIC_AreaTypeDef area;//render part of 'render_list'
 
-    drv_epic_render_list_t render_list;
-    rt_device_t lcd_dev;
-    uint8_t pixel_align;
+    uint32_t pixel_align; //partial render pixel alignments
+    drv_epic_render_cb partial_done_cb;
+    void *usr_data;
 } drv_epic_render_draw_cfg;
 
 
 typedef struct
 {
+    /*
+        The real size of 'render_list->dst'
+        if 'dst_area' is not equal to 'render_list->dst',
+        we'll draw 'render_list->dst' sized area first then scale to 'dst_area'
+    */
+    EPIC_AreaTypeDef dst_area;
+    drv_epic_render_cb done_cb;
+    void *usr_data;
+} drv_epic_render_to_buf_cfg;
+
+
+typedef struct
+{
     EPIC_MsgIdDef id;
-    uint32_t tick;
+    drv_epic_render_list_t render_list;
 
     union
     {
         drv_epic_render_draw_cfg  rd;
+        drv_epic_render_to_buf_cfg  r2b;
     } content;
 
-
+    uint32_t tick; //Internal use
 } EPIC_MsgTypeDef;
 
-
-
-typedef void (*drv_epic_render_cb)(EPIC_LayerConfigTypeDef *dst);
-
+rt_err_t drv_epic_setup_render_buffer(uint8_t *buf1, uint8_t *buf2, uint32_t buf_bytes);
 
 drv_epic_render_list_t drv_epic_alloc_render_list(drv_epic_render_buf *p_buf, EPIC_AreaTypeDef *p_ow_area);
 
@@ -219,7 +297,7 @@ drv_epic_letter_type_t *drv_epic_op_alloc_letter(drv_epic_operation *op);
 rt_err_t drv_epic_commit_op(drv_epic_operation *op);
 
 
-rt_err_t drv_epic_render_draw_commit(drv_epic_render_draw_cfg *cfg);
+rt_err_t drv_epic_render_msg_commit(EPIC_MsgTypeDef *p_msg);
 
 
 #endif /* DRV_EPIC_NEW_API */

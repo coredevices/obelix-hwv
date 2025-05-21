@@ -38,7 +38,6 @@ Original Author: Shay Gal-on
 #define MEM_STACK 2
 
 #include "core_portme.h"
-#include <rtthread.h>
 
 #if HAS_STDIO
 #include <stdio.h>
@@ -51,6 +50,8 @@ Original Author: Shay Gal-on
 #define ee_printf rt_kprintf
 #endif /* ee_printf */
 #endif
+#else
+#define ee_printf(...)
 #endif
 
 /* Actual benchmark execution in iterate */

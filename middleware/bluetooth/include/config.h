@@ -138,8 +138,9 @@
 
 
 #define CFG_MAX_ACL_CONN_NUM (7)
-#define SPP_CLT_MAX_CONN_NUM 1
-#define SPP_SRV_MAX_CONN_NUM 7
+//support the maximum number of spp client and server.
+#define SPP_CLT_MAX_CONN_NUM 2
+#define SPP_SRV_MAX_CONN_NUM 3
 
 
 

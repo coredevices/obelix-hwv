@@ -63,7 +63,7 @@
 
 
 
-#ifdef OTA_55X
+#if defined(OTA_55X)
 
 #ifndef OTA_NOR_LCPU_ROM_PATCH_SIZE
     #define OTA_NOR_LCPU_ROM_PATCH_SIZE 0
@@ -259,11 +259,13 @@ uint32_t dfu_get_download_addr_by_imgid(uint8_t img_id, uint8_t flag)
         break;
     }
 
+#ifdef OTA_55X
     dfu_flash_info_t info;
     if (dfu_flash_addr_get(img_id, &info) == DFU_ERR_NO_ERR)
     {
         flash_addr = info.addr;
     }
+#endif
 
     return flash_addr;
 }

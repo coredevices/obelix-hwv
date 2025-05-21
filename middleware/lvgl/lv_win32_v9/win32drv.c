@@ -275,6 +275,9 @@ EXTERN_C HWND lv_windows_create_display_window(
     HICON icon_handle,
     int show_window_mode)
 {
+
+    RECT rc = {0, 0, hor_res, ver_res};
+    AdjustWindowRectEx(&rc, WINDOW_STYLE, FALSE, WINDOW_EX_STYLE);
     HWND display_window_handle = CreateWindowExW(
                                      WINDOW_EX_STYLE,
                                      LVGL_SIMULATOR_WINDOW_CLASS,
@@ -282,12 +285,13 @@ EXTERN_C HWND lv_windows_create_display_window(
                                      WINDOW_STYLE,
                                      CW_USEDEFAULT,
                                      0,
-                                     hor_res,
-                                     ver_res,
+                                     rc.right - rc.left,
+                                     rc.bottom - rc.top,
                                      NULL,
                                      NULL,
                                      instance_handle,
                                      NULL);
+
     if (display_window_handle)
     {
         SendMessageW(

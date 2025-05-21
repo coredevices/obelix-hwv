@@ -39,7 +39,25 @@ menu "Bluetooth Hardware Config"
                 int "Supported RAL number. Maximum is 6"
                 depends on STACK_BLE_ON
                 default 3
-    endmenu 
+            config MAX_BLE_ISO
+                int "Supported ISO number. Maximum is 2"
+                depends on STACK_BLE_ON
+                default 2
+    endmenu
+    choice BTC_RUN_TYPE
+        prompt "Config how LCPU run"
+        default LCPU_RUN_ROM_COMBINE_RAM
+    config LCPU_RUN_ROM_COMBINE_RAM
+        bool "LCPU run based on ROM and RAM"
+        depends on BF0_HCPU
+    config LCPU_RUN_SEPERATE_IMG
+        bool "LCPU run based a seperated image on RAM or flash"
+        depends on ((SOC_SF32LB58X || SOC_SF32LB56X)&& BF0_HCPU)
+    config LCPU_RUN_ROM_ONLY
+        bool "LCPU run based on ROM"
+        depends on (SOC_SF32LB58X && BF0_HCPU)
+    endchoice
+    
     choice STACK_ENV_BUFF
         prompt "Select ROM envoirment buffer"
         default BT_DUAL_CTRL_MEM
@@ -99,5 +117,17 @@ menu "Bluetooth Hardware Config"
                 default 131072
         config HCI_DISABLE
             bool "Disable bt host HCI log"
+    endchoice
+    choice BT_IPC_UART_PORT
+        prompt "IPC UART PORT"
+        default IPC_USE_CONSOLE_DEVICE
+        config IPC_USE_CONSOLE_DEVICE
+            bool "IPC use console device"
+        config IPC_USE_OWN_DEVICE
+            bool "IPC use its own device"
+            config IPC_OWN_DEVICE_NAME
+                string "IPC own device name"
+                depends on IPC_USE_OWN_DEVICE
+                default "uart2"
     endchoice
 endmenu

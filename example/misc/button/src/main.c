@@ -63,7 +63,7 @@ static void button_event_handler(int32_t pin, button_action_t action)
 
 int main(void)
 {
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
+#if defined(BSP_USING_BOARD_SF32LB52_DEVKIT_LCD_525)
     HAL_PIN_Set(PAD_PA34, GPIO_A34, PIN_PULLDOWN, 1);
     HAL_PIN_Set(PAD_PA11, GPIO_A11, PIN_PULLDOWN, 1);
 #elif defined (BSP_USING_BOARD_EM_LB587XXX)
@@ -78,7 +78,7 @@ int main(void)
 
     button_cfg_t cfg;
 
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
+#if defined(BSP_USING_BOARD_SF32LB52_DEVKIT_LCD_525)
     cfg.pin = 34;
 #elif defined (BSP_USING_BOARD_EM_LB587XXX)
     cfg.pin = 152;
@@ -91,7 +91,7 @@ int main(void)
     RT_ASSERT(SF_EOK == button_enable(id));
 
 
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
+#if defined(BSP_USING_BOARD_SF32LB52_DEVKIT_LCD_525)
     cfg.pin = 11;
 #elif defined (BSP_USING_BOARD_EM_LB587XXX)
     cfg.pin = 150;

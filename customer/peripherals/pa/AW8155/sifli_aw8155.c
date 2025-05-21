@@ -48,36 +48,23 @@
 #include <stdlib.h>
 #include <string.h>
 #include "board.h"
+#include "drv_gpio.h"
 #if defined(PMIC_CTRL_ENABLE)
     #include "pmic_controller.h"
 #endif
 #define DBG_TAG           "aw8155"
 #include "rtdbg.h"
 
-#define  AW8155_WORK_MODE   1   // only 1 2 3 4
-#if (defined(BSP_USING_BOARD_EH_SS6700XXX) || defined(BSP_USING_BOARD_EH_LB561XXX) || defined(BSP_USING_BOARD_EH_LB563XXX) \
-    || defined(BSP_USING_BOARD_EH_LB561XXX_V2) || defined(BSP_USING_BOARD_EH_LB563XXX_V2))
 
-#define  AW8155_GPIO_PIN    28
-#define  AW8155_GPIO_HWP    hwp_gpio1
-#elif defined(BSP_USING_BOARD_EM_LB567XXX) || defined(BSP_USING_BOARD_EM_LB566XXX)
-#define  AW8155_GPIO_PIN    18
-#define  AW8155_GPIO_HWP    hwp_gpio2
-#elif defined(SOC_SF32LB52X)
-#define  AW8155_GPIO_PIN    10
-#define  AW8155_GPIO_HWP    hwp_gpio1
-#elif defined(BSP_USING_BOARD_EM_LB587XXX)
-#define  AW8155_GPIO_PIN    23
-#define  AW8155_GPIO_HWP    hwp_gpio2
-#else
-#define  AW8155_GPIO_PIN    21
-#define  AW8155_GPIO_HWP    hwp_gpio2
-#endif
+#define  AW8155_WORK_MODE   1   // only 1 2 3 4
+
+static GPIO_TypeDef *gpio_inst = GET_GPIO_INSTANCE(AW8155_GPIO_PIN);
+static uint16_t gpio_pin = GET_GPIOx_PIN(AW8155_GPIO_PIN);
 
 void aw8155_gpio_write(bool State)
 {
     GPIO_PinState PinState = (GPIO_PinState)State;
-    HAL_GPIO_WritePin(AW8155_GPIO_HWP, AW8155_GPIO_PIN, PinState);
+    HAL_GPIO_WritePin(gpio_inst, gpio_pin, PinState);
     HAL_Delay_us(5);
 }
 
@@ -94,9 +81,9 @@ void sifli_aw8155_start()
 #endif
     // set sensor pin to output mode
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT;
-    GPIO_InitStruct.Pin  = AW8155_GPIO_PIN;
+    GPIO_InitStruct.Pin  = gpio_pin;
     GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-    HAL_GPIO_Init(AW8155_GPIO_HWP, &GPIO_InitStruct);
+    HAL_GPIO_Init(gpio_inst, &GPIO_InitStruct);
     HAL_Delay_us(550);
 
     while (1)

@@ -101,11 +101,11 @@ do {                                                                        \
 
 
 #if defined(SOC_SF32LB58X)
-    #ifdef SF32LB58X_3SCO
+    #ifdef NVDS_BUF_START_ADDR
         #define NVDS_BUFF_START NVDS_BUF_START_ADDR
-    #else
+    #else // !NVDS_BUF_START_ADDR
         #define NVDS_BUFF_START 0x204FFD00
-    #endif
+    #endif // NVDS_BUF_START_ADDR
     #define NVDS_BUFF_SIZE 512
 #elif defined(SOC_SF32LB56X)
     #define NVDS_BUFF_START 0x2041FD00
@@ -630,11 +630,6 @@ static rt_err_t uart_tx_complete(struct uart_env_tag *env, rt_device_t dev, void
 
 }
 
-RT_WEAK void blebredr_rf_power_set(uint8_t type, int8_t txpwr)
-{
-    return;
-}
-
 
 #ifdef USING_IPC_QUEUE
 #include "mem_map.h"
@@ -1053,7 +1048,8 @@ static uint8_t crystal_cali_reset(void)
 
     return 1;
 }
-
+extern void cw_config(uint8_t is_start, uint8_t pa, uint8_t channel);
+extern void cw_config_bt(uint8_t is_start, uint8_t pa, uint8_t channel);
 static uint8_t loc_cmd_hdl(uint8_t *cmd, uint16_t len)
 {
     hci_forward_env_t *env = hci_forward_get_env();
@@ -1080,6 +1076,32 @@ static uint8_t loc_cmd_hdl(uint8_t *cmd, uint16_t len)
                 blebredr_rf_power_set(1, tx_pwr);
                 res = 0;
             }
+#ifndef  SOC_SF32LB55X
+            else if (cmd[3] == 0x03)
+            {
+                uint8_t pa = cmd[4];
+                uint8_t channel = cmd[5];
+                cw_config(1, pa, channel);
+                res = 0;
+            }
+            else if (cmd[3] == 0x04)
+            {
+                cw_config(0, 0, 0);
+                res = 0;
+            }
+            else if (cmd[3] == 0x09)
+            {
+                uint8_t pa = cmd[4];
+                uint8_t channel = cmd[5];
+                cw_config_bt(1, pa, channel);
+                res = 0;
+            }
+            else if (cmd[3] == 0x0A)
+            {
+                cw_config_bt(0, 0, 0);
+                res = 0;
+            }
+#endif
             else if (cmd[3] == 0x05)
             {
                 ret_len = 8;
@@ -1387,6 +1409,10 @@ __WEAK void bt_rf_bqb_config(void)
 void uart_ipc_path_change(void)
 {
     hci_forward_env_t *env = hci_forward_get_env();
+#ifdef IPC_USE_OWN_DEVICE
+    uint32_t oflag;
+    rt_err_t result;
+#endif /* IPC_USE_OWN_DEVICE */
 
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
@@ -1405,14 +1431,46 @@ void uart_ipc_path_change(void)
 #endif
 
     env->ipc_port = mbox_env.ipc_port;
-    env->uart_port = rt_console_get_device();;
+#ifdef IPC_USE_OWN_DEVICE
+    env->uart_port = rt_device_find(IPC_OWN_DEVICE_NAME);
+    RT_ASSERT(env->uart_port);
+
+    oflag = RT_DEVICE_OFLAG_RDWR;
+    if (env->uart_port->flag & RT_DEVICE_FLAG_DMA_RX)
+    {
+        oflag |= RT_DEVICE_FLAG_DMA_RX;
+    }
+    else
+    {
+        oflag |= RT_DEVICE_FLAG_INT_RX;
+    }
+
+    if (env->uart_port->flag & RT_DEVICE_FLAG_DMA_TX)
+    {
+        oflag |= RT_DEVICE_FLAG_DMA_TX;
+    }
+    else
+    {
+        oflag |= RT_DEVICE_FLAG_INT_TX;
+    }
+
+    result = rt_device_open(env->uart_port, oflag);
+    RT_ASSERT(RT_EOK == result);
+#else
+    env->uart_port = rt_console_get_device();
+    RT_ASSERT(env->uart_port);
+#endif /* IPC_USE_OWN_DEVICE */
+
     env->trans_en = 1;
     env->saved_rx_indicate = env->uart_port->rx_indicate;
     env->uart_port->rx_indicate = hci_trans_uart_rx_ind;
     env->saved_open_flag = env->uart_port->open_flag;
     env->uart_port->open_flag &= ~RT_DEVICE_FLAG_STREAM;
 
-    log_pause(true);
+    if (env->uart_port == rt_console_get_device())
+    {
+        log_pause(true);
+    }
 
     //__asm__("B .");
 
@@ -2124,16 +2182,18 @@ __ROM_USED tl_port_t rom_port_get(uint8_t idx)
 #ifndef SOC_SF32LB52X
     #ifndef ZBT
         #define MAX_BLE_ISO 0
-    #else
+    #else // !ZBT
         #define MAX_BLE_ISO 2
         #undef MAX_BT_ACL
         #define MAX_BT_ACL 1
         #undef MAX_BT_SCO
         #define MAX_BT_SCO 0
-    #endif
-#else
-    #define MAX_BLE_ISO 2
-#endif
+    #endif // ZBT
+#else // SOC_SF32LB52X
+    #ifndef MAX_BLE_ISO
+        #define MAX_BLE_ISO 2
+    #endif // MAX_BLE_ISO
+#endif // !SOC_SF32LB52X
 
 #define MAX_EXTRA_TX_BUF_CNT 2
 #if MAX_BT_ACL > 2
@@ -2323,8 +2383,9 @@ __ROM_USED void em_config(void)
 
 #if defined(SOC_SF32LB52X) && defined(BF0_LCPU)
 extern void rom_config_set_default_link_config(bluetooth_act_configt_t *cfg);
-static void act_config(void)
+__ROM_USED void act_config(void)
 {
+#ifndef ROM_CONFIG_V2
     g_bluetooth_act_config.bt_max_acl = MAX_BT_ACL;
     g_bluetooth_act_config.bt_max_sco = MAX_BT_SCO;
     g_bluetooth_act_config.ble_max_act = MAX_BLE_ACT;
@@ -2343,6 +2404,8 @@ static void act_config(void)
     g_bluetooth_act_config.is_ble_on = 0;
 #endif
     rom_config_set_default_link_config(&g_bluetooth_act_config);
+
+#endif // ROM_CONFIG_V2
 }
 #endif // SOC_SF32LB52X
 
@@ -2402,7 +2465,7 @@ __ROM_USED void mem_env_config(ble_mem_config_t *config, uint16_t env_buf_size, 
 
 __ROM_USED void mem_config(void)
 {
-
+#ifndef ROM_CONFIG_V2
 #if (defined(SOC_SF32LB56X) || defined(SOC_SF32LB52X)) && defined(BF0_LCPU)
     extern void rom_config_set_controller_enabled(uint8_t enabled_module);
     rom_config_set_controller_enabled(BT_CONTROLLER_ENABLE_MASK | BLE_CONTROLLER_ENABLE_MASK);
@@ -2423,7 +2486,7 @@ __ROM_USED void mem_config(void)
 //em_config();
 
 #endif // SOC_SF32LB56X && BF0_LCPU
-
+#endif // ROM_CONFIG_V2
 }
 
 

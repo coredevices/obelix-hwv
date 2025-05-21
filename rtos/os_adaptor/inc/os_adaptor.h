@@ -65,7 +65,7 @@
 #include "rtconfig.h"
 #include <stdint.h>
 
-
+#define OS_ADAPTOR_V2
 /*
  * DEFINES
  ****************************************************************************************
@@ -79,8 +79,9 @@
 #define OS_EVENT_FLAG_CLEAR            /**< Event clear flag */
 
 // Timer flags options
-#define OS_TIMER_FLAG_ONE_SHOT         /**< One shot timer */
-#define OS_TIMER_FLAG_PERIODIC         /**< Periodic timer */
+#define OS_TIMER_FLAG_ONE_SHOT   0      /**< One shot timer */
+#define OS_TIMER_FLAG_PERIODIC   1      /**< Periodic timer */
+#define OS_TIMER_FLAG_SOFT       2      /**< Soft timer */
 
 // ROM used indicator
 #ifndef __ROM_USED
@@ -127,19 +128,21 @@ typedef uint32_t os_status_t;
 /******************* Thread management ***************/
 
 // Thread handle initalized
-#define OS_THREAD_DECLAR(tid)
+#define OS_THREAD_DECLAR(tid) \
+    os_thread_t tid
 
 /**@brief Create a thread and add it into active list.
- * @param[in][out] handle Thread handle to the thread and NULL if created failed.
+ * @param[in] name Thread name.
  * @param[in] entry Thread callback functioin.
  * @param[in] parameter Passed to the thread function as start argument.
  * @param[in] stack_memory Provided stack memory to the thread or thread created the memory from heap if NULL.
  * @param[in] stack_size Stack size for the thread.
  * @param[in] priority Priority of thread. The lower value refer higher priority.
  * @param[in] tick Thread tick for time slice.
+ * @retval Handle of thread.
  */
-void os_thread_create(os_thread_t handle, os_thread_func_t entry, void *parameter, void *stack_memory,
-                      uint32_t stack_size, os_priority_t priority, uint32_t tick);
+os_thread_t os_thread_create(char     *name, os_thread_func_t entry, void *parameter, void *stack_memory,
+                             uint32_t stack_size, os_priority_t priority, uint32_t tick);
 
 
 /**@brief Thread enter critical.
@@ -173,7 +176,9 @@ os_status_t os_delay(uint32_t ms);
 /******************* Timer management ***************/
 
 // Timer handle initalized
-#define OS_TIMER_DECLAR(timer)
+#define OS_TIMER_DECLAR(timer_id) \
+    ot_timer_id_t timer_id
+
 
 /**@brief Create a system timer.
  * @param[in][out] timer_id Timer handle as reference for other timer functions and NULL if created failed.
@@ -206,13 +211,16 @@ os_status_t os_timer_delete(ot_timer_id_t        timer_id);
 /******************* Semaphore management ***************/
 
 // Semaphore handle initalized
-#define OS_SEM_DECLAR(sema)
+#define OS_SEM_DECLAR(sema) \
+    os_semaphore_t sema
+
 
 /**@brief Create and initalize a semaphore.
- * @param[in][out] smea Semaphore handle as reference for other semaphore functions and NULL if created failed.
+ * @param[in] name Semaphore name.
  * @param[in] count Maximum semphore count.
+ * @retval Created semaphore, NULL if failed.
  */
-void os_sem_create(os_semaphore_t sema, uint32_t count);
+os_semaphore_t os_sem_create(char *name, uint32_t count);
 
 /**@brief Take a semaphore. If no sempahore is available, it will wait till timeout
  * @param[in] smea Semaphore handle as created \ref os_sem_create.
@@ -239,12 +247,15 @@ os_status_t os_sem_delete(os_semaphore_t sem);
 /******************* Mutex management ***************/
 
 // Mutex handle initalized
-#define OS_MUTEX_DECLAR(mutex)
+#define OS_MUTEX_DECLAR(mutex) \
+    os_mutex_t mutex
+
 
 /**@brief Create and initalize a mutex.
- * @param[in][out] mutex Mutex handle as reference for other mutex functions and NULL if created failed.
+ * @param[in] name Mutex name.
+ * @retval Created Mutex, NULL if failed.
  */
-void os_mutex_create(os_mutex_t mutex);
+os_mutex_t os_mutex_create(char *name);
 
 /**@brief Take a mutex. If no mutex is available, it will wait till timeout.
  * @param[in] mutex Mutex handle as created \ref os_mutex_create.
@@ -270,7 +281,8 @@ os_status_t os_mutex_delete(os_mutex_t mutex);
 /******************* Message queue management ***************/
 
 // Message queue handle initalized
-#define OS_MESSAGE_QUEUE_DECLAR(queue)
+#define OS_MESSAGE_QUEUE_DECLAR(queue) \
+    os_message_queue_t queue
 
 /**@brief Create and initalize a message queue.
  * @param[in][out] queue Message queue handle as reference for other message functions and NULL if created failed.
@@ -310,7 +322,8 @@ os_status_t os_message_delete(os_message_queue_t queue);
 /******************* Mailbox management ***************/
 
 // Mailbox handle initalized
-#define OS_MAILBOX_DECLAR(mailbox)
+#define OS_MAILBOX_DECLAR(mailbox) \
+    os_mailbox_t mailbox
 
 /**@brief Create and initalize a mailbox.
  * @param[in][out] mailbox Mailbox handle as reference for other mailbox functions and NULL if created failed.
@@ -343,7 +356,9 @@ os_status_t os_mailbox_delete(os_mailbox_t mailbox);
 /******************* Mailbox management ***************/
 
 // Event initalized
-#define OS_EVENT_DECLAR(event)
+#define OS_EVENT_DECLAR(event) \
+    os_event_t event
+
 
 /**@brief Create and initalize a event.
  * @param[in][out] event Event handle as reference for other event functions and NULL if created failed.
@@ -380,15 +395,10 @@ os_status_t os_event_delete(os_event_t event);
 
 
 #if defined(BSP_USING_RTTHREAD)
-
-    #include "os_adaptor_rtthread.h"
-
-
+#include "os_adaptor_rtthread.h"
 #elif defined(BSP_USING_FREERTOS)
 
 #endif // BSP_USING_RTTHREAD
-
-
 
 #endif // __OS_ADAPTOR_H
 

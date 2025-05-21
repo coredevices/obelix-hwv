@@ -6,7 +6,7 @@
 */
 /**
  * @attention
- * Copyright (c) 2021 - 2021,  Sifli Technology
+ * Copyright (c) 2021 - 2025,  Sifli Technology
  *
  * All rights reserved.
  *
@@ -52,6 +52,13 @@
 #include "bf0_ble_gap.h"
 #include "bf0_sibles.h"
 #include "bf0_sibles_advertising.h"
+
+#include "bts2_app_inc.h"
+
+
+#ifdef AUDIO_USING_MANAGER
+    #include "audio_server.h"
+#endif // AUDIO_USING_MANAGER
 
 #define LOG_TAG "ble_app"
 
@@ -145,6 +152,43 @@ static app_env_t *ble_app_get_env(void)
     return &g_app_env;
 }
 
+#if 0 //CFG_AV_AAC
+#include "mem_section.h"
+
+#define AAC_HEAP_SIZE  (1 * 1024 * 1024)
+
+#if defined(__CC_ARM) || defined(__CLANG_ARM)
+    L2_RET_BSS_SECT_BEGIN(g_xz_opus_stack)
+    static  uint32_t g_aac_heap[AAC_HEAP_SIZE / sizeof(uint32_t)];
+    L2_RET_BSS_SECT_END
+#else
+    static uint32_t g_aac_heap[AAC_HEAP_SIZE / sizeof(uint32_t)] L2_RET_BSS_SECT(g_aac_heap);
+#endif
+
+static struct rt_memheap aac_memheap;
+static uint32_t g_aac_mem_size;
+
+static int aac_heap_init(void)
+{
+    rt_memheap_init(&aac_memheap, "aac_memheap", (void *)g_aac_heap, AAC_HEAP_SIZE);
+    return 0;
+}
+
+INIT_BOARD_EXPORT(aac_heap_init);
+
+void *faad_malloc(size_t size)
+{
+    void *p = rt_memheap_alloc(&aac_memheap, size);
+    RT_ASSERT(p);
+    return p;
+}
+
+void faad_free(void *b)
+{
+    rt_memheap_free(b);
+}
+
+#endif
 
 #ifdef APP_ENABLE_BG_ADV
 SIBLES_ADVERTISING_CONTEXT_DECLAR(g_app_advertising_bg_context);
@@ -498,16 +542,6 @@ static void app_wakeup(void)
 #endif
 }
 
-ble_common_update_type_t ble_request_public_address(bd_addr_t *addr)
-{
-    ble_common_update_type_t res = BLE_UPDATE_NO_UPDATE;
-    int ret = bt_mac_addr_generate_via_uid_v2(addr);
-    if (ret == 0)
-        res = BLE_UPDATE_ONCE;
-
-    return res;
-
-}
 
 static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8_t *data, uint16_t data_len)
 {
@@ -517,11 +551,9 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
         {
         case BT_NOTIFY_AVRCP_PROFILE_CONNECTED:
         {
-            LOG_I("AVRCP connected");
-            BTS2S_BD_ADDR bd_addr;
+            LOG_I("AVRCP connected success");
             bt_notify_profile_state_info_t *profile_info = (bt_notify_profile_state_info_t *)data;
-            bt_addr_convert_to_bts((bd_addr_t *)&profile_info->mac, &bd_addr);
-            bt_interface_set_avrcp_role(&bd_addr, AVRCP_TG);
+            bt_interface_set_avrcp_role_ext(&profile_info->mac, AVRCP_TG);
         }
         break;
         case BT_NOTIFY_AVRCP_PROFILE_DISCONNECTED:
@@ -529,10 +561,33 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
             LOG_I("AVRCP disconnected");
         }
         break;
+        case BT_NOTIFY_AVRCP_ABSOLUTE_VOLUME:
+        {
+            uint8_t *volume = (uint8_t *)data;
+#ifdef AUDIO_USING_MANAGER
+            uint8_t local_vol = bt_interface_avrcp_abs_vol_2_local_vol(*volume, audio_server_get_max_volume());
+            audio_server_set_private_volume(AUDIO_TYPE_BT_MUSIC, local_vol);
+#endif
+        }
+        break;
+        default:
+            break;
         }
     }
 
     return 0;
+}
+
+
+ble_common_update_type_t ble_request_public_address(bd_addr_t *addr)
+{
+    ble_common_update_type_t res = BLE_UPDATE_NO_UPDATE;
+    int ret = bt_mac_addr_generate_via_uid_v2(addr);
+    if (ret == 0)
+        res = BLE_UPDATE_ONCE;
+
+    return res;
+
 }
 
 
@@ -771,5 +826,59 @@ int ble_config(int argc, char *argv[])
     return 0;
 }
 MSH_CMD_EXPORT(ble_config, "BLE Configure")
+
+
+#if defined(LCPU_RUN_ROM_ONLY) || defined(FPGA)
+void lcpu_rom_config(void)
+{
+
+    uint8_t rev_id = __HAL_SYSCFG_GET_REVID();
+
+#ifdef LXT_DISABLE
+    uint8_t is_enable_lxt = 0;
+    uint8_t is_lcpu_rccal = 1;
+#else // !LXT_DISABLE
+    uint8_t is_enable_lxt = 1;
+    uint8_t is_lcpu_rccal = 0;
+#endif // LXT_DISABLE
+    uint32_t wdt_staus = 0xFF;
+    uint32_t wdt_time = 10;
+    uint16_t wdt_clk = 32768;
+
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_XTAL_ENABLED, &is_enable_lxt, 1);
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_STATUS, &wdt_staus, 4);
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_TIME, &wdt_time, 4);
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_WDT_CLK_FEQ, &wdt_clk, 2);
+    HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_RC_CAL_IN_L, &is_lcpu_rccal, 1);
+
+    {
+        uint32_t tx_queue = HCPU2LCPU_MB_CH1_BUF_START_ADDR;
+        hal_lcpu_bluetooth_rom_config_t config = {0};
+        config.bit_valid |= 1 << 10 | 1 << 6;
+        config.is_fpga = 1;
+        config.default_xtal_enabled = is_enable_lxt;
+        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_HCPU_TX_QUEUE, &tx_queue, 4);
+        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_CONFIG, &config, sizeof(config));
+    }
+
+    {
+        hal_lcpu_bluetooth_actmove_config_t act_cfg;
+        act_cfg.bit_valid = 1;
+        act_cfg.act_mov = 0x10;
+        HAL_LCPU_CONFIG_set(HAL_LCPU_CONFIG_BT_ACTMOVE_CONFIG, &act_cfg, LCPU_CONFIG_BT_ACTMOVE_ROM_LENGTH);
+    }
+}
+#endif // defined(LCPU_RUN_ROM_ONLY) || defined(FPGA)
+
+#ifdef LCPU_RUN_ROM_ONLY
+void HAL_LPAON_ConfigStartAddr(uint32_t *start_addr)
+{
+    hwp_lpsys_aon->SPR = 0;
+    hwp_lpsys_aon->PCR = 0;
+}
+#endif // LCPU_RUN_ROM_ONLY
+
+
+
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/
 

@@ -28,8 +28,7 @@ from shutil import ignore_patterns
 
 def do_copy_file(src, dst):
     # check source file
-    if not os.path.exists(src):
-        return
+    assert os.path.exists(src), "file {} not found".format(src)
 
     path = os.path.dirname(dst)
     # mkdir if path not exist

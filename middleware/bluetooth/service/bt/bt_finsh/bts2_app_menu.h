@@ -130,14 +130,6 @@ typedef enum
     menu_hid,
 #endif
 
-#ifdef CFG_SPP_CLT
-    menu_spp_clt,
-    menu_spp_clt_0,
-    menu_spp_clt_3,
-    menu_spp_clt_4,
-    menu_spp_clt_5,
-#endif
-
 #ifdef CFG_SPP_SRV
     menu_spp_srv,
     menu_spp_srv_0,

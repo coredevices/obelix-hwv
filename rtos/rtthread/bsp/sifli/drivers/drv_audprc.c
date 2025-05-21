@@ -2550,10 +2550,13 @@ int Set_mic_gain(int8_t value)
 
 
 
-#if AUDIO_USING_PDM
+#ifdef AUDIO_RX_USING_PDM
 
 extern void set_pdm_gain_to_register(int val);
-
+int get_pdm_volume()
+{
+    return g_pdm_volume;
+}
 int pdm_gain(int argc, char **argv)
 {
     int val;

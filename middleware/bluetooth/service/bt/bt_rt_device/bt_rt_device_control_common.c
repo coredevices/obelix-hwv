@@ -60,6 +60,10 @@
     #include "bt_rt_device_control_avrcp.h"
 #endif
 
+#ifdef AUDIO_USING_MANAGER
+    #include "audio_server.h"
+#endif // AUDIO_USING_MANAGER
+
 #define DBG_TAG               "bt_rt_device.control_comm"
 //#define DBG_LVL               DBG_INFO
 #include <log.h>
@@ -67,7 +71,6 @@
 
 static bd_addr_t g_custom_bt_addr = {0};
 
-extern void set_speaker_volume(uint8_t volume);
 static bt_err_t bt_sifli_set_speaker_volume(rt_bt_device_t *dev, bt_volume_set_t *set)
 {
     bt_err_t ret = BT_ERROR_STATE;
@@ -91,7 +94,9 @@ static bt_err_t bt_sifli_set_speaker_volume(rt_bt_device_t *dev, bt_volume_set_t
         ret = BT_EOK;
     }
 
-    set_speaker_volume(volume);
+#ifdef AUDIO_USING_MANAGER
+    audio_server_set_private_volume(AUDIO_TYPE_BT_VOICE, volume);
+#endif // AUDIO_USING_MANAGER
     return ret;
 }
 
@@ -176,8 +181,7 @@ bt_err_t bt_sifli_control_common(struct rt_bt_device *bt_handle, int cmd, void *
 
     case BT_CONTROL_EXIT_SNIFF:
     {
-        // bt_mac_t *mac = (bt_mac_t *)args;
-        // bt_interface_exit_sniff_mode(mac);
+        bt_interface_exit_sniff_mode();
     }
     break;
 
@@ -378,9 +382,7 @@ bt_err_t bt_sifli_control_common(struct rt_bt_device *bt_handle, int cmd, void *
             ble_get_public_address(&addr);
             sibles_change_bd_addr(SIBLES_CH_BD_TYPE_BT, SIBLES_CH_BD_METHOD_CUSTOMIZE, &addr);
 #ifdef BT_FINSH_PAN
-            BTS2S_BD_ADDR     bd_addr;
-            bt_addr_convert_to_bts(&addr, &bd_addr);
-            bt_interface_update_pan_addr(&bd_addr);
+            bt_interface_update_pan_addr_ext((bt_notify_device_mac_t *)addr);
 #endif
         }
         else
@@ -388,9 +390,7 @@ bt_err_t bt_sifli_control_common(struct rt_bt_device *bt_handle, int cmd, void *
             rt_memcpy(&g_custom_bt_addr, args, sizeof(bd_addr_t));
             sibles_change_bd_addr(SIBLES_CH_BD_TYPE_BT, SIBLES_CH_BD_METHOD_CUSTOMIZE, args);
 #ifdef BT_FINSH_PAN
-            BTS2S_BD_ADDR     bd_addr;
-            bt_addr_convert_to_bts(&g_custom_bt_addr, &bd_addr);
-            bt_interface_update_pan_addr(&bd_addr);
+            bt_interface_update_pan_addr_ext((bt_notify_device_mac_t *)g_custom_bt_addr);
 #endif
         }
     }

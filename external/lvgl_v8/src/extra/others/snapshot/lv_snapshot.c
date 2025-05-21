@@ -139,11 +139,11 @@ lv_res_t lv_snapshot_take_to_buf(lv_obj_t * obj, lv_img_cf_t cf, lv_img_dsc_t * 
     driver.draw_ctx = draw_ctx;
 
     lv_disp_t * refr_ori = _lv_refr_get_disp_refreshing();
-    _lv_refr_set_disp_refreshing(&fake_disp);
+    _lv_refr_set_disp_to_draw_start(&fake_disp);
 
     lv_obj_redraw(draw_ctx, obj);
 
-    _lv_refr_set_disp_refreshing(refr_ori);
+    _lv_refr_set_disp_to_draw_end(refr_ori, NULL);
     obj_disp->driver->draw_ctx_deinit(fake_disp.driver, draw_ctx);
     lv_mem_free(draw_ctx);
 
@@ -298,12 +298,12 @@ lv_res_t lv_refr_dump_buf_to_img_now(lv_img_dsc_t *img_dsc)
         init_fake_disp(ori_disp, &fake_disp, &driver, &clip_area,img_dsc);
         
         if (draw_ctx->wait_for_finish) draw_ctx->wait_for_finish(draw_ctx);
-        _lv_refr_set_disp_refreshing(&fake_disp);
+        _lv_refr_set_disp_to_draw_start(&fake_disp);
         
        
         lv_draw_img(driver.draw_ctx, &img_draw_dsc, &clip_area, &img_screen);
         if (driver.draw_ctx->wait_for_finish) driver.draw_ctx->wait_for_finish(driver.draw_ctx);
-        _lv_refr_set_disp_refreshing(ori_disp);
+        _lv_refr_set_disp_to_draw_end(ori_disp, NULL);
 
         deinit_fake_disp(ori_disp, &fake_disp);
     }

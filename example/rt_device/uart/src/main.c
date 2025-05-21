@@ -74,7 +74,7 @@ int uart2_init(void)
 {
     rt_err_t ret = RT_EOK;
     /* 1, pinmux set to uart mode */
-#if defined(BSP_USING_BOARD_EM_LB525XXX)
+#if defined(BSP_USING_BOARD_SF32LB52_DEVKIT_LCD_525)
     HAL_PIN_Set(PAD_PA20, USART2_RXD, PIN_PULLUP, 1);
     HAL_PIN_Set(PAD_PA27, USART2_TXD, PIN_PULLUP, 1);
 #elif defined (BSP_USING_BOARD_EM_LB587XXX)

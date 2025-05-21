@@ -116,10 +116,6 @@ typedef enum
     BTS2T_BPP_SRV,
 #endif
 
-#ifdef CFG_SPP_CLT
-    BTS2T_SPP_CLT,
-#endif
-
 #ifdef CFG_SPP_SRV
     BTS2T_SPP_SRV,
 #endif

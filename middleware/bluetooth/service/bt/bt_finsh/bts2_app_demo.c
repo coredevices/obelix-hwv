@@ -110,10 +110,6 @@ void init_inst_data(bts2_app_stru *bts2_app_data)
  *----------------------------------------------------------------------------*/
 void bt_init_profile(bts2_app_stru *bts2_app_data)
 {
-    /*SPP */
-#ifdef CFG_SPP_CLT
-    bt_spp_clt_init(bts2_app_data);
-#endif
     /*HFP HF */
 #ifdef CFG_HFP_HF
     bt_hfp_hf_init(bts2_app_data);
@@ -147,7 +143,7 @@ void bt_init_profile(bts2_app_stru *bts2_app_data)
     bt_pbap_clt_init(bts2_app_data);
 #endif
 #ifdef CFG_SPP_SRV
-    bt_spp_srv_init(bts2_app_data);
+    bt_spp_init(bts2_app_data);
     bt_spp_srv_start_enb(bts2_app_data);
 #endif
 }
@@ -233,47 +229,6 @@ void app_fn_rel(void **pp)
     {
         switch (msg_type)
         {
-#ifdef CFG_SPP_CLT
-        case BTS2M_SPP_CLT:
-        {
-            U16 *msg_type;
-
-            msg_type = (U16 *)msg_data;
-            switch (*msg_type)
-            {
-
-            case BTS2MU_SPP_CLT_DATA_IND:
-            {
-                BTS2S_SPP_CLT_DATA_IND *msg;
-
-                msg = (BTS2S_SPP_CLT_DATA_IND *)msg_data;
-                bfree(msg->payload);
-                break;
-            }
-            }
-            bfree(msg_data);
-
-            /*SPP */
-            for (i = 0; i < SPP_CLT_MAX_CONN_NUM; i++)
-            {
-                if (bts2_app_data->spp_inst[i].timer_flag)
-                {
-                    bts2_timer_ev_cancel(bts2_app_data->spp_inst[i].time_id, NULL, NULL);
-                }
-
-                if (bts2_app_data->spp_inst[i].cur_file_hdl != NULL)
-                {
-                    fclose(bts2_app_data->spp_inst[i].cur_file_hdl);
-                }
-
-                if (bts2_app_data->spp_inst[i].wr_file_hdl != NULL)
-                {
-                    fclose(bts2_app_data->spp_inst[i].wr_file_hdl);
-                }
-            }
-            break;
-        }
-#endif
 #ifdef CFG_SPP_SRV
         case BTS2M_SPP_SRV:
         {
@@ -283,11 +238,11 @@ void app_fn_rel(void **pp)
             switch (*msg_type)
             {
 
-            case BTS2MU_SPP_SRV_DATA_IND:
+            case BTS2MU_SPP_DATA_IND:
             {
-                BTS2S_SPP_SRV_DATA_IND *msg;
+                BTS2S_SPP_DATA_IND *msg;
 
-                msg = (BTS2S_SPP_SRV_DATA_IND *)msg_data;
+                msg = (BTS2S_SPP_DATA_IND *)msg_data;
                 bfree(msg->payload);
                 break;
             }
@@ -402,17 +357,10 @@ int app_event_hdl(U16 type, U16 event_id, uint8_t *msg, uint32_t context)
 
     switch (type)
     {
-#ifdef CFG_SPP_CLT
-    case BTS2M_SPP_CLT:
-    {
-        bt_spp_clt_msg_hdl(bts2_app_data);
-        break;
-    }
-#endif
 #ifdef CFG_SPP_SRV
     case BTS2M_SPP_SRV:
     {
-        bt_spp_srv_msg_hdl(bts2_app_data);
+        bt_spp_msg_hdl(bts2_app_data);
         break;
     }
 #endif
@@ -561,17 +509,10 @@ void app_fn_hdl(void **pp)
 
     switch (msg_cls)
     {
-#ifdef CFG_SPP_CLT
-    case BTS2M_SPP_CLT:
-    {
-        bt_spp_clt_msg_hdl(bts2_app_data);
-        break;
-    }
-#endif
 #ifdef CFG_SPP_SRV
     case BTS2M_SPP_SRV:
     {
-        bt_spp_srv_msg_hdl(bts2_app_data);
+        bt_spp_msg_hdl(bts2_app_data);
         break;
     }
 #endif

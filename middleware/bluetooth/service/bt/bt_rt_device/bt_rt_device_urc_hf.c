@@ -191,8 +191,16 @@ void urc_func_profile_cind_sifli(bts2_hfp_hf_cind *cind)
     //callStatus is not 0,means exista active call at least ,when hfp profile is connected
     //callSetupStatus is not 0,means exist a setup call,when hfp profile is connected
     //callHeldStatus is not 0,means exist a 3way call,when hfp pforile is connected
-    //args.args = cind;
-    //rt_bt_event_notify(&args);
+    bt_notify_t args;
+    bt_cind_data_t data;
+    data.service = cind->service;
+    data.signal = cind->signal;
+    data.batt_level = cind->batt_level;
+    data.roam = cind->roam;
+    args.event = BT_EVENT_CINDS_IND;
+    args.args = &data;
+    rt_bt_event_notify(&args);
+    LOG_I("URC cind signal:%d batt_level:%d service:%d roam:%d", cind->signal, cind->batt_level, cind->service, cind->roam);
 }
 
 void urc_func_clcc_sifli(bt_clcc_ind_t *ind)
@@ -371,6 +379,10 @@ int bt_sifli_notify_hfp_hf_event_hdl(uint16_t event_id, uint8_t *data, uint16_t 
         cind_status.callHeldStatus = call_status->callheld_status;
         cind_status.callStatus = call_status->call_status;
         cind_status.callSetupStatus = call_status->callsetup_status;
+        cind_status.roam = call_status->roam;
+        cind_status.service = call_status->service;
+        cind_status.signal = call_status->signal;
+        cind_status.batt_level = call_status->batt_level;
         urc_func_profile_cind_sifli(&cind_status);
         break;
     }

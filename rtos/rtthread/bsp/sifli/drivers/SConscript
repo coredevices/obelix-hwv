@@ -112,7 +112,7 @@ if GetDepend(['BSP_USING_EPIC']):
     if not GetDepend(['RT_USING_MESSAGEQUEUE']):
         print("Warning: EPIC driver requrie RT_USING_MESSAGEQUEUE!")
     else:
-        src += ['drv_epic.c']
+        src += ['drv_epic.c', 'drv_epic_mask.c']
 
 
 if GetDepend(['RT_USING_BT']):
@@ -136,6 +136,9 @@ if GetDepend(['BSP_USING_USBH']) or GetDepend(['BSP_USING_USBD']):
 
 if GetDepend(['BSP_USING_HW_AES']):
     src += ['drv_aes.c']
+
+if GetDepend(['BSP_USING_ENCODER1']):
+    src += ['drv_encoder.c']
 
 src += ['drv_common.c','drv_dbg.c']
 path =  [cwd]

@@ -51,7 +51,7 @@
 #include <stdlib.h>
 #include "board.h"
 #include "drv_config.h"
-
+#include "drv_i2s.h"
 #include "string.h"
 
 #ifdef FPGA
@@ -539,7 +539,7 @@ static rt_err_t bf0_audio_i2s_start(struct bf0_i2s_audio *aud, int stream)
 #endif /* !SOC_BF0_HCPU */
 #endif /* SF32LB58X */
 
-#ifndef ASIC  //i2s mic on FPGA  
+#ifndef ASIC  //i2s mic on FPGA
 
     /*FPGA have NONE I2S TX device*/
 #ifndef SF32LB55X
@@ -586,6 +586,8 @@ static rt_err_t bf0_audio_start(struct rt_audio_device *audio, int stream)
 {
     struct bf0_i2s_audio *aud = (struct bf0_i2s_audio *) audio->parent.user_data;
     HAL_StatusTypeDef res = HAL_OK;
+
+    RT_ASSERT((uint32_t)&audio_data[0] >= 0x20000000); //must in sram
 
     if ((aud->hi2s.State == HAL_I2S_STATE_RESET) || (aud->hi2s.State == HAL_I2S_STATE_READY))
     {
@@ -871,6 +873,14 @@ static const struct rt_audio_ops       _g_audio_ops =
     .transmit   = bf0_audio_trans,
 };
 
+void bf0_i2s_device_write(rt_device_t dev, rt_off_t pos, const void *buffer, rt_size_t size)
+{
+
+    // i2s_save_to_file((uint8_t *)buffer, size);  // Save the I2S output music
+    struct rt_audio_device *audio = (struct rt_audio_device *)dev;
+
+    bf0_audio_trans(audio, buffer, NULL, size);
+}
 
 /**
 * @} I2S Audio_device
@@ -906,7 +916,7 @@ int rt_bf0_i2s_audio_init(void)
             hi2s->hdmatx->Instance = bf0_i2s_audio_obj[i].hdma_tx;
             hi2s->hdmatx->Init.Request = bf0_i2s_audio_obj[i].reqdma_tx;
 
-#ifndef ASIC  //i2s mic on FPGA  
+#ifndef ASIC  //i2s mic on FPGA
             hi2s->Init.src_clk_freq =     3 * 1024 * 1000;   //FPGA A0 I2S clk source is 3.072MHz
 
             hi2s->Init.rx_cfg.data_dw = 16;

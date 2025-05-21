@@ -216,10 +216,6 @@ void acpu_send_result(void *val, uint32_t val_size)
     {
         acpu_task_output->error_code = 1;
     }
-    else
-    {
-        acpu_task_output->error_code = 0;
-    }
 
     acpu_task_output->seq_no = acpu_task_input->seq_no;
     for (uint32_t i = 0; i < val_size; i++)
@@ -228,9 +224,16 @@ void acpu_send_result(void *val, uint32_t val_size)
     }
 
     acpu_task_output->task_name = acpu_task_input->task_name;
+    acpu_task_input->task_name = ACPU_TASK_INVALID;
 
     handle.Instance = A2H_MAILBOX;
     __HAL_MAILBOX_TRIGGER_CHANNEL_IT(&handle, (ACPU_TASK_DONE_NTF_QUEUE % IPC_HW_QUEUE_NUM));
+}
+
+void acpu_send_result2(void *val, uint32_t val_size, uint8_t error_code)
+{
+    acpu_task_output->error_code = error_code;
+    acpu_send_result(val, val_size);
 }
 
 __WEAK void acpu_main(uint8_t task_name, void *param)
@@ -364,8 +367,8 @@ int main(void)
     {
         if (ACPU_TASK_INVALID != acpu_task_input->task_name)
         {
+            acpu_task_output->error_code = 0;
             acpu_main(acpu_task_input->task_name, (void *)&acpu_task_input->param[0]);
-            acpu_task_input->task_name = ACPU_TASK_INVALID;
         }
     }
 }
@@ -415,7 +418,7 @@ __ERR:
 }
 MSH_CMD_EXPORT(acpu, acpu control);
 
-
+#ifdef ACPU_CALLER_ENABLED
 static rt_event_t g_call_start_event;
 
 /*
@@ -452,6 +455,8 @@ void acpu_caller_entry(void *parameter)
         }
     }
 }
+#endif /* ACPU_CALLER_ENABLED */
+
 
 int32_t acpu_task_done_ind(ipc_queue_handle_t handle, size_t size)
 {
@@ -464,10 +469,12 @@ int32_t acpu_task_done_ind(ipc_queue_handle_t handle, size_t size)
         rt_kprintf("%s\n", acpu_task_output->val);
         acpu_task_output->error_code = ACPU_ERR_OK;
     }
+#ifdef ACPU_CALLER_ENABLED
     else if (acpu_task_output->error_code == ACPU_ERR_CALL_HCPU)
     {
         rt_event_send(g_call_start_event, 1);
     }
+#endif /* ACPU_CALLER_ENABLED */
     return 0;
 }
 
@@ -482,9 +489,9 @@ RT_WEAK int acpu_init(void)
 
     q_cfg.qid = ACPU_TASK_DONE_NTF_QUEUE;
     q_cfg.tx_buf_size = 0;
-    q_cfg.tx_buf_addr = NULL;
-    q_cfg.tx_buf_addr_alias = NULL;
-    q_cfg.rx_buf_addr = NULL;
+    q_cfg.tx_buf_addr = (uint32_t)NULL;
+    q_cfg.tx_buf_addr_alias = (uint32_t)NULL;
+    q_cfg.rx_buf_addr = (uint32_t)NULL;
     q_cfg.rx_ind = acpu_task_done_ind;
     q_cfg.user_data = 0;
 
@@ -498,6 +505,7 @@ RT_WEAK int acpu_init(void)
     memset(acpu_task_input, 0, sizeof(*acpu_task_input));
     memset(acpu_task_output, 0, sizeof(*acpu_task_output));
 
+#ifdef ACPU_CALLER_ENABLED
     g_call_start_event = rt_event_create("acall_s", RT_IPC_FLAG_FIFO);
     RT_ASSERT(g_call_start_event);
     rt_thread_t tid = rt_thread_create("acpu",
@@ -507,6 +515,7 @@ RT_WEAK int acpu_init(void)
                                        RT_THREAD_PRIORITY_HIGH,
                                        RT_THREAD_TICK_DEFAULT);
     rt_thread_startup(tid);
+#endif /* ACPU_CALLER_ENABLED */
 
     acpu_power_on();
 
@@ -540,8 +549,6 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
 
     lock();
 
-    HAL_RCC_EnableModule(RCC_MOD_ACPU);
-
     /* ACPU doesn't use ipc_queue module, so sender won't unmask the interrupt for receiver,
      *  HCPU has to unmask by itself
      */
@@ -555,6 +562,8 @@ RT_WEAK void *acpu_run_task(uint8_t task_name, void *param, uint32_t param_size,
     }
     acpu_task_input->seq_no++;
     acpu_task_input->task_name = task_name;
+
+    HAL_RCC_EnableModule(RCC_MOD_ACPU);
 
     err = rt_sem_take(&acpu_task_done_sema, rt_tick_from_millisecond(10 * 1000));
     RT_ASSERT(RT_EOK == err);

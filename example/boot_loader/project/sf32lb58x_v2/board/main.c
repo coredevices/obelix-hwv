@@ -8,15 +8,17 @@
  * 2018-11-06     zylx         first version
  */
 
-#include <rtthread.h>
-#include <rtdevice.h>
+#include <rtconfig.h>
 #include <board.h>
+#include "stdio.h"
 #include <string.h>
 #include "register.h"
-#include "dfu.h"
-#include "drv_flash.h"
+#include "../dfu/dfu.h"
 #include "drv_io.h"
-#include "drv_psram.h"
+#include "dma_config.h"
+#include "flash_config.h"
+#include "sifli_bbm.h"
+#include "secboot.h"
 
 // Target is retention memory 0x20000, 0x20000000 is temp before retention memory ready
 #define HCPU_RAM_RETENTION_ADDR 0x20000000
@@ -36,15 +38,24 @@ typedef enum
 } boot_flash_t;
 
 typedef void (*ram_hook_handler)(void);
-
 typedef int (*flash_enable_func)();
-
-flash_read_func g_bl_flash_read;
 
 extern int BSP_Flash_hw1_init();
 extern int BSP_Flash_hw3_init();
 extern int BSP_Flash_hw4_init();
 extern void flash_set_dual_mode(uint8_t id, uint8_t dual);
+
+static UART_HandleTypeDef uart_handle;
+static QSPI_FLASH_CTX_T spi_nand_handle;
+static DMA_HandleTypeDef spi_nand_dma_handle;
+static uint32_t nand_pagesize = 2048;
+static uint32_t nand_blksize = 0x20000;
+static uint32_t nand_cache[(4096 + 128) / 4];
+static uint32_t bbm_cache_buf[(4096 + 128) / 4];
+struct sec_configuration *g_sec_config;
+
+struct sec_configuration sec_config_cache;
+flash_read_func dfu_flash_reader = NULL;
 
 __STATIC_INLINE void dwtIpInit(void)
 {
@@ -70,6 +81,68 @@ __STATIC_INLINE uint32_t dwtGetCycles(void)
 {
     return DWT->CYCCNT;
 }
+
+static void boot_uart_init(void)
+{
+    memset(&uart_handle, 0, sizeof(UART_HandleTypeDef));
+
+#ifdef BSP_USING_UART4
+    HAL_PIN_Set(PAD_PB37, USART4_TXD, PIN_PULLUP, 0);
+    HAL_PIN_Set(PAD_PB36, USART4_RXD, PIN_PULLUP, 0);
+    uart_handle.Instance = USART4;
+    HAL_RCC_LCPU_ClockSelect(RCC_CLK_MOD_LP_PERI, RCC_CLK_PERI_HXT48);
+#elif defined(BSP_USING_UART1)
+    HAL_PIN_Set(PAD_PA31, USART1_TXD, PIN_PULLUP, 1);
+    HAL_PIN_Set(PAD_PA32, USART1_RXD, PIN_PULLUP, 1);
+    uart_handle.Instance = USART1;
+    HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_HP_PERI, RCC_CLK_PERI_HXT48);
+#else
+#error Select UART1/4 for bootloader
+#endif
+
+    uart_handle.Init.BaudRate   = 1000000;
+    uart_handle.Init.WordLength = UART_WORDLENGTH_8B;
+    uart_handle.Init.StopBits   = UART_STOPBITS_1;
+    uart_handle.Init.Parity     = UART_PARITY_NONE;
+    uart_handle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
+    uart_handle.Init.Mode       = UART_MODE_TX_RX;
+    uart_handle.Init.OverSampling = UART_OVERSAMPLING_16;
+    if (HAL_UART_Init(&uart_handle) != HAL_OK)
+    {
+
+    }
+}
+
+#ifdef __CC_ARM
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#elif defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050)
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#elif __ICCARM__
+#error "not supported"
+#else
+// #define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+int _write(int fd, char *ptr, int len)
+{
+
+    if (fd > 2)
+    {
+        return -1;
+    }
+    HAL_UART_Transmit(&uart_handle, ptr, len, 0xFFFF);
+    return len;
+}
+#endif
+
+#ifdef PUTCHAR_PROTOTYPE
+PUTCHAR_PROTOTYPE
+{
+    /* Place your implementation of fputc here */
+    /* e.g. write a character to the USART1 and Loop until the end of transmission */
+    HAL_UART_Transmit(&uart_handle, (uint8_t *)&ch, 1, 0xFFFF);
+
+    return ch;
+}
+#endif /* PUTCHAR_PROTOTYPE */
 
 
 static uint32_t boot_get_flash_start_addr(boot_flash_t flash)
@@ -128,6 +201,152 @@ void boot_image(int coreid, int force)
     }
 }
 
+static void boot_disable_aes(uint32_t addr)
+{
+    FLASH_HandleTypeDef *fhandle = BSP_Flash_get_handle(addr);
+
+    if (fhandle == NULL)
+        return;
+
+    HAL_FLASH_ENABLE_AES(fhandle, 0);
+}
+
+
+static int boot_nand_init()
+{
+    qspi_configure_t flash_cfg; // = FLASH3_CONFIG;
+    struct dma_config flash_dma;
+    uint16_t div;
+    HAL_StatusTypeDef res = HAL_ERROR;
+    int clk_mode;
+    memset(&spi_nand_handle, 0, sizeof(QSPI_FLASH_CTX_T));
+
+#if defined(BSP_ENABLE_QSPI3) && (BSP_QSPI3_MODE == SPI_MODE_NAND)
+    qspi_configure_t flash_cfg3 = FLASH3_CONFIG;
+    struct dma_config flash_dma3 = FLASH3_DMA_CONFIG;
+
+    // set clock divider, it related with source clock freq
+    div = BSP_GetFlash3DIV();
+    clk_mode = RCC_CLK_MOD_FLASH3;
+    memcpy(&flash_cfg, &flash_cfg3, sizeof(qspi_configure_t));
+    memcpy(&flash_dma, &flash_dma3, sizeof(struct dma_config));
+#elif defined(BSP_ENABLE_QSPI4) && (BSP_QSPI4_MODE == SPI_MODE_NAND)
+    qspi_configure_t flash_cfg4 = FLASH4_CONFIG;
+    struct dma_config flash_dma4 = FLASH4_DMA_CONFIG;
+
+    // set clock divider, it related with source clock freq
+    div = BSP_GetFlash4DIV();
+    clk_mode = RCC_CLK_MOD_FLASH4;
+    memcpy(&flash_cfg, &flash_cfg4, sizeof(qspi_configure_t));
+    memcpy(&flash_dma, &flash_dma4, sizeof(struct dma_config));
+#elif defined(BSP_ENABLE_QSPI2) && (BSP_QSPI2_MODE == SPI_MODE_NAND)
+    qspi_configure_t flash_cfg2 = FLASH2_CONFIG;
+    struct dma_config flash_dma2 = FLASH2_DMA_CONFIG;
+
+    // set clock divider, it related with source clock freq
+    div = BSP_GetFlash2DIV();
+    clk_mode = RCC_CLK_MOD_FLASH2;
+    memcpy(&flash_cfg, &flash_cfg2, sizeof(qspi_configure_t));
+    memcpy(&flash_dma, &flash_dma2, sizeof(struct dma_config));
+#endif
+
+    // for nand, use nand interface to read/write, do not use AHB, so do not care address
+    if (flash_cfg.SpiMode == SPI_MODE_NAND)
+    {
+#ifdef SOC_SF32LB55X
+        if (flash_cfg.msize > (QSPI3_MAX_SIZE >> 20))
+            flash_cfg.msize = QSPI3_MAX_SIZE >> 20;
+#else
+        flash_cfg.base = HCPU_MPI_SBUS_ADDR(flash_cfg.base);
+#endif
+    }
+    else
+    {
+        return 0;
+    }
+
+    spi_nand_handle.handle.freq = flash_get_freq(clk_mode, div, 1);
+    // init hardware, set dma, clock
+    res = HAL_FLASH_Init(&spi_nand_handle, &flash_cfg, &spi_nand_dma_handle, &flash_dma, div);
+    if (res == HAL_OK)
+    {
+        nand_pagesize = HAL_NAND_PAGE_SIZE(&spi_nand_handle.handle);
+        nand_blksize = HAL_NAND_BLOCK_SIZE(&spi_nand_handle.handle);
+
+        spi_nand_handle.handle.data_buf = (uint8_t *)nand_cache;
+        spi_nand_handle.handle.buf_mode = 1;    // default set to buffer mode for nand
+        HAL_NAND_CONF_ECC(&spi_nand_handle.handle, 1); // default enable ECC if support !
+        bbm_set_page_size(nand_pagesize);
+        bbm_set_blk_size(nand_blksize);
+        sif_bbm_init(spi_nand_handle.total_size, (uint8_t *)bbm_cache_buf);
+
+        return 1;
+    }
+
+    return 0;
+}
+
+
+int port_read_page(int blk, int page, int offset, uint8_t *buff, uint32_t size, uint8_t *spare, uint32_t spare_len)
+{
+    int res;
+    uint32_t addr = (blk * nand_blksize) + (page * nand_pagesize) + offset;
+
+    FLASH_HandleTypeDef *hflash = (FLASH_HandleTypeDef *)&spi_nand_handle.handle;
+    if ((offset + size) > nand_pagesize)
+    {
+        HAL_ASSERT(0);
+    }
+#if (NAND_BUF_CPY_MODE == 1)
+    SCB_InvalidateDCache_by_Addr(buff, size);
+#endif
+    SCB_InvalidateDCache_by_Addr((void *)hflash->base, nand_pagesize + SPI_NAND_MAXOOB_SIZE);
+    if (((blk & 1) != 0) && (hflash->wakeup != 0))
+        SCB_InvalidateDCache_by_Addr((void *)(hflash->base + (1 << 12)), SPI_NAND_PAGE_SIZE + SPI_NAND_MAXOOB_SIZE);
+    res = HAL_NAND_READ_WITHOOB(hflash, addr, buff, size, spare, spare_len);
+
+
+    return res; //RET_NOERROR;
+}
+
+int bbm_get_bb(int blk)
+{
+    FLASH_HandleTypeDef *hflash = (FLASH_HandleTypeDef *)&spi_nand_handle.handle;
+
+    SCB_InvalidateDCache_by_Addr((void *)hflash->base, nand_pagesize + SPI_NAND_MAXOOB_SIZE);
+    if (((blk & 1) != 0) && (hflash->wakeup != 0))
+        SCB_InvalidateDCache_by_Addr((void *)(hflash->base + (1 << 12)), SPI_NAND_PAGE_SIZE + SPI_NAND_MAXOOB_SIZE);
+    int bad = HAL_NAND_GET_BADBLK(hflash, blk);
+
+    return bad;
+}
+
+static int read_nand(uint32_t addr, const int8_t *buf, uint32_t size)
+{
+    int cnt;
+    uint32_t fill, offset;
+
+    cnt = 0;
+    offset = addr >= spi_nand_handle.handle.base ? addr - spi_nand_handle.handle.base : addr;
+    while (size > 0)
+    {
+        fill = size > nand_pagesize ? nand_pagesize : size;
+        if (bbm_read_page(offset / nand_blksize, (offset / nand_pagesize) & (nand_blksize / nand_pagesize - 1), offset & (nand_pagesize - 1), (uint8_t *)(buf + cnt), fill, NULL, 0) != fill)
+            break;
+        cnt += fill;
+        size -= fill;
+        offset += fill;
+    }
+    return cnt;
+}
+
+static int read_nor(uint32_t addr, const int8_t *buf, uint32_t size)
+{
+    memcpy((void *)buf, (uint8_t *)addr, size);
+    return size;
+}
+
+
 // Return:
 // BOOT_INVALID_ADDR means init failed
 // 1 means init success,
@@ -136,6 +355,7 @@ static int boot_flash_init(boot_flash_t flash)
 {
     int ret = -1;
     int flash_en;
+    flash_read_func flash_reader = NULL;
     uint32_t flash_addr = boot_get_flash_start_addr(flash);
     // Only need check flash1 and flash2
     if (flash_addr == BOOT_INVALID_ADDR)
@@ -144,14 +364,19 @@ static int boot_flash_init(boot_flash_t flash)
     flash_enable_func init_func;
 
     if (flash == BOOT_FLASH1)
+    {
         init_func = BSP_Flash_hw1_init;
+        flash_reader = read_nor;
+    }
     else if (flash == BOOT_FLASH3)
     {
 #if defined(BSP_ENABLE_MPI3)
 #if defined(BSP_USING_NOR_FLASH3)
         init_func = BSP_Flash_hw3_init;
+        flash_reader = read_nor;
 #else
-        init_func = rt_nand_init;
+        init_func = boot_nand_init;
+        flash_reader = read_nand;
 #endif /* BSP_USING_NOR_FLASH3 */
 #endif /* BSP_ENABLE_MPI3 */
     }
@@ -160,8 +385,10 @@ static int boot_flash_init(boot_flash_t flash)
 #if defined(BSP_ENABLE_MPI4)
 #if defined(BSP_USING_NOR_FLASH4)
         init_func = BSP_Flash_hw4_init;
+        flash_reader = read_nor;
 #else
-        init_func = rt_nand_init;
+        init_func = boot_nand_init;
+        flash_reader = read_nand;
 #endif  /* BSP_USING_NOR_FLASH4 */
 #endif /* BSP_ENABLE_MPI4 */
     }
@@ -180,40 +407,14 @@ static int boot_flash_init(boot_flash_t flash)
         return ret;
     }
     else
-        ret = 0; // flash existed
-
-    do
     {
-        ret = 1;
+        ret = 1; // flash existed
     }
-    while (0);
+
+    boot_set_flash_read_func(flash_reader);
+    dfu_flash_reader = flash_reader;
 
     return ret;
-}
-
-static int read_nand(uint32_t addr, const int8_t *buf, uint32_t size)
-{
-    return rt_nand_read(addr, (uint8_t *)buf, size);
-}
-
-static int read_nor(uint32_t addr, const int8_t *buf, uint32_t size)
-{
-    memcpy((void *)buf, (uint8_t *)addr, size);
-    return size;
-}
-
-
-static uint32_t init_flash_read()
-{
-    int nand = 0;
-#if (defined(BSP_USING_NOR_FLASH4) || defined(BSP_USING_NOR_FLASH3))
-    nand = 0;
-#elif (defined(BSP_USING_NAND_FLASH4) || defined(BSP_USING_NAND_FLASH3))
-    nand = 1;
-#endif
-
-    g_bl_flash_read = nand ? read_nand : read_nor;
-    return 0;
 }
 
 uint32_t boot_enable_flash(void)
@@ -221,7 +422,6 @@ uint32_t boot_enable_flash(void)
     uint32_t addr = BOOT_INVALID_ADDR;
     int ret;
 #if  (defined (BSP_USING_SPI_FLASH))
-    rt_hw_flash_var_init();
     do
     {
         int flash_en;
@@ -243,8 +443,6 @@ uint32_t boot_enable_flash(void)
 
         if (boot_flash_init(BOOT_FLASH4) != BOOT_INVALID_ADDR)
             addr = boot_get_flash_start_addr(BOOT_FLASH4);
-
-        init_flash_read();
 #elif defined(BSP_USING_NOR_FLASH3) || defined(BSP_USING_NAND_FLASH3)
         HAL_PIN_Set(PAD_PA46, MPI3_CLK, PIN_NOPULL, 1);
         HAL_PIN_Set(PAD_PA44, MPI3_CS, PIN_NOPULL, 1);
@@ -254,8 +452,6 @@ uint32_t boot_enable_flash(void)
         HAL_PIN_Set(PAD_PA45, MPI3_DIO3, PIN_PULLUP, 1);
         if (boot_flash_init(BOOT_FLASH3) != BOOT_INVALID_ADDR)
             addr = boot_get_flash_start_addr(BOOT_FLASH3);
-
-        init_flash_read();
 #elif defined(BSP_USING_NOR_FLASH1)
         HAL_PIN_Set(PAD_SA11, MPI1_CLK, PIN_NOPULL, 1);
         HAL_PIN_Set(PAD_SA01, MPI1_CS, PIN_NOPULL, 1);
@@ -376,6 +572,10 @@ static void config_psram_pinmux(void)
 
 void boot_images()
 {
+}
+
+void boot_images_main()
+{
     int i;
     int flash_en;
     uint32_t start_addr;
@@ -391,7 +591,8 @@ void boot_images()
     HAL_HPAON_EnableXT48();
 
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_SYS, RCC_SYSCLK_HXT48);
-    //HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_HP_PERI, RCC_CLK_PERI_HXT48);
+    // HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_HP_PERI, RCC_CLK_PERI_HXT48);
+    boot_uart_init();
 
     HAL_PMU_EnableDLL(1);
 
@@ -440,7 +641,7 @@ void boot_images()
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH1, RCC_CLK_FLASH_DLL2);
     HAL_RCC_HCPU_ClockSelect(RCC_CLK_MOD_FLASH2, RCC_CLK_FLASH_DLL2);
     config_psram_pinmux();
-    rt_psram_init();
+    bsp_psramc_init();
 #endif
     HAL_Delay_us(0);
 
@@ -454,23 +655,26 @@ void boot_images()
         mbedtls_aes_lib_init();
     }
 
-    rt_flash_disable_aes(start_addr);
+    boot_disable_aes(start_addr);
     /* init AES_ACC as normal mode */
     __HAL_SYSCFG_CLEAR_SECURITY();
 
     dfu_install_info info;
     dfu_install_info info_ext;
-    if (DFU_DOWNLOAD_REGION_START_ADDR != FLASH_UNINIT_32)
+    if (dfu_flash_reader != NULL)
     {
-        g_bl_flash_read(DFU_DOWNLOAD_REGION_START_ADDR, (const int8_t *)&info, sizeof(dfu_install_info));
-    }
-    if (DFU_INFO_REGION_START_ADDR != FLASH_UNINIT_32)
-    {
-        g_bl_flash_read(DFU_INFO_REGION_START_ADDR, (const int8_t *)&info_ext, sizeof(dfu_install_info));
-    }
-    if (info.magic == SEC_CONFIG_MAGIC && info_ext.magic == SEC_CONFIG_MAGIC)
-    {
-        info = info_ext;
+        if (DFU_DOWNLOAD_REGION_START_ADDR != FLASH_UNINIT_32)
+        {
+            dfu_flash_reader(DFU_DOWNLOAD_REGION_START_ADDR, (const int8_t *)&info, sizeof(dfu_install_info));
+        }
+        if (DFU_INFO_REGION_START_ADDR != FLASH_UNINIT_32)
+        {
+            dfu_flash_reader(DFU_INFO_REGION_START_ADDR, (const int8_t *)&info_ext, sizeof(dfu_install_info));
+        }
+        if (info.magic == SEC_CONFIG_MAGIC && info_ext.magic == SEC_CONFIG_MAGIC)
+        {
+            info = info_ext;
+        }
     }
 
     g_sec_config = (struct sec_configuration *)FLASH_BASE_ADDR;
@@ -479,11 +683,9 @@ void boot_images()
 
     if (DFU_DOWNLOAD_REGION_START_ADDR != FLASH_UNINIT_32)
     {
-        if ((HAL_Get_backup(RTC_BAKCUP_OTA_FORCE_MODE) == DFU_FORCE_MODE_REBOOT_TO_OFFLINE_OTA_MANAGER) ||
-                (info.magic == SEC_CONFIG_MAGIC) && (info.install_state == DFU_OFFLINE_INSTALL))
+        if ((HAL_Get_backup(RTC_BAKCUP_OTA_FORCE_MODE) == DFU_FORCE_MODE_REBOOT_TO_PACKAGE_OTA_MANAGER) ||
+                (info.magic == SEC_CONFIG_MAGIC) && (info.install_state == DFU_PACKAGE_INSTALL))
         {
-            //HAL_sw_breakpoint();
-            //g_sec_config->running_imgs[CORE_HCPU] = (struct image_header_enc *) & (((struct sec_configuration *)FLASH_BASE_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)]);
             sec_config_cache.running_imgs[CORE_HCPU] = (struct image_header_enc *) & (((struct sec_configuration *)FLASH_TABLE_START_ADDR)->imgs[DFU_FLASH_IMG_IDX(DFU_FLASH_HCPU_EXT2)]);
         }
     }
@@ -624,13 +826,15 @@ int main(void)
         sec_flash_write(DFU_FLASH_SEC_CONFIG, 0, (uint8_t *)&magic, 4);
     }
 #endif
-    dfu_flash_init();
+
+    boot_images_main();
 
     while (count++)
     {
-        rt_thread_mdelay(1000000);
+        printf("boot fail\n");
+        HAL_Delay(2000);
     }
 
-    return RT_EOK;
+    return 0;
 }
 

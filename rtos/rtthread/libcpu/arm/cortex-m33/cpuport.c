@@ -422,7 +422,7 @@ static void handle_exception(struct exception_info *exception_info)
 #endif /* SOC_BF0_HCPU */
 
     memcpy(&saved_stack_frame, context, sizeof(saved_stack_frame));
-    if (exception_info->exc_return & 0x10)
+    if (exception_info->exc_return & 0x10)  /* EXC_RETURN_FTYPE: check floating-point context */
     {
         /* FPU is not active */
         saved_stack_pointer = (uint32_t)((struct exception_stack_frame *)&exception_info->stack_frame.exception_stack_frame + 1);
@@ -431,6 +431,13 @@ static void handle_exception(struct exception_info *exception_info)
     {
         saved_stack_pointer = (uint32_t)((struct exception_stack_frame_fpu *)&exception_info->stack_frame.exception_stack_frame + 1);
     }
+
+    if (exception_info->stack_frame.exception_stack_frame.psr & 0x200)
+    {
+        /* undo the realignment, ref. <v8m architecture reference manual>, RETPSR, Combined Exception Return Program Status Registers */
+        saved_stack_pointer += 4;
+    }
+
     error_reason = RT_ERROR_HW_EXCEPTION;
 
     saved_scb_reg.cfsr = SCB_CFSR;

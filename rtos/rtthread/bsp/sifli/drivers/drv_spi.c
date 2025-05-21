@@ -379,6 +379,7 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
 
     struct sifli_spi *spi_drv =  rt_container_of(device->bus, struct sifli_spi, spi_bus);
     SPI_HandleTypeDef *spi_handle = &spi_drv->handle;
+    bool sw_cs = (SPI_FRAME_FORMAT_SSP != spi_handle->Init.FrameFormat);
 #ifdef RT_USING_PM
     rt_pm_request(PM_SLEEP_MODE_IDLE);
     rt_pm_hw_device_start();
@@ -386,7 +387,7 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
 
 #ifdef USR_CONTROL_CS
     // cs_take==1 set cs low manual , hold do not release
-    if (message->cs_take == 1)
+    if (message->cs_take == 1 && sw_cs)
     {
         LOG_D("Transfer entry : take %d, release %d\n", message->cs_take, message->cs_release);
         __HAL_SPI_TAKE_CS(spi_handle);
@@ -538,7 +539,7 @@ static rt_uint32_t spixfer(struct rt_spi_device *device, struct rt_spi_message *
 
 #ifdef USR_CONTROL_CS
     // cs_release == 1 need manual release
-    if (message->cs_release == 1)
+    if (message->cs_release == 1  && sw_cs)
     {
         LOG_D("Transfer exit : take %d, release %d\n", message->cs_take, message->cs_release);
         __HAL_SPI_RELEASE_CS(spi_handle);

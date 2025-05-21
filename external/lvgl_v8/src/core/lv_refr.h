@@ -84,6 +84,11 @@ lv_disp_t * _lv_refr_get_disp_refreshing(void);
  * @param the display being refreshed
  */
 void _lv_refr_set_disp_refreshing(lv_disp_t * disp);
+void _lv_refr_set_disp_to_draw_start(lv_disp_t * disp);
+/*
+    p_area - [OPTIONAL] The real buffer area
+*/
+void _lv_refr_set_disp_to_draw_end(lv_disp_t * disp, lv_area_t *p_area);
 
 #if LV_USE_PERF_MONITOR
 /**

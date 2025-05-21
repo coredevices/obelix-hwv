@@ -70,6 +70,16 @@
 
 typedef struct
 {
+    uint32_t start_tick;
+    uint32_t draw_core_max;
+    uint32_t draw_core_min;
+    uint32_t draw_core_cnt;
+
+    uint32_t draw_core_err_cnt;
+} LCD_DRVStatistTypeDef;
+
+typedef struct
+{
     struct rt_device parent;
     LCDC_HandleTypeDef hlcdc;
     lcd_drv_desc_t *p_drv_ops;
@@ -97,7 +107,9 @@ typedef struct
     */
     uint32_t assert_timeout : 2;
     uint32_t send_time_log: 1;
-    uint32_t reserved: 27;
+    uint32_t statistics_log: 1; //Show statistical logs
+    uint32_t skip_draw_core: 1;
+    uint32_t reserved: 25;
     //Configuration union end//
 
     int8_t timeout_retry_cnt; /*Current lefted retry times,  -1 for retry infinitely, */
@@ -112,6 +124,9 @@ typedef struct
     uint32_t debug_cnt1; /*'draw_rect_async' counts*/
     uint32_t debug_cnt2; /* HAL 'XferCpltCallback' cbk counts*/
     uint32_t debug_cnt3; /*'draw_rect_async' cbk counts*/
+
+
+    LCD_DRVStatistTypeDef statistics;
 } LCD_DrvTypeDef;
 
 
@@ -133,6 +148,7 @@ typedef enum
 
     /*Synchronized executed MSG*/
     __LCD_SYNCHRONIZED_MSG_START,
+    LCD_MSG_CONTROL,
     LCD_MSG_CLOSE,
     LCD_MSG_POWER_OFF,
     LCD_MSG_SET_MODE,
@@ -161,6 +177,12 @@ typedef struct
     int16_t y;
 } LCD_PixelDef;
 
+typedef struct
+{
+    rt_device_t dev;
+    int cmd;
+    void *args;
+} LCD_CtrlDef;
 
 typedef struct
 {
@@ -181,6 +203,7 @@ typedef struct
         uint8_t idle_mode_on;
         uint8_t is_lcd_present;
         uint8_t assert_timeout;
+        LCD_CtrlDef ctrl_ctx;
     } content;
 
 

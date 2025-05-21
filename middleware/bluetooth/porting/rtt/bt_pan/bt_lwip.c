@@ -49,13 +49,20 @@ struct bt_lwip_prot_des
 };
 
 extern BTS2S_ETHER_ADDR   bts2_local_ether_addr;
-extern void lwip_system_uninit(void);
-extern void lwip_sys_init();
 
-void rt_bt_lwip_event_handle(struct rt_bt_lwip_pan_dev *bt_dev, int event)
+
+
+static void rt_bt_lwip_event_handle(struct rt_bt_prot *port, struct rt_bt_pan_instance *bt_instance, int event)
 {
-    struct bt_lwip_prot_des *lwip_prot = (struct bt_lwip_prot_des *)bt_dev->prot;
-    struct eth_device *eth_dev = &lwip_prot->eth;
+    struct bt_lwip_prot_des *lwip_prot = (struct bt_lwip_prot_des *)bt_instance->prot;
+    rt_bool_t flag_old;
+
+    flag_old = lwip_prot->connected_flag;
+
+    if (flag_old == lwip_prot->connected_flag)
+    {
+        return;
+    }
 
     switch (event)
     {
@@ -63,24 +70,12 @@ void rt_bt_lwip_event_handle(struct rt_bt_lwip_pan_dev *bt_dev, int event)
     {
         LOG_D("event: CONNECT");
         lwip_prot->connected_flag = RT_TRUE;
-        lwip_sys_init();//to restart timer
-        netifapi_netif_common(eth_dev->netif, netif_set_link_up, NULL);
-#ifdef RT_LWIP_DHCP
-        dhcp_start(eth_dev->netif);
-#endif
         break;
     }
     case RT_BT_PROT_EVT_DISCONNECT:
     {
         LOG_D("event: DISCONNECT");
         lwip_prot->connected_flag = RT_FALSE;
-        netifapi_netif_common(eth_dev->netif, netif_set_link_down, NULL);
-#ifdef RT_LWIP_DHCP
-        ip_addr_t ip_addr = { 0 };
-        dhcp_stop(eth_dev->netif);
-        netif_set_addr(eth_dev->netif, &ip_addr, &ip_addr, &ip_addr);
-#endif
-        lwip_system_uninit(); // to stop lwip timer
         break;
     }
     default :
@@ -91,7 +86,7 @@ void rt_bt_lwip_event_handle(struct rt_bt_lwip_pan_dev *bt_dev, int event)
     }
 }
 
-BTS2S_ETHER_ADDR bt_pan_get_mac_address()
+BTS2S_ETHER_ADDR bt_pan_get_mac_address(struct rt_bt_pan_instance *bt_instance)
 {
     BTS2S_ETHER_ADDR   local_ether_addr;
     local_ether_addr = bts2_local_ether_addr;
@@ -101,7 +96,7 @@ BTS2S_ETHER_ADDR bt_pan_get_mac_address()
 static rt_err_t rt_bt_lwip_protocol_control(rt_device_t device, int cmd, void *args)
 {
     struct eth_device *eth_dev = (struct eth_device *)device;
-    struct rt_bt_lwip_pan_dev  *bt_dev;
+    struct rt_bt_pan_instance  *bt_instance;
     rt_err_t err = RT_EOK;
     BTS2S_ETHER_ADDR   mac_addr;
     rt_uint8_t *address;
@@ -114,8 +109,8 @@ static rt_err_t rt_bt_lwip_protocol_control(rt_device_t device, int cmd, void *a
     {
     case NIOCTL_GADDR:
         /* get MAC address */
-        bt_dev = eth_dev->parent.user_data;
-        mac_addr = bt_pan_get_mac_address();
+        bt_instance = eth_dev->parent.user_data;
+        mac_addr = bt_pan_get_mac_address(bt_instance);
 
         address[0] = (mac_addr.w[0] >> 8) & 0xff;
         address[1] = mac_addr.w[0] & 0xff;
@@ -139,9 +134,9 @@ static rt_err_t rt_bt_lwip_protocol_control(rt_device_t device, int cmd, void *a
     return err;
 }
 
-static rt_err_t rt_bt_lwip_protocol_recv(struct rt_bt_lwip_pan_dev *bt_dev, void *buff, int len)
+static rt_err_t rt_bt_lwip_protocol_recv(struct rt_bt_pan_instance *bt_instance, void *buff, int len)
 {
-    struct eth_device *eth_dev = &((struct bt_lwip_prot_des *)bt_dev->prot)->eth;
+    struct eth_device *eth_dev = &((struct bt_lwip_prot_des *)bt_instance->prot)->eth;
     struct pbuf *p = RT_NULL;
 
     // LOG_D("F:%s L:%d run", __FUNCTION__, __LINE__);
@@ -189,9 +184,12 @@ static rt_err_t rt_bt_lwip_protocol_recv(struct rt_bt_lwip_pan_dev *bt_dev, void
 
 }
 
+
+
+
 static rt_err_t rt_bt_lwip_protocol_send(rt_device_t device, struct pbuf *p)
 {
-    struct rt_bt_lwip_pan_dev *bt_dev = ((struct eth_device *)device)->parent.user_data;
+    struct rt_bt_pan_instance *bt_instance = ((struct eth_device *)device)->parent.user_data;
 
     //LOG_D("F:%s L:%d run", __FUNCTION__, __LINE__);
 
@@ -200,10 +198,11 @@ static rt_err_t rt_bt_lwip_protocol_send(rt_device_t device, struct pbuf *p)
     /* sending data directly */
     if (p->len == p->tot_len)
     {
+
         // rt_kprintf("enter rt_bt_lwip_protocol_send total ,total len %d\n",p->tot_len);
         frame = (rt_uint8_t *)p->payload;
-        rt_bt_prot_send_data(bt_dev, frame, p->tot_len);
-        // LOG_D("F:%s L:%d run len:%d", __FUNCTION__, __LINE__, p->tot_len);
+        rt_bt_prot_transfer_instance(bt_instance, frame, p->tot_len);
+        LOG_D("F:%s L:%d run len:%d", __FUNCTION__, __LINE__, p->tot_len);
         return RT_EOK;
     }
 
@@ -217,10 +216,12 @@ static rt_err_t rt_bt_lwip_protocol_send(rt_device_t device, struct pbuf *p)
     pbuf_copy_partial(p, frame, p->tot_len, 0);
     /* send data */
     //rt_kprintf("enter rt_bt_lwip_protocol_send fragment ,total len %d\n",p->tot_len);
-    rt_bt_prot_send_data(bt_dev, frame, p->tot_len);
+    rt_bt_prot_transfer_instance(bt_instance, frame, p->tot_len);
     // LOG_D("F:%s L:%d run len:%d", __FUNCTION__, __LINE__, p->tot_len);
     rt_free(frame);
     return RT_EOK;
+
+
 }
 
 #ifdef RT_USING_DEVICE_OPS
@@ -235,16 +236,16 @@ const static struct rt_device_ops bt_lwip_ops =
 };
 #endif
 
-static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, struct rt_bt_lwip_pan_dev *bt_dev)
+static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, struct rt_bt_pan_instance *bt_instance)
 {
     struct eth_device *eth = RT_NULL;
     char eth_name[4], timer_name[16];
     rt_device_t device = RT_NULL;
     static struct bt_lwip_prot_des *lwip_prot = NULL;
-    lwip_sys_init();// to init lwip and lwip timer
-    LOG_I("lwip:enter register_eth %d  %d\n", bt_dev, prot);
 
-    if (bt_dev == RT_NULL || prot == RT_NULL)
+    LOG_I("lwip:enter register_eth %d  %d\n", bt_instance, prot);
+
+    if (bt_instance == RT_NULL || prot == RT_NULL)
         return RT_NULL;
 
     /* find ETH device name */
@@ -252,7 +253,6 @@ static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, 
     eth_name[1] = '0';
     eth_name[2] = '\0';
     device = rt_device_find(eth_name);
-
     if (device == NULL)
     {
         RT_ASSERT(lwip_prot == NULL);
@@ -264,8 +264,8 @@ static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, 
             LOG_E("F:%s L:%d malloc mem failed", __FUNCTION__, __LINE__);
             return RT_NULL;
         }
-
         rt_memset(lwip_prot, 0, sizeof(struct bt_lwip_prot_des));
+
         eth = &lwip_prot->eth;
 
 #ifdef RT_USING_DEVICE_OPS
@@ -279,7 +279,7 @@ static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, 
         eth->parent.control    = rt_bt_lwip_protocol_control;
 #endif
 
-        eth->parent.user_data  = bt_dev;
+        eth->parent.user_data  = bt_instance;
         eth->eth_rx     = RT_NULL;
         eth->eth_tx     = rt_bt_lwip_protocol_send;
 
@@ -288,31 +288,39 @@ static struct rt_bt_prot *rt_bt_lwip_protocol_register(struct rt_bt_prot *prot, 
         {
             LOG_E("eth device init failed");
             rt_free(lwip_prot);
-            lwip_prot = RT_NULL;
             return RT_NULL;
         }
         rt_memcpy(&lwip_prot->prot, prot, sizeof(struct rt_bt_prot));
         netif_set_up(eth->netif);
+        netif_set_link_up(eth->netif);
+    }
+    else
+    {
+        eth = &lwip_prot->eth;
+        netif_set_up(eth->netif);
+        netif_set_link_up(eth->netif);
+        dhcp_start(eth->netif);
     }
 
-    lwip_system_uninit(); // To stop timer,and Reduce power consumption
+    bt_instance->user_data = eth->netif;
     LOG_I("eth device init ok name:%s", eth_name);
+
     return &lwip_prot->prot;
 }
 
-static void rt_bt_lwip_protocol_unregister(struct rt_bt_prot *prot, struct rt_bt_lwip_pan_dev *bt_dev)
+static void rt_bt_lwip_protocol_unregister(struct rt_bt_prot *prot, struct rt_bt_pan_instance *bt_instance)
 {
-    struct eth_device *eth_dev = &((struct bt_lwip_prot_des *)bt_dev->prot)->eth;
-    LOG_I("Unregister device:%p\n", eth_dev);
-    if (eth_dev && eth_dev->netif)
-    {
-        dhcp_release(eth_dev->netif);
-        dhcp_stop(eth_dev->netif);
-        dhcp_cleanup(eth_dev->netif);
-        netif_set_link_down(eth_dev->netif);
-    }
+    struct netif *ethif = (struct netif *)bt_instance->user_data;
 
-    //to do
+    LOG_I("Unregister device:%p\n", ethif);
+    if (ethif)
+    {
+        dhcp_release(ethif);
+        dhcp_stop(ethif);
+        netif_set_link_down(ethif);
+        netif_set_down(ethif);
+        bt_instance->user_data = NULL;
+    }
 }
 
 static struct rt_bt_prot_ops ops =

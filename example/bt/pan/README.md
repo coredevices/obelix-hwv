@@ -26,6 +26,7 @@
 3. 手机开启网络共享下，PAN协议才会连接成功，可以从log里面找到“pan connect successed”的打印。并且确保手机本身可以上网的情况下，
    通过输入finsh命令“weather”获取当前天气，打印成功信息如下：\
    ![WEATHER_PRINT](./assets/weather_print.png)
+4. 默认本例程已开启OTA功能，输入finsh命令pan_cmd ota_pan，可以通过BT PAN下载main.c的URL指定的image并安装。关于OTA本身的介绍，见peripheral_with_ota工程
 
 ### 硬件需求
 运行该例程前，需要准备：
@@ -74,5 +75,6 @@ please input the serial port num:5
 |版本 |日期   |发布说明 |
 |:---|:---|:---|
 |0.0.1 |01/2025 |初始版本 |
+|0.0.2 |04/2025 |增加OTA |
 | | | |
 | | | |

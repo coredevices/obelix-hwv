@@ -339,7 +339,9 @@ void BSP_PIN_Init(void)
 
     HAL_PIN_Set(PAD_PB28, I2C6_SCL, PIN_PULLUP, 0);             // I2C6 (Heart rate sensor)
     HAL_PIN_Set(PAD_PB29, I2C6_SDA, PIN_PULLUP, 0);
+#if !defined(LCPU_RUN_SEPERATE_IMG) && !defined(SOC_BF0_LCPU) //pb39 for RF PA control
     HAL_PIN_Set(PAD_PB39, GPIO_B39, PIN_NOPULL, 0);              // Heart power
+#endif
     HAL_PIN_Set(PAD_PB57, GPIO_B57, PIN_NOPULL, 0);              // hrt INT
 
     HAL_PIN_Set(PAD_PB53, GPIO_B53, PIN_PULLUP, 0);     //BSP_CHARGER_EN_PIN

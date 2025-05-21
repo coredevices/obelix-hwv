@@ -24,8 +24,17 @@
 
 注意：直接在rtconfig.h中修改宏还是会无效，我们需要通过menuconfig如下命令进行打开，在烧录界面下输入以下命令（board=板子型号）
 
+````{note}
+本示例重定向了printf到串口发送，但为了避免Keil编译时激活了不必要的semihosting代码，`proj.conf`中配置使用了microlib
+```kconfig
+CONFIG_USING_MICROLIB=y
+```
+````
 
-> menuconfig --board=em-lb525
+
+```
+menuconfig --board=em-lb525
+```
 
 ![alt text](assets/common.png)
 
@@ -34,7 +43,6 @@
 ![alt text](assets/menuconfig2.png)
 
 切换到例程project目录，运行scons命令执行编译：（board=板子型号）
-
 ```
 scons --board=em-lb525 -j8
 ```
@@ -77,7 +85,6 @@ please input the serial port num:5
 * 向uart2发送`abc`,接收到`abc`字符、换行符，回车符，共5个字符ASCII码,打印以下内容
     ```
     TX:abc
-    Receive 5
     rev:abc
     ```
 
@@ -94,7 +101,6 @@ uart2 hal demo!
 uart2
 uart demo end!
 TX:abc
-Receive 5
 rev:abc
 ```
 
@@ -128,13 +134,14 @@ rev:abc
 
 * 设置对应的Uart2对应的IO口
 ```c
-   #if defined(BSP_USING_BOARD_EM_LB525XXX)
-    HAL_PIN_Set(PAD_PA20, USART2_RXD, PIN_PULLUP, 1);
-    HAL_PIN_Set(PAD_PA27, USART2_TXD, PIN_PULLUP, 1);
-    #elif defined (BSP_USING_BOARD_EM_LB587XXX)
-    HAL_PIN_Set(PAD_PA29, USART2_RXD, PIN_PULLUP, 1);
-    HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
-    #endif
+#if defined(BSP_USING_BOARD_EM_LB525XXX)
+HAL_PIN_Set(PAD_PA20, USART2_RXD, PIN_PULLUP, 1);
+HAL_PIN_Set(PAD_PA27, USART2_TXD, PIN_PULLUP, 1);
+
+#elif defined (BSP_USING_BOARD_EM_LB587XXX)
+HAL_PIN_Set(PAD_PA29, USART2_RXD, PIN_PULLUP, 1);
+HAL_PIN_Set(PAD_PA28, USART2_TXD, PIN_PULLUP, 1);
+#endif
 ```
 **注意**: 
 1. 除55x芯片外,可以配置到任意带有PA*_I2C_UART功能的IO输出UART2波形（想查询引脚复用表可在项目路径下文件中查找对应版型的引脚复用如：bf0_pin_const.c）
@@ -151,29 +158,113 @@ rev:abc
 ```
 * uart2 DMA的配置
 ```c
-    // Start RX DMA
-    __HAL_LINKDMA(&(UartHandle), hdmarx, dma_rx_handle);
-    dma_rx_handle.Instance = UART_RX_DMA_INSTANCE;
-    dma_rx_handle.Init.Request = UART_RX_DMA_REQUEST;
+// Start RX DMA
+__HAL_LINKDMA(&(UartHandle), hdmarx, dma_rx_handle);
+dma_rx_handle.Instance = UART_RX_DMA_INSTANCE;
+dma_rx_handle.Init.Request = UART_RX_DMA_REQUEST;
  /**
  buffer：配置为DMA接收到的内存地址；
- BUFF_LEN为DMA的buffer长度；
+ BUFFER_SIZE为DMA的buffer长度；
  DMA_PERIPH_TO_MEMORY：表示DMA从UART外设搬到配置的内存buffer内；
  */   
-    HAL_UART_DmaTransmit(&UartHandle, buffer, BUFF_LEN, DMA_PERIPH_TO_MEMORY);
+HAL_UART_DmaTransmit(&UartHandle, buffer, BUFFER_SIZE, DMA_PERIPH_TO_MEMORY); /* DMA_PERIPH_TO_MEMORY */
 
-    /* 设置DMA优先级和使能DMA中断 */
-    HAL_NVIC_SetPriority(UART_RX_DMA_IRQ, 0, 0);
-    HAL_NVIC_EnableIRQ(UART_RX_DMA_IRQ);
+/* 设置DMA优先级和使能DMA中断 */
+HAL_NVIC_SetPriority(UART_RX_DMA_IRQ, 0, 0);
+HAL_NVIC_EnableIRQ(UART_RX_DMA_IRQ);
 
-    {
+{
 // For RX DMA, also need to enable UART IRQ.
 /* UART_IT_IDLE：配置为uart2空闲中断，即接收完一串数据后才产生uart中断 */
-        __HAL_UART_ENABLE_IT(&UartHandle, UART_IT_IDLE);
-        HAL_NVIC_SetPriority(UART_INTERRUPT, 1, 0);/*配置uart2的中断优先级*/
-        HAL_NVIC_EnableIRQ(UART_INTERRUPT);/* 打开uart2中断 */
-    }
+    __HAL_UART_ENABLE_IT(&UartHandle, UART_IT_IDLE);
+    HAL_NVIC_SetPriority(UART_INTERRUPT, 1, 0);/*配置uart2的中断优先级*/
+    HAL_NVIC_EnableIRQ(UART_INTERRUPT);/* 打开uart2中断 */
+}
 ```
+* 用状态表示当前dma接收进度
+```c
+typedef enum {
+    STATE_UNFULL,
+    STATE_HALF_FULL,
+    STATE_FULL
+} ReceiveState;
+// 当前接收状态
+ReceiveState currentState = STATE_UNFULL;
+
+```
+* 半满，全满，uart空闲处理
+```c
+在 void UART_IRQ_HANDLER(void)函数中通过uart空闲之后判断当前接收状态来执行半满或者全满亦或是空闲处理
+
+switch (currentState) 
+{
+    case STATE_UNFULL:
+        processData(buffer, last_index, recv_total_index);
+        last_index2 = recv_total_index;//由空闲态进入全满要及时更新这一次停留的索引
+        break;
+    case STATE_HALF_FULL:
+        if(last_index==0)
+        {
+            last_index2 = recv_total_index;
+        }
+        else if(count == HALF_BUFFER_SIZE)//刚好结束半满再进入全满则从中间开始打印
+        {
+            last_index2 = HALF_BUFFER_SIZE; 
+        }
+        else//超过半满后再进入全满就沿用上一次索引打印
+        {
+            last_index2 = last_index; 
+        }
+        processData(buffer, HALF_BUFFER_SIZE, recv_total_index);
+        break;
+    case STATE_FULL:
+        processData(buffer, 0, recv_total_index);
+        break;
+}
+//半满操作
+void HAL_UART_RxHalfCpltCallback(UART_HandleTypeDef *huart)
+{
+
+    if(huart->Instance == hwp_usart2)
+    {
+        // 实现半满处理逻辑，例如将前半部分数据写入FIFO或进行初步处理
+        if(currentState==STATE_UNFULL)
+        {
+            uint16_t halfLength = HALF_BUFFER_SIZE;
+            processData(buffer, last_index, halfLength);//半满则处理从之前的索引开始到中间部分
+        }
+        else if(currentState==STATE_FULL)
+        {
+            uint16_t halfLength = HALF_BUFFER_SIZE;
+            processData(buffer, 0, halfLength);//半满则处理从之前的索引开始到中间部分
+        }     
+        currentState = STATE_HALF_FULL;
+        last_index2 = HALF_BUFFER_SIZE;
+        __HAL_DMA_CLEAR_FLAG(&dma_rx_handle,DMA_FLAG_HT6);
+    }
+
+}
+
+//全满
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    
+   if(huart->Instance == hwp_usart2)
+    {       
+        
+        // 实现全满处理逻辑，例如将中间至最后的数据写入FIFO或进行初步处理
+        uint16_t fullLength = BUFFER_SIZE;
+
+        processData(buffer, last_index2, fullLength);
+        currentState = STATE_FULL;
+        __HAL_DMA_CLEAR_FLAG(&dma_rx_handle,DMA_FLAG_TC6);
+    } 
+}
+
+
+
+```
+
 * uart2 发送数据
 ```c
     /* 通过printf从uart2发送数据 */

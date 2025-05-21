@@ -203,10 +203,10 @@ static void LCD_Drv_Init(LCDC_HandleTypeDef *hlcdc)
     uint8_t   parameter[14];
 
     BSP_LCD_ResetSide(current_lcd_cs_pin);
-    if (LCD_ReadID(hlcdc) !=  LCD_ID)
-    {
-        return;
-    }
+    // if (LCD_ReadID(hlcdc) !=  LCD_ID)
+    // {
+    //     return;
+    // }
     parameter[0] = 0x20;
     LCD_WriteReg(hlcdc, 0xFE, parameter, 1); //Pass word unlock
     parameter[0] = 0x5A;
@@ -308,12 +308,29 @@ static void LCD_Init(LCDC_HandleTypeDef *hlcdc)
   */
 static uint32_t LCD_ReadID(LCDC_HandleTypeDef *hlcdc)
 {
-    uint32_t data;
-    data = LCD_ReadData(hlcdc, REG_LCD_ID, 3);
-    rt_kprintf("\nCO5300_ReadID 0x%x \n", data);
-    if (data == LCD_ID)
-        DEBUG_PRINTF("LCD module use CO5300 IC \n");
-    return data;
+    uint32_t left_data, right_data;
+    current_lcd_cs_pin = left_lcd_pin_pin;
+    left_data = LCD_ReadData(hlcdc, REG_LCD_ID, 3);
+    rt_kprintf("\nLeft CO5300_ReadID 0x%x \n", left_data);
+
+    current_lcd_cs_pin = right_lcd_pin_pin;
+    right_data = LCD_ReadData(hlcdc, REG_LCD_ID, 3);
+    rt_kprintf("\nRight CO5300_ReadID 0x%x \n", right_data);
+    if (left_data == LCD_ID)
+    {
+        DEBUG_PRINTF("LCD module use Left CO5300 IC \n");
+        return left_data;
+    }
+    else if (right_data == LCD_ID)
+    {
+        DEBUG_PRINTF("LCD module use Right CO5300 IC \n");
+        return right_data;
+    }
+    else
+    {
+        return RT_FALSE;
+    }
+
 }
 
 /**

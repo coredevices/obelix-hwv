@@ -90,6 +90,7 @@ void HAL_MspInit(void)
 
 typedef struct
 {
+    U8              connect_direction;
     U16             connected_profile;
     BTS2S_BD_ADDR   bd_addr;
 } bt_app_t;
@@ -368,6 +369,31 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
             LOG_I("Inquiry completed");
         }
         break;
+        case BT_NOTIFY_COMMON_ACL_CONNECTED:
+        {
+            bt_notify_device_acl_conn_info_t *acl_info = (bt_notify_device_acl_conn_info_t *) data;
+
+            LOG_I("[bt_app]link connected COD:%d Incoming:%d res %d\r\n", acl_info->dev_cls, acl_info->acl_dir, acl_info->res);
+            LOG_I("[bt_app]bd addr %02x:%02x:%02x:%02x:%02x:%02x\r\n", acl_info->mac.addr[0], acl_info->mac.addr[1], acl_info->mac.addr[2], acl_info->mac.addr[3], acl_info->mac.addr[4], acl_info->mac.addr[5]);
+
+            if (acl_info->res != HCI_SUCC)
+            {
+                LOG_I("[bt_app]acl connect fail!!!!\n");
+            }
+            else
+            {
+                LOG_I("[bt_app]acl connect success!!!!\n");
+                g_bt_app_env.connect_direction = acl_info->acl_dir;
+            }
+        }
+        break;
+        case BT_NOTIFY_COMMON_ACL_DISCONNECTED:
+        {
+            bt_notify_device_base_info_t *device_info = (bt_notify_device_base_info_t *)data;
+            LOG_I("[bt_app]link dis-connected %d\r\n", device_info->res);
+            LOG_I("[bt_app]bd addr %02x:%02x:%02x:%02x:%02x:%02x\r\n", device_info->mac.addr[0], device_info->mac.addr[1], device_info->mac.addr[2], device_info->mac.addr[3], device_info->mac.addr[4], device_info->mac.addr[5]);
+        }
+        break;
         default:
             break;
         }
@@ -378,8 +404,13 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
         {
         case BT_NOTIFY_A2DP_PROFILE_CONNECTED:
         {
+            bt_notify_profile_state_info_t *profile_info = (bt_notify_profile_state_info_t *)data;
             LOG_I("A2DP connected");
             audio_server_select_public_audio_device(AUDIO_DEVICE_A2DP_SINK);
+            if (!g_bt_app_env.connect_direction)
+            {
+                bt_interface_conn_to_source_ext((unsigned char *)&profile_info->mac, BT_PROFILE_AVRCP);
+            }
         }
         break;
         case BT_NOTIFY_A2DP_PROFILE_DISCONNECTED:
@@ -397,10 +428,8 @@ static int bt_app_interface_event_handle(uint16_t type, uint16_t event_id, uint8
         case BT_NOTIFY_AVRCP_PROFILE_CONNECTED:
         {
             LOG_I("AVRCP connected");
-            BTS2S_BD_ADDR bd_addr;
             bt_notify_profile_state_info_t *profile_info = (bt_notify_profile_state_info_t *)data;
-            bt_addr_convert_to_bts((bd_addr_t *)&profile_info->mac, &bd_addr);
-            bt_interface_set_avrcp_role(&bd_addr, AVRCP_TG);
+            bt_interface_set_avrcp_role_ext(&profile_info->mac, AVRCP_TG);
         }
         break;
         case BT_NOTIFY_AVRCP_PROFILE_DISCONNECTED:

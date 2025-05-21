@@ -1654,6 +1654,11 @@
     <FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/SF32LB56X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
   </Device> 
   <Device>
+    <ChipInfo Vendor="SiFli" Name="SF32LB58X_SD" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
+	<FlashBankInfo Name="External Flash5" BaseAddr="0x1C000000" MaxSize="0x4000000" Loader="Devices/SiFli/SF32LB58X_FLASH5.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+	<FlashBankInfo Name="External SDMMC1" BaseAddr="0x68000000" MaxSize="0x38000000" Loader="Devices/SiFli/SF32LB58X_EXT_SD1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
+  </Device>  
+  <Device>
     <ChipInfo Vendor="SiFli" Name="SF32LB56X" Core="JLINK_CORE_CORTEX_M33" WorkRAMAddr="0x20000000" WorkRAMSize="0x60000" />
     <FlashBankInfo Name="Internal Flash1" BaseAddr="0x10000000" MaxSize="0x0400000"  Loader="Devices/SiFli/SF32LB56X_INT_FLASH1.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>
     <FlashBankInfo Name="External Flash2" BaseAddr="0x10400000" MaxSize="0x2000000" Loader="Devices/SiFli/SF32LB56X_EXT_FLASH2.elf" LoaderType="FLASH_ALGO_TYPE_OPEN" AlwaysPresent="1"/>

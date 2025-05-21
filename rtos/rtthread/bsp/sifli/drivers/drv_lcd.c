@@ -651,8 +651,12 @@ static rt_err_t api_lcd_init(rt_device_t dev)
     drv_lcd.mq = rt_mq_create("drv_lcd", sizeof(LCD_MsgTypeDef), 4, RT_IPC_FLAG_FIFO);
     RT_ASSERT(drv_lcd.mq);
 
+    uint16_t priority = RT_THREAD_PRIORITY_HIGH;
+#ifdef SOLUTION
+    priority = 6;
+#endif
     rt_err_t ret = rt_thread_init(&drv_lcd.task, "lcd_task", lcd_task, drv_lcd.mq, drv_lcd_stack, sizeof(drv_lcd_stack),
-                                  RT_THREAD_PRIORITY_HIGH, RT_THREAD_TICK_DEFAULT);
+                                  priority, RT_THREAD_TICK_DEFAULT);
 
     RT_ASSERT(RT_EOK == ret);
     rt_thread_startup(&drv_lcd.task);
@@ -667,7 +671,7 @@ static rt_err_t api_lcd_init(rt_device_t dev)
 
 rt_thread_t lcd_get_task(void)
 {
-    return &drv_lcd.task;
+    return drv_lcd.task.name[0] ? &drv_lcd.task : NULL;
 }
 
 #ifdef LCD_USE_GPIO_TE
@@ -1242,6 +1246,36 @@ static rt_err_t api_lcd_control(rt_device_t dev, int cmd, void *args)
         return RT_EOK;
     }
 
+
+    if (RT_DEVICE_CTRL_RESUME == cmd)
+    {
+        if (NULL != drv_lcd.p_drv_ops)
+        {
+            HAL_StatusTypeDef err;
+            //Re-initialize LCDC
+            err = HAL_LCDC_Resume(&drv_lcd.hlcdc);
+            RT_ASSERT(HAL_OK == err);
+        }
+#ifdef BSP_USING_EPIC
+        drv_gpu_open();
+#endif /* BSP_USING_EPIC */
+
+        return RT_EOK;
+    }
+
+    if (RT_DEVICE_CTRL_SUSPEND == cmd)
+    {
+#ifdef BSP_USING_EPIC
+        drv_gpu_close();
+#endif /* BSP_USING_EPIC */
+        RT_ASSERT(HAL_LCDC_STATE_BUSY != drv_lcd.hlcdc.State);
+        /*LCDC lost power supply*/
+
+        return RT_EOK;
+    }
+
+
+
     LCD_MsgTypeDef msg;
     switch (cmd)
     {
@@ -1290,27 +1324,22 @@ static rt_err_t api_lcd_control(rt_device_t dev, int cmd, void *args)
         break;
 
     default:
-        msg.id = LCD_MSG_INVALID;
+        msg.id = LCD_MSG_CONTROL;
+        msg.content.ctrl_ctx.dev = dev;
+        msg.content.ctrl_ctx.cmd = cmd;
+        msg.content.ctrl_ctx.args = args;
         break;
     }
 
-    if (msg.id != LCD_MSG_INVALID)
-    {
-        msg.driver = &drv_lcd;
-        send_msg_to_lcd_task(&msg);
-        return RT_EOK;
-    }
+
+    msg.driver = &drv_lcd;
+    send_msg_to_lcd_task(&msg);
+    return RT_EOK;
+}
 
 
-
-
-
-    if (RT_EOK != api_lock(&drv_lcd))
-    {
-        WAIT_SEMA_TIMEOUT();
-        return RT_ETIMEOUT;
-    }
-
+static rt_err_t exe_lcd_control_cmds(rt_device_t dev, int cmd, void *args)
+{
     switch (cmd)
     {
     case RTGRAPHIC_CTRL_GET_INFO:
@@ -1447,29 +1476,6 @@ static rt_err_t api_lcd_control(rt_device_t dev, int cmd, void *args)
 
 
 
-    case RT_DEVICE_CTRL_RESUME:
-        if (NULL != drv_lcd.p_drv_ops)
-        {
-            HAL_StatusTypeDef err;
-            //Re-initialize LCDC
-            err = HAL_LCDC_Resume(&drv_lcd.hlcdc);
-            RT_ASSERT(HAL_OK == err);
-        }
-#ifdef BSP_USING_EPIC
-        drv_gpu_open();
-#endif /* BSP_USING_EPIC */
-        break;
-
-
-    case RT_DEVICE_CTRL_SUSPEND:
-#ifdef BSP_USING_EPIC
-        drv_gpu_close();
-#endif /* BSP_USING_EPIC */
-        RT_ASSERT(HAL_LCDC_STATE_BUSY != drv_lcd.hlcdc.State);
-        /*LCDC lost power supply*/
-        break;
-
-
 
     case RTGRAPHIC_CTRL_GET_STATE:
     {
@@ -1563,8 +1569,6 @@ static rt_err_t api_lcd_control(rt_device_t dev, int cmd, void *args)
         break;
     }
 
-    api_unlock(&drv_lcd);
-
     return RT_EOK;
 }
 
@@ -1616,17 +1620,17 @@ static rt_err_t draw_core(LCD_DrvTypeDef *p_drvlcd, const uint8_t *pixels, int x
     RT_ASSERT(0 == p_drvlcd->draw_lock);
 
     p_drvlcd->draw_lock = 1;
-    if (IS_DRV_LCD_ERROR())
-    {
-        err = RT_EOK;//Do nothing if LCD ERROR.
-    }
+    if (IS_DRV_LCD_ERROR() || p_drvlcd->skip_draw_core
 #ifdef SKIP_GPU_ERROR_FRAME
-    else if (gpu_timeout_cnt)
+            || gpu_timeout_cnt
+#endif /* SKIP_GPU_ERROR_FRAME */
+       )
     {
+#ifdef SKIP_GPU_ERROR_FRAME
         gpu_timeout_cnt = 0;
+#endif /* SKIP_GPU_ERROR_FRAME */
         err = RT_EOK;//Do nothing if LCD ERROR.
     }
-#endif /* SKIP_GPU_ERROR_FRAME */
     else if (p_drvlcd->p_drv_ops->p_ops->WriteMultiplePixels)
     {
 
@@ -1766,7 +1770,7 @@ static rt_err_t draw_core(LCD_DrvTypeDef *p_drvlcd, const uint8_t *pixels, int x
         }
 
 
-
+        p_drvlcd->statistics.draw_core_cnt++;
         if (RT_EOK == err)
         {
             p_drvlcd->timeout_retry_cnt = MAX_TIMEOUT_RETRY;
@@ -1785,6 +1789,12 @@ static rt_err_t draw_core(LCD_DrvTypeDef *p_drvlcd, const uint8_t *pixels, int x
                 lcd_set_brightness(p_drvlcd->brightness);
                 lcd_display_on();
             }
+
+            if ((p_drvlcd->end_tick - p_drvlcd->start_tick) > p_drvlcd->statistics.draw_core_max)
+                p_drvlcd->statistics.draw_core_max = p_drvlcd->end_tick - p_drvlcd->start_tick;
+            if ((p_drvlcd->end_tick - p_drvlcd->start_tick) < p_drvlcd->statistics.draw_core_min)
+                p_drvlcd->statistics.draw_core_min = p_drvlcd->end_tick - p_drvlcd->start_tick;
+
         }
         else if (-RT_ETIMEOUT == err)
         {
@@ -1795,6 +1805,7 @@ static rt_err_t draw_core(LCD_DrvTypeDef *p_drvlcd, const uint8_t *pixels, int x
             RT_ASSERT(RT_EOK == err2);
 
             p_drvlcd->draw_error = 1;
+            p_drvlcd->statistics.draw_core_err_cnt++;
             lcd_driver_print_error_info();
             rt_thread_mdelay(30);//Wait LCDC finish if it was just started.
             lcd_driver_print_error_info();
@@ -1850,6 +1861,27 @@ static rt_err_t draw_core(LCD_DrvTypeDef *p_drvlcd, const uint8_t *pixels, int x
         rt_pm_hw_device_stop();
 #endif  /* RT_USING_PM */
 
+        if (rt_tick_get() - p_drvlcd->statistics.start_tick  > 2 * RT_TICK_PER_SECOND)
+        {
+            if (p_drvlcd->statistics_log)
+            {
+                uint32_t fps = 0;
+                uint32_t seconds = (rt_tick_get() - p_drvlcd->statistics.start_tick) / RT_TICK_PER_SECOND;
+                if (seconds > 0) fps = (p_drvlcd->statistics.draw_core_cnt + (seconds >> 1)) / seconds;
+
+                LOG_I("fps=%d,flush_time[%d~%d],err_cnt=%d",
+                      fps,
+                      p_drvlcd->statistics.draw_core_min,
+                      p_drvlcd->statistics.draw_core_max,
+                      p_drvlcd->statistics.draw_core_err_cnt);
+            }
+
+            p_drvlcd->statistics.draw_core_cnt = 0;
+            p_drvlcd->statistics.draw_core_max = 0;
+            p_drvlcd->statistics.draw_core_min = UINT32_MAX;
+            p_drvlcd->statistics.start_tick = rt_tick_get();
+        }
+
     }
 
 
@@ -1861,11 +1893,6 @@ static rt_err_t draw_core(LCD_DrvTypeDef *p_drvlcd, const uint8_t *pixels, int x
 
 static void api_lcd_draw_rect(const char *pixels, int x0, int y0, int x1, int y1)
 {
-
-    if (IS_DRV_LCD_ERROR()) return;
-    RT_ASSERT(!IS_LCDC_OFF());
-
-#if 1
     LCD_MsgTypeDef msg;
 
     msg.id = LCD_MSG_DRAW_RECT;
@@ -1877,114 +1904,12 @@ static void api_lcd_draw_rect(const char *pixels, int x0, int y0, int x1, int y1
     msg.content.draw_ctx.area.y1 = y1;
 
     send_msg_to_lcd_task(&msg);
-
-
-    return;
-
-#elif 0
-    rt_err_t err;
-    err = api_lock(&drv_lcd);
-    if (RT_EOK != err)
-    {
-        WAIT_SEMA_TIMEOUT();
-        return;
-    }
-
-    LOG_D("api_lcd_draw_rect %x, [%d,%d,%d,%d]", pixels, x0, y0, x1, y1);
-    err = draw_core(&drv_lcd, pixels, x0, y0, x1, y1);
-    RT_ASSERT(RT_EOK == err);
-
-    api_unlock(&drv_lcd);
-
-    return;
-
-
-#else
-    if (drv_lcd.p_drv_ops->p_ops->WriteMultiplePixels)
-    {
-        rt_err_t err;
-        LOG_D("api_lcd_draw_rect %x, [%d,%d,%d,%d]", pixels, x0, y0, x1, y1);
-
-        err = api_lock(&drv_lcd);
-        if (RT_EOK != err)
-        {
-            WAIT_SEMA_TIMEOUT();
-            return;
-        }
-
-#ifdef QAD_SPI_USE_GPIO_CS
-        gpio_cs_enable();
-#endif /* QAD_SPI_USE_GPIO_CS */
-
-#ifdef RT_USING_PM
-        rt_pm_request(PM_SLEEP_MODE_IDLE);
-        rt_pm_hw_device_start();
-#endif  /* RT_USING_PM */
-
-        RT_ASSERT((x0 <= x1) && (y0 <= y1));
-
-        drv_lcd.hlcdc.XferCpltCallback = SendLayerDataCpltCbk;
-        drv_lcd.hlcdc.XferErrorCallback = SendLayerDataErrCbk;
-        drv_lcd.hlcdc.debug_cnt0++;
-        drv_lcd.p_drv_ops->p_ops->WriteMultiplePixels(&drv_lcd.hlcdc, (const uint8_t *)pixels, x0, y0, x1, y1);
-
-        err = api_lock(&drv_lcd);
-        if (RT_EOK != err)
-        {
-#ifdef RT_USING_PM
-            rt_pm_release(PM_SLEEP_MODE_IDLE);
-            rt_pm_hw_device_stop();
-
-#endif  /* RT_USING_PM */
-
-#ifdef QAD_SPI_USE_GPIO_CS
-            gpio_cs_disable();
-#endif /* QAD_SPI_USE_GPIO_CS */
-
-            WAIT_SEMA_TIMEOUT();
-            return;
-        }
-
-        api_unlock(&drv_lcd);
-
-#if 0 //Will been relased in SendLayerDataCpltCbk
-#ifdef RT_USING_PM
-        rt_pm_release(PM_SLEEP_MODE_IDLE);
-        rt_pm_hw_device_stop();
-
-#endif  /* RT_USING_PM */
-
-#ifdef QAD_SPI_USE_GPIO_CS
-        gpio_cs_disable();
-#endif /* QAD_SPI_USE_GPIO_CS */
-#endif /* 0 */
-
-        /*
-            Turn on display if it not, and the last line of LCD should be updated.
-        */
-        if ((LCD_STATUS_INITIALIZED == drv_lcd.status) && (y1 >= drv_lcd.p_drv_ops->lcd_vertical_res - 1))
-        {
-            LOG_I("Auto turn on display after draw rect");
-            lcd_set_brightness(drv_lcd.brightness);
-            lcd_display_on();
-        }
-    }
-
-#endif
 }
 
 static void api_lcd_draw_rect_async(const char *pixels, int x0, int y0, int x1, int y1)
 {
-
     drv_lcd.debug_cnt1++;
 
-    if (IS_DRV_LCD_ERROR())
-    {
-        aysnc_send_cmplt_cbk(&drv_lcd, (uint8_t *)pixels);
-        return;
-    }
-
-#if 1
     LCD_MsgTypeDef msg;
 
     msg.id = LCD_MSG_DRAW_RECT_ASYNC;
@@ -1996,93 +1921,6 @@ static void api_lcd_draw_rect_async(const char *pixels, int x0, int y0, int x1, 
     msg.content.draw_ctx.area.y1 = y1;
 
     send_msg_to_lcd_task(&msg);
-
-    return;
-
-
-#elif 0
-    RT_ASSERT(!IS_LCDC_OFF());
-    rt_err_t err;
-    err = api_lock(&drv_lcd);
-    if (RT_EOK != err)
-    {
-        WAIT_SEMA_TIMEOUT();
-        aysnc_send_cmplt_cbk(&drv_lcd, (uint8_t *)pixels);
-        return;
-    }
-
-    LOG_D("api_lcd_draw_rect_async %x, [%d,%d,%d,%d]", pixels, x0, y0, x1, y1);
-    err = draw_core(pixels, x0, y0, x1, y1);
-    RT_ASSERT(RT_EOK == err);
-
-    return;
-
-#else
-    if (drv_lcd.p_drv_ops->p_ops->WriteMultiplePixels)
-    {
-        rt_err_t err;
-
-        LOG_D("api_lcd_draw_rect_async %x, [%d,%d,%d,%d]", pixels, x0, y0, x1, y1);
-
-#ifdef RT_USING_PM
-        rt_pm_request(PM_SLEEP_MODE_IDLE);
-        rt_pm_hw_device_start();
-#endif  /* RT_USING_PM */
-
-        err = api_lock(&drv_lcd);
-        if (RT_EOK != err)
-        {
-            WAIT_SEMA_TIMEOUT();
-            goto ASYNC_SEND_FAIL;
-        }
-
-#ifdef QAD_SPI_USE_GPIO_CS
-        gpio_cs_enable();
-#endif /* QAD_SPI_USE_GPIO_CS */
-
-        RT_ASSERT((x0 <= x1) && (y0 <= y1));
-
-        rt_enter_critical();
-        rt_timer_start(&drv_lcd.async_time);
-
-        drv_lcd.hlcdc.XferCpltCallback = SendLayerDataCpltCbk;
-        drv_lcd.hlcdc.XferErrorCallback = SendLayerDataErrCbk;
-        drv_lcd.hlcdc.debug_cnt0++;
-        drv_lcd.p_drv_ops->p_ops->WriteMultiplePixels(&drv_lcd.hlcdc, (const uint8_t *)pixels, x0, y0, x1, y1);
-        rt_exit_critical();
-
-        /*
-            Turn on display if it not, and the last line of LCD should be updated.
-        */
-        if ((LCD_STATUS_INITIALIZED == drv_lcd.status) && (y1 >= drv_lcd.p_drv_ops->lcd_vertical_res - 1))
-        {
-            //Wait WriteMultiplePixels done.
-            {
-                err = api_lock(&drv_lcd);
-                if (RT_EOK != err)
-                {
-                    WAIT_SEMA_TIMEOUT();
-                    goto ASYNC_SEND_FAIL;
-                }
-                api_unlock(&drv_lcd);
-            }
-
-            LOG_I("Auto turn on display after draw rect async");
-            lcd_set_brightness(drv_lcd.brightness);
-            lcd_display_on();
-        }
-
-        return;
-    }
-
-
-
-ASYNC_SEND_FAIL:
-    {
-        SendLayerDataCpltCbk(&drv_lcd.hlcdc);
-    }
-#endif
-
 }
 
 static void set_window(int x0, int y0, int x1, int y1)
@@ -2135,34 +1973,16 @@ static void set_window(int x0, int y0, int x1, int y1)
 
 static void api_lcd_set_window(int x0, int y0, int x1, int y1)
 {
-    if (!IS_DRV_LCD_ERROR())
-    {
-#if 1
-        LCD_MsgTypeDef msg;
+    LCD_MsgTypeDef msg;
 
-        msg.id = LCD_MSG_SET_WINDOW;
-        msg.driver = &drv_lcd;
-        msg.content.window.x0 = x0;
-        msg.content.window.y0 = y0;
-        msg.content.window.x1 = x1;
-        msg.content.window.y1 = y1;
+    msg.id = LCD_MSG_SET_WINDOW;
+    msg.driver = &drv_lcd;
+    msg.content.window.x0 = x0;
+    msg.content.window.y0 = y0;
+    msg.content.window.x1 = x1;
+    msg.content.window.y1 = y1;
 
-        send_msg_to_lcd_task(&msg);
-
-#else
-        rt_err_t err;
-        err = api_lock(&drv_lcd);
-        if (RT_EOK == err)
-        {
-            set_window(x0, y0, x1, y1);
-        }
-        else
-        {
-            WAIT_SEMA_TIMEOUT();
-        }
-        api_unlock(&drv_lcd);
-#endif /* 0 */
-    }
+    send_msg_to_lcd_task(&msg);
 }
 
 
@@ -2599,6 +2419,9 @@ static void lcd_task(void *param)
                            flush_info->window.x1, flush_info->window.y1);
 
                 HAL_LCDC_LayerSetCmpr(&p_drvlcd->hlcdc, p_drvlcd->select_layer, flush_info->cmpr_rate);
+                p_drvlcd->buf_format = flush_info->color_format;
+                HAL_LCDC_LayerSetFormat(&p_drvlcd->hlcdc, p_drvlcd->select_layer,
+                                        rt_lcd_format_to_hal_lcd_format(flush_info->color_format));
 
 
                 LOG_D("draw %x, [%d,%d,%d,%d]", flush_info->pixel,
@@ -2689,6 +2512,15 @@ static void lcd_task(void *param)
                     *(uint32_t *)msg.content.pixel.data = v;
                 }
 
+            }
+            break;
+
+            case LCD_MSG_CONTROL:
+            {
+                exe_lcd_control_cmds(msg.content.ctrl_ctx.dev,
+                                     msg.content.ctrl_ctx.cmd,
+                                     msg.content.ctrl_ctx.args
+                                    );
             }
             break;
 
@@ -3134,6 +2966,9 @@ LCDC_HandleTypeDef *debug_get_drv_lcd_handler(void)
 static struct rt_device lcd_backlight_device;
 static uint8_t lcd_backlight_level;       // save local bl, check previous level
 
+#ifndef LCD_PWM_BACKLIGHT_PEROID
+    #define LCD_PWM_BACKLIGHT_PEROID (10*1000)  /*set pwm peroid default: 100k*/
+#endif
 static rt_size_t backligt_get(rt_device_t dev, rt_off_t pos, void *buffer, rt_size_t size)
 {
     if (buffer != NULL)
@@ -3184,7 +3019,7 @@ static rt_size_t backligt_set(rt_device_t dev, rt_off_t pos, const void *buffer,
         }
         else
         {
-            rt_uint32_t period = 1 * 1000 * 1000;
+            rt_uint32_t period = LCD_PWM_BACKLIGHT_PEROID;
             LOG_I("backligt_set %d%", percent);
 
             rt_pwm_set(backlight_device, LCD_PWM_BACKLIGHT_CHANEL_NUM, period, period * percent / 100);
@@ -3530,6 +3365,26 @@ static rt_err_t lcd_ctrl(int argc, char **argv)
 
             drv_lcd.assert_timeout = v;
             DEBUG_PRINTF("assert= %d\n", v);
+        }
+    }
+    else if (strcmp(argv[1], "fps") == 0)
+    {
+        if (argc > 2)
+        {
+            uint32_t v = strtoul(argv[2], 0, 10);
+
+            drv_lcd.statistics_log = v;
+            DEBUG_PRINTF("fps_log= %d\n", v);
+        }
+    }
+    else if (strcmp(argv[1], "no_draw") == 0)
+    {
+        if (argc > 2)
+        {
+            uint32_t v = strtoul(argv[2], 0, 10);
+
+            drv_lcd.skip_draw_core = v;
+            DEBUG_PRINTF("skip_draw_core= %d\n", v);
         }
     }
 

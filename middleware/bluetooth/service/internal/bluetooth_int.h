@@ -63,8 +63,8 @@ extern void bluetooth_config(void);
 extern void wlan_coex_config(void);
 extern void pta_io_config(void);
 
-void *bt_mem_alloc(rt_size_t size);
-void *bt_mem_calloc(rt_size_t count, rt_size_t nbytes);
+void *bt_mem_alloc(size_t size);
+void *bt_mem_calloc(size_t count, size_t nbytes);
 void bt_mem_free(void *ptr);
 
 

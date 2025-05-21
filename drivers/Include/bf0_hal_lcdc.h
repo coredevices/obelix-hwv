@@ -433,10 +433,10 @@ typedef enum
 typedef enum
 {
     HAL_LCDC_LAYER_0 = 0,                           //!< Layer 0, support compressed buffer
-    HAL_LCDC_LAYER_DEFAULT = HAL_LCDC_LAYER_0,      //!< Default layer
     HAL_LCDC_LAYER_1,                               //!< Layer 1  is upon layer 1, NOT support compressed buffer
     HAL_LCDC_LAYER_MAX
 } HAL_LCDC_LayerDef;
+#define HAL_LCDC_LAYER_DEFAULT HAL_LCDC_LAYER_0
 
 typedef enum
 {

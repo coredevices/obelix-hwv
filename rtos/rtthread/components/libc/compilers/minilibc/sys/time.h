@@ -15,6 +15,10 @@
     #define _TIME_T_DECLARED
     typedef long time_t;
 #endif
+
+#ifndef _TIMEVAL_DEFINED
+#define _TIMEVAL_DEFINED
+
 /*
  * Structure returned by gettimeofday(2) system call,
  * and used in other calls.
@@ -24,11 +28,11 @@ struct timeval
     long    tv_sec;     /* seconds */
     long    tv_usec;    /* and microseconds */
 };
-
+#endif
 /*
  * Structure defined by POSIX.1b to be like a timeval.
  */
-#if !defined(_TIME_SPEC_DECLARED)
+#if !defined(_TIME_SPEC_DECLARED) && (!defined(__GNUC__) || (__GNUC__ <= 8))
 #define _TIME_SPEC_DECLARED
 struct timespec
 {

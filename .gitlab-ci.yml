@@ -1,0 +1,48 @@
+# SiFli SDK 自动构建配置
+
+stages:
+  - build
+
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
+# 定义构建作业
+build-sdk:
+  stage: build
+  tags:
+    - build  # 使用带有build标签的执行器
+  script: |
+    # 设置环境并构建
+    . ./export.sh
+    python tools/autotest/build_sdk.py -c=build_config.yaml -p=gcc
+    echo "SDK构建完成"
+  artifacts:
+    paths:
+      - ci_build_logs
+      - ci_report_logs
+    expire_in: 1 week
+  rules:
+    # 定时触发 - 每天凌晨3点
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+    # 手动触发
+    - if: '$CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"'
+      when: always
+    # MR触发
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: always
+    # Push触发 (例如推送到主分支)
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: always
+
+# 定时任务配置
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+    - when: never
+
+# 定时任务配置，在Repository > Schedules中添加以下cron表达式:
+# 0 3 * * *  (每天凌晨3点运行)

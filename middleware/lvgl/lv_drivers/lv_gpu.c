@@ -148,12 +148,10 @@ static uint32_t lv_img_2_epic_cf2(uint32_t cf)
     {
         color_mode = EPIC_INPUT_EZIP;
     }
-#if LV_USE_L8_GPU
     else if (LV_IMG_CF_INDEXED_8BIT == cf)
     {
         color_mode = EPIC_INPUT_L8;
     }
-#endif /* LV_USE_L8_GPU==1 */
     else if (LV_IMG_CF_ALPHA_2BIT == cf)
     {
         color_mode = EPIC_INPUT_A2;
@@ -398,13 +396,11 @@ void img_rotate_opa_frac2(lv_img_dsc_t *dest, lv_img_dsc_t *src, int16_t angle, 
         input_layers[1].color_b = chroma_u32.ch.blue;
 
     }
-#if LV_USE_L8_GPU
     else if (LV_IMG_CF_INDEXED_8BIT == src->header.cf)
     {
         input_layers[1].lookup_table = (uint8_t *)src->data;
         input_layers[1].data = (uint8_t *)src->data + (1 << lv_img_cf_get_px_size(LV_IMG_CF_INDEXED_8BIT)) * sizeof(lv_color32_t);
     }
-#endif /* LV_USE_L8_GPU==1 */
 #ifdef EPIC_SUPPORT_YUV
     else if (LV_IMG_CF_YUV420_PLANAR == src->header.cf)
     {
@@ -470,12 +466,13 @@ void img_rotate_opa_frac2(lv_img_dsc_t *dest, lv_img_dsc_t *src, int16_t angle, 
 }
 
 
-void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src,
+
+void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
                    const lv_area_t *src_coords, const lv_area_t *dst_coords,
-                   const lv_area_t *output_coords, lv_color_t ax_color,
-                   uint8_t use_dest_as_bg,
+                   const lv_area_t *output_coords, lv_opa_t opa, lv_color_t ax_color,
+                   lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom,
                    lv_img_cf_t mask_cf, const lv_opa_t *mask_map, const lv_area_t *mask_coords,
-                   EPIC_TransPath hor_path, EPIC_TransPath ver_path, void *user_data)
+                   uint8_t type)
 {
     EPIC_LayerConfigTypeDef input_layers[3];
     EPIC_LayerConfigTypeDef output_canvas;
@@ -564,13 +561,11 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src,
         input_layers[1].color_b = chroma_u32.ch.blue;
 
     }
-#if LV_USE_L8_GPU
     else if (LV_IMG_CF_INDEXED_8BIT == src->header.cf)
     {
         input_layers[1].lookup_table = (uint8_t *)src->data;
         input_layers[1].data = (uint8_t *)src->data + (1 << lv_img_cf_get_px_size(LV_IMG_CF_INDEXED_8BIT)) * sizeof(lv_color32_t);
     }
-#endif /* LV_USE_L8_GPU==1 */
 #ifdef EPIC_SUPPORT_YUV
     else if (LV_IMG_CF_YUV420_PLANAR == src->header.cf)
     {
@@ -593,7 +588,19 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src,
         input_layers[1].yuv.y_buf = input_layers[1].data;
     }
 #endif /* EPIC_SUPPORT_YUV */
+    input_layers[1].transform_cfg.type = type;
+    input_layers[1].transform_cfg.angle_adv = angle;
+    input_layers[1].transform_cfg.pivot_z = pivot_z;
+    input_layers[1].transform_cfg.z_offset = src_z;
+    input_layers[1].transform_cfg.pivot_x = pivot->x;
+    input_layers[1].transform_cfg.pivot_y = pivot->y;
+    //To epic scale
+    input_layers[1].transform_cfg.scale_x = LV_IMG_ZOOM_NONE * EPIC_INPUT_SCALE_NONE / (uint32_t)src_zoom;
+    input_layers[1].transform_cfg.scale_y = input_layers[1].transform_cfg.scale_x;
 
+    input_layers[1].transform_cfg.vp_x_offset = input_layers[1].transform_cfg.pivot_x;
+    input_layers[1].transform_cfg.vp_y_offset = input_layers[1].transform_cfg.pivot_y;
+    input_layers[1].transform_cfg.dst_z_offset = input_layers[1].transform_cfg.z_offset;
 
 
     /*Setup bg layer*/
@@ -625,10 +632,10 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src,
     output_canvas.data_size = pixel_size * output_canvas.total_width * output_canvas.height;
 
 
-    if (use_dest_as_bg)
-        err = drv_epic_transform(&input_layers[0], input_layer_cnt, &output_canvas, hor_path, ver_path, user_data, NULL);
+    if (1)
+        err = drv_epic_transform(&input_layers[0], input_layer_cnt, &output_canvas, NULL);
     else
-        err = drv_epic_transform(&input_layers[1], input_layer_cnt - 1, &output_canvas, hor_path, ver_path, user_data, NULL);
+        err = drv_epic_transform(&input_layers[1], input_layer_cnt - 1, &output_canvas, NULL);
 
     if (RT_EOK != err)
     {
@@ -636,6 +643,41 @@ void img_transform(lv_img_dsc_t *dest, const lv_img_dsc_t *src,
     }
 }
 
+void img_rotate_adv1(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
+                     const lv_area_t *p_src_coords, const lv_area_t *p_dst_coords,
+                     const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
+                     lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom)
+{
+    img_transform(dest, src, angle, p_src_coords, p_dst_coords,
+                  p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
+                  0, NULL, NULL, 1);
+}
+
+void img_rotate_adv2(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
+                     const lv_area_t *p_src_coords, const lv_area_t *p_dst_coords,
+                     const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
+                     lv_point_t *pivot, lv_coord_t pivot_z,  lv_coord_t src_z, uint16_t src_zoom)
+{
+    img_transform(dest, src, angle, p_src_coords, p_dst_coords,
+                  p_output_coords, opa, ax_color, pivot, pivot_z, src_z, src_zoom,
+                  0, NULL, NULL, 2);
+}
+
+
+void img_rotate_adv2_vp(lv_img_dsc_t *dest, const lv_img_dsc_t *src, int16_t angle,
+                        const lv_area_t *p_src_coords, const lv_area_t *p_dst_coords,
+                        const lv_area_t *p_output_coords, lv_opa_t opa, lv_color_t ax_color,
+                        lv_point_t *pivot, lv_coord_t pivot_z, lv_coord_t src_z, uint16_t src_zoom,
+                        lv_coord_t dst_z, lv_point_t *viewpoint, lv_area_t *src_new_area)
+{
+
+}
+
+extern void HAL_EPIC_Adv_Log(uint32_t level);
+void lv_gpu_adv_log(uint32_t level)
+{
+    HAL_EPIC_Adv_Log(level);
+}
 
 void img_rotate_opa_frac(lv_img_dsc_t *dest, lv_img_dsc_t *src, int16_t angle, uint32_t zoom,
                          const lv_area_t *src_coords, const lv_area_t *dst_coords,
@@ -784,9 +826,22 @@ static void draw_img(struct _lv_draw_ctx_t *draw_ctx,
         dest.data = draw_ctx->buf;
         dest.header.w = lv_area_get_width(draw_ctx->buf_area);
         dest.header.h = lv_area_get_height(draw_ctx->buf_area);
-        dest.data_size = dest.header.w * dest.header.h * sizeof(lv_color_t);
-        dest.header.cf = LV_IMG_CF_TRUE_COLOR;
         dest.header.always_zero = 0;
+
+        lv_disp_t *disp = _lv_refr_get_disp_refreshing();
+        if (set_px_true_color_alpha == disp->driver->set_px_cb)
+        {
+            dest.header.cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+            dest.data_size = dest.header.w * dest.header.h * (sizeof(lv_color_t) + 1);
+        }
+        else
+        {
+            dest.header.cf = LV_IMG_CF_TRUE_COLOR;
+            dest.data_size = dest.header.w * dest.header.h * sizeof(lv_color_t);
+        }
+
+
+
 #ifdef SOC_SF32LB55X
 #define gpu_min_zoom  33
 
@@ -1242,8 +1297,18 @@ static void draw_letter(lv_draw_ctx_t *draw_ctx, const lv_draw_label_dsc_t *dsc,
         dest.data = draw_ctx->buf;
         dest.header.w = lv_area_get_width(draw_ctx->buf_area);
         dest.header.h = lv_area_get_height(draw_ctx->buf_area);
-        dest.data_size = dest.header.w * dest.header.h * sizeof(lv_color_t);
-        dest.header.cf = (set_px_true_color_alpha == disp->driver->set_px_cb) ? LV_IMG_CF_TRUE_COLOR_ALPHA : LV_IMG_CF_TRUE_COLOR;
+        if (set_px_true_color_alpha == disp->driver->set_px_cb)
+        {
+            dest.data_size = dest.header.w * dest.header.h * (sizeof(lv_color_t) + 1);
+            dest.header.cf = LV_IMG_CF_TRUE_COLOR_ALPHA;
+
+        }
+        else
+        {
+            dest.data_size = dest.header.w * dest.header.h * sizeof(lv_color_t);
+            dest.header.cf = LV_IMG_CF_TRUE_COLOR;
+        }
+
         dest.header.always_zero = 0;
 
         img_rotate_opa_frac(&dest, &src, 0, (uint32_t)LV_IMG_ZOOM_NONE,

@@ -75,12 +75,22 @@ struct rt_pwm_configuration
     rt_uint32_t pulse;   /* unit:ns (pulse<=period) */
     rt_uint32_t break_dead;
     rt_uint32_t dead_time; /*uint:ns if pclk=120MH, dead_time:0~136000ns*/
+    rt_uint32_t *pulse_dma_data;/*dma data*/
+    rt_uint16_t *dma_data;/*dma data*/
+    rt_uint16_t    data_len;/*dma len*/
+    rt_uint8_t  use_percentage;/*pulse is passed in as a percentage*/
 };
+
+
+
+
+extern unsigned long long global_pulse_values[];
+extern size_t global_array_length;
 
 struct rt_device_pwm;
 struct rt_rgbled_configuration
 {
-    rt_uint16_t channel; /* 0-n */
+    // rt_uint16_t channel; /* 0-n */
     rt_uint8_t  is_comp; /* Is complementary*/
     rt_uint8_t  reserved;
     rt_uint32_t color_rgb;  /*rgb color*/
