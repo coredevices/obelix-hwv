@@ -32,6 +32,7 @@ void ioexp_init(void)
 void ioexp_pin_set(IOEXP_CHANNEL_T channel, IOEXP_STATE_T state) {
     if (channel >= IOEXP_CH10) {
         uint8_t p1_value;
+		channel -= IOEXP_CH10;
         i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x03, &p1_value);
         if (state == IOEXP_HIGH) {
             p1_value |= (1<<channel);

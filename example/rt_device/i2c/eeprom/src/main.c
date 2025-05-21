@@ -8,6 +8,7 @@
 #include "drv_aw9527.h"
 #include "drv_aw86225.h"
 #include "drv_eta4662.h"
+#include "drv_mmc5603.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -31,6 +32,7 @@ int main(void)
 	ioexp_init();
 	aw86225_init();
 	eta4662_init();
+	mmc5603_init();
 		
     while (1)
     {

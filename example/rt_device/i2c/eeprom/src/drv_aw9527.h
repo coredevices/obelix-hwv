@@ -1,8 +1,8 @@
 #pragma once
 
 typedef enum {
+	IOEXP_LOW,
     IOEXP_HIGH,
-    IOEXP_LOW,
 }IOEXP_STATE_T;
 
 typedef enum {
