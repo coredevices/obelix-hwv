@@ -34,7 +34,9 @@ void mmc5603_init(void)
 
 void mmc5603_power_down(void) 
 {
-	ioexp_pin_set(MMC5603_PWR_PIN, IOEXP_HIGH);
+	i2c_write(MMC5603_I2C_ID, MMC5603_I2C_ADDRESS, 0x1D, 0x00);
+	HAL_Delay_us(20 * 1000);
+	//ioexp_pin_set(MMC5603_PWR_PIN, IOEXP_HIGH);
 	LOG_D("mmc5603 enter low power mode");
 }
 
