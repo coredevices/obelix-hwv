@@ -6,7 +6,7 @@
 #include "board.h"
 #include "drv_platform.h"
 
-#define DBG_TAG "drv_ls6dsow"
+#define DBG_TAG "drv_battery"
 #define DBG_LVL DBG_LOG
 #include <rtdbg.h>
 
