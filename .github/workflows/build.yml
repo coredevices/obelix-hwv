@@ -1,0 +1,56 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Set up environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            wget \
+            flex \
+            bison \
+            gperf \
+            cmake \
+            ninja-build \
+            ccache \
+            libffi-dev \
+            libssl-dev \
+            dfu-util \
+            libusb-1.0-0
+
+          pip install --break-system-packages requests
+          ./install.sh
+
+      - name: Build
+        run: |
+          # EXPORT NEEDED TWICE!
+          . ./export.sh
+          . ./export.sh
+
+          cd example/rt_device/i2c/eeprom/project
+          scons --board=sf32lb52-lcd_n16r8
+
+      - name: Store firmware images
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            example/rt_device/i2c/eeprom/project/build*
