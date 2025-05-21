@@ -11,6 +11,7 @@
 #include "drv_mmc5603.h"
 #include "drv_battery.h"
 #include "drv_key.h"
+#include "drv_audio.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -41,6 +42,7 @@ int main(void)
 	mmc5603_init();
 	battery_init();
 	key_init();
+	audio_init();
 		
     while (1)
     {
