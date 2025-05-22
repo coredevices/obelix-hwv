@@ -303,7 +303,7 @@ menu "On-chip Peripheral RTOS Drivers"
     menuconfig BSP_USING_SOFT_I2C
         bool "Enable I2C BUS (software simulation)"
         default n
-        depends on SOC_SF32LB55X
+        depends on SOC_SF32LB55X || SOC_SF32LB52X
         select RT_USING_I2C
         select RT_USING_I2C_BITOPS
         select RT_USING_PIN

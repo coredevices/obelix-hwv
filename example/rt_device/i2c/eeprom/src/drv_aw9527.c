@@ -21,7 +21,8 @@ void ioexp_init(void)
 	gpio_set(44, 1, 1);
 	HAL_Delay_us(10 *1000);
 	LOG_D("ioexp_init i2c");
-	i2c_init(AW9527_I2C_ID);
+	//i2c_init(AW9527_I2C_ID);
+	LOG_D("iic init done");
 
 	uint8_t value;
 	rt_size_t ret = i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x10, &value);

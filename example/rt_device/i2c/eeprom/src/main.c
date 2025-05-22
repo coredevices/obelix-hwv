@@ -36,6 +36,7 @@ int main(void)
 	i2c_init(2);
 	i2c_init(3);
 	i2c_init(4);
+	i2c_init(5);
 	ioexp_init();
 	aw86225_init();
 	eta4662_init();

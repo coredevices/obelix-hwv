@@ -49,8 +49,9 @@
 
 #ifdef BSP_USING_SOFT_I2C
 
-//#define DRV_DEBUG
-#define LOG_TAG              "drv.i2c"
+#define DRV_DEBUG
+#define LOG_TAG              "drv.si2c"
+#define DBG_LVL DBG_ERROR
 #include <drv_log.h>
 
 #if !defined(BSP_USING_SOFT_I2C1) && !defined(BSP_USING_SOFT_I2C2) && !defined(BSP_USING_SOFT_I2C3) && !defined(BSP_USING_SOFT_I2C4)
@@ -100,6 +101,7 @@ static void sifli_i2c_gpio_init(struct sifli_i2c *i2c)
  */
 static void sifli_set_sda(void *data, rt_int32_t state)
 {
+	//rt_kprintf("si2c sda set:%d\n", state);
     struct sifli_soft_i2c_config *cfg = (struct sifli_soft_i2c_config *)data;
     if (state)
     {
@@ -121,6 +123,7 @@ static void sifli_set_sda(void *data, rt_int32_t state)
  */
 static void sifli_set_scl(void *data, rt_int32_t state)
 {
+	//rt_kprintf("si2c clk set:%d\n", state);
     struct sifli_soft_i2c_config *cfg = (struct sifli_soft_i2c_config *)data;
     if (state)
     {
@@ -235,7 +238,7 @@ static rt_err_t sifli_i2c_bus_unlock(const struct sifli_soft_i2c_config *cfg)
 
 /* I2C initialization function */
 int rt_sw_i2c_init(void)
-{
+{	//rt_kprintf("si2c init\n");
     rt_size_t obj_num = sizeof(i2c_obj) / sizeof(struct sifli_i2c);
     rt_err_t result;
 
@@ -245,11 +248,12 @@ int rt_sw_i2c_init(void)
         i2c_obj[i].ops.data = (void *)&soft_i2c_config[i];
         i2c_obj[i].i2c2_bus.priv = &i2c_obj[i].ops;
         sifli_i2c_gpio_init(&i2c_obj[i]);
+		rt_kprintf("si2c add bus\n");
         result = rt_i2c_bit_add_bus(&i2c_obj[i].i2c2_bus, soft_i2c_config[i].bus_name);
         RT_ASSERT(result == RT_EOK);
         sifli_i2c_bus_unlock(&soft_i2c_config[i]);
 
-        LOG_D("software simulation %s init done, pin scl: %d, pin sda %d",
+        rt_kprintf("software simulation %s init done, pin scl: %d, pin sda %d",
               soft_i2c_config[i].bus_name,
               soft_i2c_config[i].scl,
               soft_i2c_config[i].sda);
@@ -257,7 +261,7 @@ int rt_sw_i2c_init(void)
 
     return RT_EOK;
 }
-INIT_BOARD_EXPORT(rt_sw_i2c_init);
+INIT_ENV_EXPORT(rt_sw_i2c_init);
 
 #endif /* RT_USING_I2C */
 /************************ (C) COPYRIGHT Sifli Technology *******END OF FILE****/

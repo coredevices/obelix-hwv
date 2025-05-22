@@ -69,7 +69,7 @@ struct sifli_i2c
     {                                                    \
         .scl = BSP_I2C1_SCL_PIN,                         \
         .sda = BSP_I2C1_SDA_PIN,                         \
-        .bus_name = "i2c1",                              \
+        .bus_name = "si2c1",                              \
     }
 #endif
 
@@ -78,7 +78,7 @@ struct sifli_i2c
     {                                                    \
         .scl = BSP_I2C2_SCL_PIN,                         \
         .sda = BSP_I2C2_SDA_PIN,                         \
-        .bus_name = "i2c2",                              \
+        .bus_name = "si2c2",                              \
     }
 #endif
 
@@ -87,7 +87,7 @@ struct sifli_i2c
     {                                                    \
         .scl = BSP_I2C3_SCL_PIN,                         \
         .sda = BSP_I2C3_SDA_PIN,                         \
-        .bus_name = "i2c3",                              \
+        .bus_name = "si2c3",                              \
     }
 #endif
 
@@ -96,7 +96,7 @@ struct sifli_i2c
     {                                                    \
         .scl = BSP_I2C4_SCL_PIN,                         \
         .sda = BSP_I2C4_SDA_PIN,                         \
-        .bus_name = "i2c4",                              \
+        .bus_name = "si2c4",                              \
     }
 #endif
 int rt_hw_i2c_init(void);

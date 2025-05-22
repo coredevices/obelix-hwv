@@ -15,10 +15,12 @@ static struct rt_i2c_bus_device *i2c_bus1 = NULL;
 static struct rt_i2c_bus_device *i2c_bus2 = NULL;
 static struct rt_i2c_bus_device *i2c_bus3 = NULL;
 static struct rt_i2c_bus_device *i2c_bus4 = NULL;
+static struct rt_i2c_bus_device *i2c_bus5 = NULL;
+
 
 uint8_t i2c_init(uint8_t id)
 {
-	struct rt_i2c_bus_device * i2c[5] = {NULL};//, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4};
+	struct rt_i2c_bus_device * i2c[6] = {NULL};//, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4};
 		//1. pin mux
 #ifdef SF32LB52X
 	switch(id) {
@@ -29,8 +31,8 @@ uint8_t i2c_init(uint8_t id)
 		rt_kprintf("i2c_bus1:0x%x\n", i2c_bus1);
 		break;
 	case 2:
-		HAL_PIN_Set(PAD_PA29, I2C2_SCL, PIN_NOPULL, 1); // i2c io select
-		HAL_PIN_Set(PAD_PA28, I2C2_SDA, PIN_NOPULL, 1);
+		HAL_PIN_Set(PAD_PA33, I2C2_SCL, PIN_NOPULL, 1); // i2c io select
+		HAL_PIN_Set(PAD_PA32, I2C2_SDA, PIN_NOPULL, 1);
 		i2c[id] = i2c_bus2 = rt_i2c_bus_device_find("i2c2");
 		rt_kprintf("i2c_bus2:0x%x\n", i2c_bus2);
 		break;
@@ -45,6 +47,12 @@ uint8_t i2c_init(uint8_t id)
 		HAL_PIN_Set(PAD_PA30, I2C4_SDA, PIN_NOPULL, 1);
 		i2c[id] = i2c_bus4 = rt_i2c_bus_device_find("i2c4");
 		rt_kprintf("i2c_bus4:0x%x\n", i2c_bus4);
+		break;
+	case 5:
+		HAL_PIN_Set(PAD_PA28, GPIO_A28, PIN_PULLUP, 1); 
+		HAL_PIN_Set(PAD_PA29, GPIO_A29, PIN_PULLUP, 1); 
+		i2c[id] = i2c_bus5 = rt_i2c_bus_device_find("si2c1");
+		rt_kprintf("i2c_bus5:0x%x\n", i2c_bus5);
 		break;
 #elif defined(SF32LB58X)
 		HAL_PIN_Set(PAD_PB28, I2C6_SCL, PIN_PULLUP, 0); // i2c io select
@@ -63,15 +71,17 @@ uint8_t i2c_init(uint8_t id)
 		// open rt_device i2c2
 		rt_device_open((rt_device_t)i2c[id], RT_DEVICE_FLAG_RDWR);
 		//rt_i2c_open(i2c_bus, RT_DEVICE_FLAG_RDWR);
-		struct rt_i2c_configuration configuration =
-		{
-			.mode = 0,
-			.addr = 0,
-			.timeout = 500, //Waiting for timeout period (ms)
-			.max_hz = 400000, //I2C rate (hz)
-		};
-		// config I2C parameter
-		rt_i2c_configure(i2c[id], &configuration);
+		if (id < 5) {
+			struct rt_i2c_configuration configuration =
+			{
+				.mode = 0,
+				.addr = 0,
+				.timeout = 500, //Waiting for timeout period (ms)
+				.max_hz = 400000, //I2C rate (hz)
+			};
+			// config I2C parameter
+			rt_i2c_configure(i2c[id], &configuration);
+		}
 	}
 	else
 	{
@@ -87,14 +97,19 @@ uint8_t i2c_init(uint8_t id)
 
 rt_size_t i2c_read(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* value)
 {
-	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4};
+	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4, i2c_bus5};
 
 	HAL_StatusTypeDef ret = HAL_ERROR;
     uint8_t buf[2];
 
-	if (i2c[i2c_id]) {
+	if (i2c[i2c_id] && i2c_id <5 ) {
 	    ret = rt_i2c_mem_read(i2c[i2c_id], device_addr, reg, 8, value, 1);  // ret: return data size
 	    //LOG_D("i2c[%d] read device:0x%x reg:0x%x,pdata:0x%x,ret:%d\n", i2c_id, device_addr, reg, *value, ret);
+	}
+
+	if (i2c[i2c_id] && i2c_id == 5) {
+		rt_i2c_master_send(i2c[i2c_id], device_addr, RT_NULL, &reg, 1);
+		rt_i2c_master_recv(i2c[i2c_id], device_addr, RT_NULL, value, 1);
 	}
 	
 	return ret;
@@ -102,14 +117,21 @@ rt_size_t i2c_read(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* va
 
 rt_size_t i2c_write(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t value)
 {
-	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4};
+	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4, i2c_bus5};
 
 	rt_size_t ret = 0;
     uint8_t buf[2];
 
-	if (i2c[i2c_id]) {
+	if (i2c[i2c_id] && i2c_id < 5) {
     	ret = rt_i2c_mem_write(i2c[i2c_id], device_addr, reg, 8, &value, 1);  // ret: return data size
     	//LOG_D("i2c[%d] write device:0x%x reg:0x%x,pdata:0x%x,ret:%d\n", i2c_id, device_addr, reg, value, ret);
+	}
+
+	if (i2c[i2c_id] && i2c_id == 5) {
+		uint8_t data[2] = {0};
+		data[0] = reg;
+		data[1] = value;
+		rt_i2c_master_send(i2c[i2c_id], device_addr, RT_NULL, data, 2);
 	}
 
 	return ret;
@@ -129,4 +151,19 @@ void gpio_set(int pin, int val, int is_porta)
 
     HAL_GPIO_WritePin(gpio, pin, (GPIO_PinState)val);
 }
+
+static int set_gpio(int argc, char *argv[])
+{
+    if (argc < 3) {
+		LOG_D("usage %s pin state\n", argv[0]);
+		return 0;
+	}
+
+	uint8_t pin = atoi(argv[1]);
+	uint8_t level = atoi(argv[2]);
+	gpio_set(pin, level, 1);
+    return 0;
+}
+MSH_CMD_EXPORT(set_gpio, "set gpio cmd")
+
 

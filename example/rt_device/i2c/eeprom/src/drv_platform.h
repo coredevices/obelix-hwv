@@ -17,7 +17,7 @@
 #define MMC5603_I2C_ADDRESS			0X30
 #define W1160_I2C_ADDRESS			0X5B
 
-#define AW9527_I2C_ID				2
+#define AW9527_I2C_ID				5
 #define AW86225_I2C_ID				4
 #define ETA4662_I2C_ID				4
 #define MMC5603_I2C_ID				4
