@@ -26,6 +26,8 @@ void ioexp_init(void)
 
 	uint8_t value;
 	rt_size_t ret = i2c_read(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x10, &value);
+	//set work mode, configure P1_7~P1_5 to LED mode
+	i2c_write(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x13, 0x1F);
 	if (ret) {
 		LOG_D("aw9527 read device id=0x%x\n", value);
 		LOG_D("**** TESTING COMMS WITH AW9527: PASS ********\n");
@@ -34,7 +36,6 @@ void ioexp_init(void)
 		LOG_E("**** TESTING COMMS WITH AW9527: FAILED ********\n");
 	}
 }
-
 
 /*channel ctrl*/
 void ioexp_pin_set(IOEXP_CHANNEL_T channel, IOEXP_STATE_T state) {
@@ -96,4 +97,24 @@ static int ioexp_dump(int argc, char *argv[])
 }
 MSH_CMD_EXPORT(ioexp_dump, "ioexp_dump cmd")
 
+
+void aw9527_set_brightness(uint8_t channel, uint8_t brightness)
+{
+	if (channel == IOEXP_CH15)
+	{
+		i2c_write(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x2d, brightness);
+		LOG_D("aw9527 reg[0x%x] = 0x%02x\n", 0x2d, brightness);
+	}
+	else if (channel == IOEXP_CH16)
+	{
+		i2c_write(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x2e, brightness);
+		LOG_D("aw9527 reg[0x%x] = 0x%02x\n", 0x2e, brightness);
+	}
+	else if (channel == IOEXP_CH17)
+	{
+		i2c_write(AW9527_I2C_ID, AW9527_I2C_ADDRESS, 0x2f, brightness);
+		LOG_D("aw9527 reg[0x%x] = 0x%02x\n", 0x2f, brightness);
+	}
+}
+MSH_CMD_EXPORT(aw9527_set_brightness, "aw9527_set_brightness cmd")
 
