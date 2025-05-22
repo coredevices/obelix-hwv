@@ -29,6 +29,9 @@
 uint8_t i2c_init(uint8_t id);
 rt_size_t i2c_read(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* value);
 rt_size_t i2c_write(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t value);
+rt_size_t i2c_read_boost(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* value, int16_t size);
+rt_size_t i2c_write_boost(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* value, uint16_t size);
+
 void gpio_set(int pin, int val, int is_porta);
 
 

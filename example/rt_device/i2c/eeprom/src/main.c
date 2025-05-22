@@ -12,6 +12,7 @@
 #include "drv_battery.h"
 #include "drv_key.h"
 #include "drv_audio.h"
+#include "drv_ls6dsow.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -44,6 +45,7 @@ int main(void)
 	battery_init();
 	key_init();
 	audio_init();
+	ls6dsow_init();
 		
     while (1)
     {

@@ -31,8 +31,8 @@ uint8_t i2c_init(uint8_t id)
 		rt_kprintf("i2c_bus1:0x%x\n", i2c_bus1);
 		break;
 	case 2:
-		HAL_PIN_Set(PAD_PA33, I2C2_SCL, PIN_NOPULL, 1); // i2c io select
-		HAL_PIN_Set(PAD_PA32, I2C2_SDA, PIN_NOPULL, 1);
+		HAL_PIN_Set(PAD_PA32, I2C2_SCL, PIN_NOPULL, 1); // i2c io select
+		HAL_PIN_Set(PAD_PA33, I2C2_SDA, PIN_NOPULL, 1);
 		i2c[id] = i2c_bus2 = rt_i2c_bus_device_find("i2c2");
 		rt_kprintf("i2c_bus2:0x%x\n", i2c_bus2);
 		break;
@@ -95,6 +95,27 @@ uint8_t i2c_init(uint8_t id)
 	return 0;
 }
 
+rt_size_t i2c_read_boost(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* value, int16_t size)
+{
+	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4, i2c_bus5};
+
+	HAL_StatusTypeDef ret = HAL_ERROR;
+    uint8_t buf[2];
+
+	if (i2c[i2c_id] && i2c_id <5 ) {
+	    ret = rt_i2c_mem_read(i2c[i2c_id], device_addr, reg, 8, value, size);  // ret: return data size
+	    //LOG_D("i2c[%d] read device:0x%x reg:0x%x,pdata:0x%x,ret:%d\n", i2c_id, device_addr, reg, *value, ret);
+	}
+
+	if (i2c[i2c_id] && i2c_id == 5) {
+		rt_i2c_master_send(i2c[i2c_id], device_addr, RT_NULL, &reg, 1);
+		rt_i2c_master_recv(i2c[i2c_id], device_addr, RT_NULL, value, size);
+	}
+	
+	return ret;
+}
+
+
 rt_size_t i2c_read(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* value)
 {
 	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4, i2c_bus5};
@@ -114,6 +135,30 @@ rt_size_t i2c_read(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* va
 	
 	return ret;
 }
+
+rt_size_t i2c_write_boost(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t* value, uint16_t size)
+{
+	struct rt_i2c_bus_device * i2c[] = {NULL, i2c_bus1, i2c_bus2, i2c_bus3, i2c_bus4, i2c_bus5};
+
+	rt_size_t ret = 0;
+    uint8_t buf[2];
+
+	if (i2c[i2c_id] && i2c_id < 5) {
+    	ret = rt_i2c_mem_write(i2c[i2c_id], device_addr, reg, 8, value, size);  // ret: return data size
+    	//LOG_D("i2c[%d] write device:0x%x reg:0x%x,pdata:0x%x,ret:%d\n", i2c_id, device_addr, reg, value, ret);
+	}
+
+	if (i2c[i2c_id] && i2c_id == 5) {
+		LOG_E("ERROR NOT SUPPORT YET\n");
+		uint8_t data[2] = {0};
+		data[0] = reg;
+		data[1] = *value;
+		rt_i2c_master_send(i2c[i2c_id], device_addr, RT_NULL, data, 2);
+	}
+
+	return ret;
+}
+
 
 rt_size_t i2c_write(uint8_t i2c_id, uint8_t device_addr, uint8_t reg, uint8_t value)
 {
