@@ -366,6 +366,11 @@ if BSP_USING_LCD
             bool "6.0 rect electronic paper display(EPD OPM060E9_V1.0 1448x1072)"
             select LCD_USING_OPM060E9_V10
             select BSP_LCDC_USING_EPD_8BIT
+			
+		config LCD_USING_LS013B7DD02_LCD
+			bool "1.5 mip display for Pebble CT2"
+            select LCD_USING_LS013B7DD02
+            select BSP_LCDC_USING_JDI_PARALLEL
 
     endchoice
 
@@ -409,6 +414,7 @@ if BSP_USING_LCD
         default 390 if LCD_USING_TFT_CO5300
         default 780 if LCD_USING_TFT_CO5300_DUAL
         default 1448 if LCD_USING_EDP_OPM060E9_V10
+		default 200 if LCD_USING_LS013B7DD02_LCD
 
         
     config LCD_VER_RES_MAX
@@ -451,6 +457,7 @@ if BSP_USING_LCD
         default 450 if LCD_USING_TFT_CO5300
         default 450 if LCD_USING_TFT_CO5300_DUAL
         default 1072 if LCD_USING_EDP_OPM060E9_V10
+		default 228 if LCD_USING_LS013B7DD02_LCD
 
     config LCD_DPI
         int
@@ -492,6 +499,7 @@ if BSP_USING_LCD
         default 300 if LCD_USING_TFT_CO5300
         default 300 if LCD_USING_TFT_CO5300_DUAL
         default 300 if LCD_USING_EDP_OPM060E9_V10
+		default 210 if LCD_USING_LS013B7DD02_LCD
 
     config BSP_USING_LCD_FRAMEBUFFER
         bool

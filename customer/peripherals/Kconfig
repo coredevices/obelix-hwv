@@ -230,6 +230,9 @@ config LCD_USING_NV3052C
 config LCD_USING_OPM060E9_V10
     bool
     default n
+config LCD_USING_LS013B7DD02
+	bool
+	default n
 
 # LCD interfaces
 config BSP_LCDC_USING_SPI_NODCX_1DATA

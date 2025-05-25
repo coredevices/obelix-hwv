@@ -13,6 +13,7 @@
 #include "drv_key.h"
 #include "drv_audio.h"
 #include "drv_ls6dsow.h"
+#include "drv_lcd.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -33,19 +34,21 @@ int main(void)
 
 	LOG_D("Ready for Pebble CT2_DEV_Kit testing.\n");
 	HAL_RCC_EnableModule(RCC_MOD_GPIO1); // GPIO clock enable
+	hwp_rtc->BKP0R |= 0x5020;
 	i2c_init(1);
 	i2c_init(2);
 	i2c_init(3);
 	i2c_init(4);
 	i2c_init(5);
 	ioexp_init();
+	lcd_init();
 	aw86225_init();
 	eta4662_init();
-	mmc5603_init();
 	battery_init();
 	key_init();
 	audio_init();
 	ls6dsow_init();
+	mmc5603_init();
 		
     while (1)
     {
