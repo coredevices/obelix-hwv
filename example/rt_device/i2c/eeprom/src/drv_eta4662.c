@@ -58,7 +58,8 @@ void eta4662_init(void)
     //安全计时器使能 1：enalbe; 0:disalbe
     eta4662_en_timer(0);
     //NTC开发；0开闭；1打开
-    eta4662_en_ntc(1);
+    eta4662_en_ntc(0);
+	eta4662_dis_vdd(1);
 	//过温保护；0：关 1：开
     eta4662_en_pcb_otp(0);
     //充电状态下vsys；需比电池电压高
@@ -73,10 +74,12 @@ void eta4662_init(void)
     eta4662_en_ship_dgl(5);
     //使能充电
     eta4662_charger_enable(1);
+	//进入开关模式
+	//eta4662_switch_mode(1);
 
 	
 	//3.todo:reg int pin
-	HAL_PIN_Set(PAD_PA26, GPIO_A26, PIN_NOPULL, 1);
+	HAL_PIN_Set(PAD_PA26, GPIO_A26, PIN_PULLUP, 1);
 	rt_pin_mode(26, PIN_MODE_INPUT);
 	rt_pin_attach_irq(26, PIN_IRQ_MODE_RISING_FALLING, charger_int_callback, (void *)(rt_uint32_t)26);
     rt_pin_irq_enable(26, ENABLE);
@@ -90,20 +93,24 @@ static void charger_int_callback(void *args)
 }
 
 
-/*
-static int ioexp_set(int argc, char *argv[])
+
+static int eta4662_set(int argc, char *argv[])
 {
     if (argc < 2) {
-		LOG_D("usage %s ioe_pin level\n", argv[0]);
+		LOG_D("usage %s #switch mode; #ship_mode;\n", argv[0]);
 		return 0;
 	}
 
-	uint8_t pin = atoi(argv[1]);
-	uint8_t level = atoi(argv[2]);
-	ioexp_pin_set(pin, level);
-	LOG_D("ioe set pin:%d = %d\n", pin, level);
+	if (strcmp(argv[1], "switch_mode") == 0) {
+		LOG_D("work in switch mode\n");
+		eta4662_switch_mode(1);
+	} 
+	if (strcmp(argv[1], "ship_mode") == 0){
+		LOG_D("enter to ship mode\n");
+		eta4662_bfet_dis(1);
+	}
     return 0;
 }
-MSH_CMD_EXPORT(ioexp_set, "trigger notification to client")
-*/
+MSH_CMD_EXPORT(eta4662_set, "set eta4662 mode")
+
 
