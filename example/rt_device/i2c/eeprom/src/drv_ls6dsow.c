@@ -57,21 +57,24 @@ void ls6dsow_start(void)
 }
 
 
-
-/*
-static int ioexp_set(int argc, char *argv[])
+static int lsm6dsow_mode(int argc, char *argv[])
 {
     if (argc < 2) {
-		LOG_D("usage %s ioe_pin level\n", argv[0]);
+		LOG_D("usage %s #get; #set mode\n", argv[0]);
 		return 0;
 	}
 
-	uint8_t pin = atoi(argv[1]);
-	uint8_t level = atoi(argv[2]);
-	ioexp_pin_set(pin, level);
-	LOG_D("ioe set pin:%d = %d\n", pin, level);
+	if (strcmp(argv[1], "get") == 0) {
+		lsm6dsox_md_t mode;
+		lsm6dsox_mode_get(lsm6dsow_ctx, NULL, &mode);
+		LOG_D("lsm6dsox odr:%d\n", mode.ui.xl.odr);
+	}
+	if (strcmp(argv[1], "set") == 0) {
+
+	}
+	
     return 0;
 }
-MSH_CMD_EXPORT(ioexp_set, "trigger notification to client")
-*/
+MSH_CMD_EXPORT(lsm6dsow_mode, "lsm6dsow_mode get/set")
+
 

@@ -16,10 +16,10 @@
 
 void mmc5603_init(void)
 {
-	ioexp_pin_set(MMC5603_PWR_PIN, IOEXP_LOW);
-	LOG_D("eta4662_init i2c");
-	i2c_init(MMC5603_I2C_ID);
-	HAL_Delay_us(20 * 1000);
+	//ioexp_pin_set(MMC5603_PWR_PIN, IOEXP_LOW);
+	//LOG_D("eta4662_init i2c");
+	//i2c_init(MMC5603_I2C_ID);
+	HAL_Delay_us(100 * 1000);
 
 	uint8_t value;
 	rt_size_t ret = i2c_read(MMC5603_I2C_ID, MMC5603_I2C_ADDRESS, 0x39, &value);
