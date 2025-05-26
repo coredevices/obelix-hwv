@@ -373,6 +373,13 @@ static int lcd_test(int argc, char *argv[])
 	}
 
 	uint8_t id = atoi(argv[1]);
+	if (id == 99) {
+		LOG_D("run 20fps refresh\n");
+		for (uint8_t i=0; i<200; i++) {
+			lcd_refresh(i%7);
+			rt_thread_mdelay(80);
+		}	
+	}
 	lcd_refresh(id);
 	LOG_D("lcd refresh color id:%d = %d\n", id);
     return 0;
