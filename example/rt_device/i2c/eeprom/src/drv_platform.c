@@ -49,8 +49,8 @@ uint8_t i2c_init(uint8_t id)
 		rt_kprintf("i2c_bus4:0x%x\n", i2c_bus4);
 		break;
 	case 5:
-		HAL_PIN_Set(PAD_PA28, GPIO_A28, PIN_PULLUP, 1); 
-		HAL_PIN_Set(PAD_PA29, GPIO_A29, PIN_PULLUP, 1); 
+		HAL_PIN_Set(PAD_PA28, GPIO_A28, PIN_NOPULL, 1); 
+		HAL_PIN_Set(PAD_PA29, GPIO_A29, PIN_NOPULL, 1); 
 		i2c[id] = i2c_bus5 = rt_i2c_bus_device_find("si2c1");
 		rt_kprintf("i2c_bus5:0x%x\n", i2c_bus5);
 		break;
@@ -191,7 +191,7 @@ void gpio_set(int pin, int val, int is_porta)
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT;
     GPIO_InitStruct.Pin = pin;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-	HAL_PIN_Set(PAD_PA00 + pin, GPIO_A0 + pin, PIN_PULLUP, 1); 
+	HAL_PIN_Set(PAD_PA00 + pin, GPIO_A0 + pin, PIN_NOPULL, 1); 
     HAL_GPIO_Init(gpio, &GPIO_InitStruct);
 
     HAL_GPIO_WritePin(gpio, pin, (GPIO_PinState)val);

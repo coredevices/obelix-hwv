@@ -1,12 +1,14 @@
 #include "rtthread.h"
 #include "bf0_hal.h"
 #include "drv_io.h"
+#include "drv_gpio.h"
 #include "stdio.h"
 #include "string.h"
 #include "board.h"
 #include "drv_platform.h"
 #include "drv_aw9527.h"
 #include "lsm6dsox_reg.h"
+#include "bf0_pm.h"
 
 #define DBG_TAG "drv_ls6dsow"
 #define DBG_LVL DBG_LOG
@@ -49,6 +51,15 @@ void ls6dsow_init(void)
 	} else {
 		LOG_D("**** TESTING COMMS WITH LSM6DSOW: FAILED ********\n");
 	}
+
+	 HAL_PIN_Set(PAD_PA38, GPIO_A38, PIN_PULLUP, 1);
+	 rt_pin_mode(38, PIN_MODE_INPUT);
+	// 唤醒
+	GPIO_TypeDef *gpio = GET_GPIO_INSTANCE(38);
+	uint16_t gpio_pin = GET_GPIOx_PIN(38);
+	int8_t wakeup_pin = HAL_HPAON_QueryWakeupPin(gpio, gpio_pin);
+	ASSERT(wakeup_pin >= 0);
+	pm_enable_pin_wakeup(wakeup_pin, AON_PIN_MODE_DOUBLE_EDGE);
 }
 
 void ls6dsow_start(void)

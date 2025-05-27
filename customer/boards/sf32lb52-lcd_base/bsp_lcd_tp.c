@@ -15,8 +15,8 @@ extern void BSP_PIN_LCD(void);
 void BSP_LCD_Reset(uint8_t high1_low0)
 {
     //BSP_GPIO_Set(LCD_RESET_PIN, high1_low0, 1);
-    extern void ioexp_pin_set(int channel, int state);
-    ioexp_pin_set(3, high1_low0?0:1);
+    //extern void ioexp_pin_set(int channel, int state);
+    //ioexp_pin_set(3, high1_low0?0:1);
 }
 
 void BSP_LCD_PowerDown(void)

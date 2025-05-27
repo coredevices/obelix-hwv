@@ -11,12 +11,14 @@
 #define DBG_LVL DBG_LOG
 #include <rtdbg.h>
 
+static rt_timer_t chg_check_timer = NULL;
 static void charger_int_callback(void *args);
+static void charge_check_timer(void* args);
 
 void eta4662_init(void)
 {
 	LOG_D("eta4662_init i2c");
-	i2c_init(ETA4662_I2C_ID);
+	//i2c_init(ETA4662_I2C_ID);
 
 	uint8_t value;
 	rt_size_t ret = get_eta4662_code(&value);
@@ -75,14 +77,15 @@ void eta4662_init(void)
     //使能充电
     eta4662_charger_enable(1);
 	//进入开关模式
-	//eta4662_switch_mode(1);
+	eta4662_switch_mode(1);
 
 	
 	//3.todo:reg int pin
-	HAL_PIN_Set(PAD_PA26, GPIO_A26, PIN_PULLUP, 1);
 	rt_pin_mode(26, PIN_MODE_INPUT);
 	rt_pin_attach_irq(26, PIN_IRQ_MODE_RISING_FALLING, charger_int_callback, (void *)(rt_uint32_t)26);
     rt_pin_irq_enable(26, ENABLE);
+
+	//chg_check_timer = rt_timer_create("chg_check", );
 }
 
 static void charger_int_callback(void *args)
@@ -91,8 +94,6 @@ static void charger_int_callback(void *args)
     rt_kprintf("charger Interrupt!\n");
 	LOG_D("**** TESTING COMMS WITH ETA4662 INTERRUPT: PASS ********\n");
 }
-
-
 
 static int eta4662_set(int argc, char *argv[])
 {

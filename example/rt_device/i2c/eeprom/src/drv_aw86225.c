@@ -29,6 +29,7 @@ void aw86225_init(void)
 		LOG_E("aw86225 read device id error.\n");
 		LOG_E("**** TESTING COMMS WITH AW86225: FAILED ********\n");
 	}
+	gpio_set(1, 0, 1);
 }
 
 int aw86225_standby(int argc, char *argv[])

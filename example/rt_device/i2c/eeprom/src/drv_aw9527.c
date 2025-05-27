@@ -34,7 +34,7 @@ void ioexp_init(void)
 	} else {
 		LOG_E("aw9527 read device id error.\n");
 		LOG_E("**** TESTING COMMS WITH AW9527: FAILED ********\n");
-	}
+	}gpio_set(44, 0, 1);
 }
 
 /*channel ctrl*/

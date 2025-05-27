@@ -239,6 +239,28 @@ static void BSP_PIN_Common(void)
     HAL_PIN_Set(PAD_PA44, GPIO_A44, PIN_PULLDOWN, 1);   // VBUS_DET
 #endif
 
+	//PSRAM
+	HAL_PIN_Set_Analog(PAD_SA00, 1);
+	HAL_PIN_Set_Analog(PAD_SA01, 1);
+	HAL_PIN_Set_Analog(PAD_SA02, 1);
+	HAL_PIN_Set_Analog(PAD_SA03, 1);
+	HAL_PIN_Set_Analog(PAD_SA04, 1);
+	HAL_PIN_Set_Analog(PAD_SA05, 1);
+	HAL_PIN_Set_Analog(PAD_SA06, 1);
+	HAL_PIN_Set_Analog(PAD_SA07, 1);
+	HAL_PIN_Set_Analog(PAD_SA08, 1);
+	HAL_PIN_Set_Analog(PAD_SA09, 1);
+	HAL_PIN_Set_Analog(PAD_SA10, 1);
+	HAL_PIN_Set_Analog(PAD_SA11, 1);
+	HAL_PIN_Set_Analog(PAD_SA12, 1);
+
+	//Key
+	HAL_PIN_Set(PAD_PA34, GPIO_A34, PIN_NOPULL, 1);
+	HAL_PIN_Set(PAD_PA35, GPIO_A35, PIN_NOPULL, 1);
+	HAL_PIN_Set(PAD_PA36, GPIO_A36, PIN_NOPULL, 1);
+	HAL_PIN_Set(PAD_PA37, GPIO_A37, PIN_NOPULL, 1);
+
+	HAL_PIN_Set(PAD_PA44, GPIO_A44, PIN_PULLUP, 1);//IOE_RST
 }
 
 void BSP_PIN_Touch(void)
