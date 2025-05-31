@@ -38,8 +38,8 @@ HAL_RAM_RET_CODE_SECT(BSP_PowerDownCustom, void BSP_PowerDownCustom(int coreid, 
 {
     //BSP_GPIO_Set(MPI2_POWER_PIN, 0, 1);
 #ifdef BF0_HCPU
-	//extern int rt_psram_enter_low_power(char *name);
-	//rt_psram_enter_low_power("psram1");
+	extern int rt_psram_enter_low_power(char *name);
+	rt_psram_enter_low_power("psram1");
 
     FLASH_HandleTypeDef *flash_handle;
 	extern void *rt_flash_get_handle_by_addr(uint32_t addr);
@@ -52,8 +52,8 @@ HAL_RAM_RET_CODE_SECT(BSP_PowerDownCustom, void BSP_PowerDownCustom(int coreid, 
 HAL_RAM_RET_CODE_SECT(BSP_PowerUpCustom, void BSP_PowerUpCustom(bool is_deep_sleep))
 {
 #ifdef BF0_HCPU
-	//extern int rt_psram_exit_low_power(char *name);
-	//rt_psram_exit_low_power("psram1");
+	extern int rt_psram_exit_low_power(char *name);
+	rt_psram_exit_low_power("psram1");
 
     //BSP_GPIO_Set(MPI2_POWER_PIN, 1, 1);
     FLASH_HandleTypeDef *flash_handle;
