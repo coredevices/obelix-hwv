@@ -55,7 +55,7 @@ int main(void)
 	//lcd_init();
 	eta4662_init();
 	//battery_init();
-	//key_init();
+	key_init();
 	//audio_init();
 	//ls6dsow_init();
 	//mmc5603_init();

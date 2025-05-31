@@ -51,7 +51,7 @@ void key_init(void)
 	rt_pin_attach_irq(37, PIN_IRQ_MODE_RISING, key_pin_int_callback, (void *)(rt_uint32_t)37);
     rt_pin_irq_enable(37, ENABLE);
 
-#if 0
+#if 1
 	GPIO_TypeDef *gpio;
 	uint16_t gpio_pin;
 	int8_t wakeup_pin;
