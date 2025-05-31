@@ -54,7 +54,7 @@ int main(void)
 	aw86225_init();
 	//lcd_init();
 	eta4662_init();
-	//battery_init();
+	battery_init();
 	key_init();
 	//audio_init();
 	//ls6dsow_init();
