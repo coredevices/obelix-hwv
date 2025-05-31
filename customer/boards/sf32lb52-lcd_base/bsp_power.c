@@ -72,7 +72,6 @@ void BSP_Power_Up(bool is_deep_sleep)
 	//CHG 
 	HAL_PIN_Set(PAD_PA26, GPIO_A26, PIN_PULLUP, 1);
 
-
 }
 
 
@@ -158,12 +157,12 @@ void BSP_IO_Power_Down(int coreid, bool is_deep_sleep)
 	//COMM_I2C PA30,31 keep status
 
 	//IMU_I2C
-	HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_PULLDOWN, 1);
+	/*HAL_PIN_Set(PAD_PA32, GPIO_A32, PIN_PULLDOWN, 1);
 	BSP_GPIO_Set(32, 0, 1);
 	HAL_PIN_Set(PAD_PA33, GPIO_A33, PIN_PULLDOWN, 1);
 	BSP_GPIO_Set(33, 0, 1);
 	HAL_PIN_Set(PAD_PA38, GPIO_A38, PIN_PULLDOWN, 1);//int
-	BSP_GPIO_Set(38, 0, 1);
+	BSP_GPIO_Set(38, 0, 1);*/
 	
 	//Key PA34,35,36,37 keep status
 

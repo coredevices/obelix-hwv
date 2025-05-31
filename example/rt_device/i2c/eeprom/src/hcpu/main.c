@@ -57,8 +57,8 @@ int main(void)
 	battery_init();
 	key_init();
 	//audio_init();
-	//ls6dsow_init();
-	//mmc5603_init();
+	ls6dsow_init();
+	mmc5603_init();
 	//pm_init();
 	app_ble_init();
 
