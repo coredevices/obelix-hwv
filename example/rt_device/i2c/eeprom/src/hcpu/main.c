@@ -15,6 +15,7 @@
 #include "drv_audio.h"
 #include "drv_ls6dsow.h"
 #include "drv_lcd.h"
+#include "app_ble.h"
 //#include "drv_pm.h"
 
 #define DBG_TAG "PebbleTest"
@@ -35,11 +36,13 @@ int main(void)
     //LOG_D("i2c end!\n"); // Output a end message on console using printf function
 
 	LOG_D("Ready for Pebble CT2_DEV_Kit testing.\n");
+	#if 0
 	HAL_LPAON_DISABLE_PAD();
 	HAL_LPAON_DISABLE_AON_PAD();
 	HAL_LPAON_DISABLE_VLP();
 	/* force lpsys to enter sleep */
 	hwp_lpsys_aon->PMR = (3UL << LPSYS_AON_PMR_MODE_Pos) | (1 << LPSYS_AON_PMR_CPUWAIT_Pos) | (1 << LPSYS_AON_PMR_FORCE_SLEEP_Pos);
+	#endif
 	HAL_RCC_EnableModule(RCC_MOD_GPIO1); // GPIO clock enable
 	//hwp_rtc->BKP0R |= 0x5020;
 	i2c_init(1);
@@ -57,17 +60,18 @@ int main(void)
 	//ls6dsow_init();
 	//mmc5603_init();
 	//pm_init();
-		
+	app_ble_init();
+
     while (1)
     {
     	static uint8_t cnt = 0;
 		cnt++;
 		if (cnt%2) {
 			rt_pm_request(PM_SLEEP_MODE_IDLE);
-			rt_thread_mdelay(20 * 1000);
+			rt_thread_mdelay(30 * 1000);
 		} else {
 			rt_pm_release(PM_SLEEP_MODE_IDLE);
-			rt_thread_mdelay(300 * 1000);
+			rt_thread_mdelay(150 * 1000);
 		}
         
 		rt_kprintf("loop.\n");
@@ -75,6 +79,15 @@ int main(void)
 
     return RT_EOK;
 }
+
+static int psram_rw(int argc, char *argv[]) 
+{
+	//psram
+	uint8_t* ptr = (uint8_t*)0x60000000;
+	strcpy(ptr, "******hello psram*******");
+	LOG_D("test psram:%s\n", ptr);
+}
+MSH_CMD_EXPORT(psram_rw, "psram read write test")
 
 
 static int shutdown(int argc, char *argv[])

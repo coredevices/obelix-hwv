@@ -240,7 +240,7 @@ static void BSP_PIN_Common(void)
 #endif
 
 	//PSRAM
-	HAL_PIN_Set_Analog(PAD_SA00, 1);
+	/*HAL_PIN_Set_Analog(PAD_SA00, 1);
 	HAL_PIN_Set_Analog(PAD_SA01, 1);
 	HAL_PIN_Set_Analog(PAD_SA02, 1);
 	HAL_PIN_Set_Analog(PAD_SA03, 1);
@@ -252,7 +252,7 @@ static void BSP_PIN_Common(void)
 	HAL_PIN_Set_Analog(PAD_SA09, 1);
 	HAL_PIN_Set_Analog(PAD_SA10, 1);
 	HAL_PIN_Set_Analog(PAD_SA11, 1);
-	HAL_PIN_Set_Analog(PAD_SA12, 1);
+	HAL_PIN_Set_Analog(PAD_SA12, 1);*/
 
 	//Key
 	HAL_PIN_Set(PAD_PA34, GPIO_A34, PIN_NOPULL, 1);

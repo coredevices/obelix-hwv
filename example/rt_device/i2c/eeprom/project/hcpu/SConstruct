@@ -16,6 +16,17 @@ PrepareEnv()
 # Add bootloader project
 AddBootLoader(SIFLI_SDK,rtconfig.CHIP)
 
+#Add LCPU project
+from building import *
+lcpu_proj_path='../lcpu'
+lcpu_proj_name ='lcpu'
+if GetDepend('SOC_SF32LB52X'):
+    AddLCPU(SIFLI_SDK,rtconfig.CHIP, "../../src/lcpu_img.c")
+    print("lcpu project's path is example/ble/lcpu general/project/common/sf32lb52x ")
+else:
+    AddchildProj(lcpu_proj_name, lcpu_proj_path, True, core="LCPU")
+    print("lcpu project's path is ../lcpu ")
+
 # Set default compile options
 SifliEnv()
 
