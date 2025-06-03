@@ -22,7 +22,7 @@ void BSP_LCD_Reset(uint8_t high1_low0)
 void BSP_LCD_PowerDown(void)
 {
     // TODO: LCD power down
-    BSP_GPIO_Set(LCD_RESET_PIN, 0, 1);
+    //BSP_GPIO_Set(LCD_RESET_PIN, 0, 1);
 #ifdef LCD_USING_CO5300
     BSP_GPIO_Set(LCD_VADD_EN, 0, 1); //POwer down VADD EN
 #endif
@@ -31,8 +31,8 @@ void BSP_LCD_PowerDown(void)
 void BSP_LCD_PowerUp(void)
 {
     // TODO: LCD power up
-    HAL_Delay_us(500);      // lcd power on finish ,need 500us
-    BSP_PIN_LCD();
+    //HAL_Delay_us(500);      // lcd power on finish ,need 500us
+    //BSP_PIN_LCD();
 #ifdef LCD_USING_CO5300
     BSP_GPIO_Set(LCD_VADD_EN, 1, 1); //POwer up VADD EN
 #endif

@@ -68,7 +68,7 @@ void lcd_init(void)
     //HAL_PIN_Set(PAD_PA25, GPIO_A25, PIN_NOPULL, 1);*/
 
 	//2. enable power
-	//ioexp_pin_set(LCD_PWR_EN, IOEXP_LOW);
+	ioexp_pin_set(LCD_PWR_EN, IOEXP_LOW);
 
 	//3. init lcd ctrl
 	lcd_device =  rt_device_find("lcd");
@@ -349,6 +349,8 @@ static void lcd_refresh(uint8_t id)
 	rt_kprintf("mpu chache clean\n");
     mpu_dcache_clean((uint32_t *)p_framebuffer, sizeof(framebuffer1));
 
+	rt_device_open(lcd_device, RT_DEVICE_OFLAG_RDWR);
+
     /*Flush framebuffer to LCD*/
 	rt_kprintf("RTGRAPHIC_CTRL_SET_BUF_FORMAT.\n");
     rt_device_control(lcd_device, RTGRAPHIC_CTRL_SET_BUF_FORMAT, &framebuffer_color_format);
@@ -362,6 +364,7 @@ static void lcd_refresh(uint8_t id)
 
 	/*Waitting for Flushing LCD done*/
     rt_sem_take(&lcd_sema, RT_WAITING_FOREVER);
+	rt_device_close(lcd_device);
 }
 
 

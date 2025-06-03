@@ -52,7 +52,7 @@ int main(void)
 	i2c_init(5);
 	ioexp_init();
 	aw86225_init();
-	//lcd_init();
+	lcd_init();
 	eta4662_init();
 	battery_init();
 	key_init();
