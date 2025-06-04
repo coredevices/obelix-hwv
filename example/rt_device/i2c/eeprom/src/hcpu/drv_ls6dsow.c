@@ -72,14 +72,14 @@ void ls6dsow_init(void)
 #if 1
 	HAL_PIN_Set(PAD_PA38, GPIO_A38, PIN_NOPULL, 1);
 	rt_pin_mode(38, PIN_MODE_INPUT);
-	rt_pin_attach_irq(38, PIN_IRQ_MODE_RISING_FALLING, imu_int_calback, (void *)(rt_uint32_t)38);
+	rt_pin_attach_irq(38, PIN_IRQ_MODE_RISING, imu_int_calback, (void *)(rt_uint32_t)38);
     rt_pin_irq_enable(38, ENABLE);
 	// 唤醒
 	GPIO_TypeDef *gpio = GET_GPIO_INSTANCE(38);
 	uint16_t gpio_pin = GET_GPIOx_PIN(38);
 	int8_t wakeup_pin = HAL_HPAON_QueryWakeupPin(gpio, gpio_pin);
 	ASSERT(wakeup_pin >= 0);
-	pm_enable_pin_wakeup(wakeup_pin, AON_PIN_MODE_DOUBLE_EDGE);
+	pm_enable_pin_wakeup(wakeup_pin, AON_PIN_MODE_POS_EDGE);
 #endif
 }
 
