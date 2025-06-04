@@ -17,6 +17,7 @@
 #include "drv_lcd.h"
 #include "app_ble.h"
 //#include "drv_pm.h"
+#include "drv_otp.h"
 
 #define DBG_TAG "PebbleTest"
 #define DBG_LVL DBG_LOG
@@ -61,6 +62,7 @@ int main(void)
 	mmc5603_init();
 	//pm_init();
 	app_ble_init();
+	opt_init();
 
     while (1)
     {
